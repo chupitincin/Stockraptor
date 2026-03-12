@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockRaptor — AI-Powered Small Cap Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Archivo+Black&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#020209;--s1:#06060f;--s2:#09091a;--bord:#0f0f20;--bord2:#181828;
+  --green:#00ff94;--gold:#ffcc00;--red:#ff2d55;--blue:#00b4ff;
+  --purple:#bf5fff;--orange:#ff7040;--teal:#00e5cc;--pink:#ff4fa0;
+  --txt:#7070a0;--txb:#b0b0d0;--white:#e8e8f8;
+  --font:'JetBrains Mono',monospace;--sans:'Barlow',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;min-height:100vh;overflow-x:hidden;position:relative;}
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% -5%,#0d0d3a55,transparent),radial-gradient(ellipse 40% 30% at 90% 80%,#0a1a0a33,transparent),linear-gradient(var(--bord) 1px,transparent 1px),linear-gradient(90deg,var(--bord) 1px,transparent 1px);background-size:auto,auto,36px 36px,36px 36px;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:60px;background:rgba(2,2,9,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--bord2);}
+.nav-logo{font-family:'Archivo Black',sans-serif;font-size:20px;color:var(--white);letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:10px;}
+.nav-logo span{color:var(--green);}
+.nav-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--green),#00996a);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.nav-links{display:flex;gap:28px;align-items:center;}
+.nav-link{color:var(--txt);font-size:13px;font-weight:500;letter-spacing:.5px;transition:color .2s;cursor:pointer;}
+.nav-link:hover{color:var(--white);}
+.nav-cta{padding:8px 20px;background:var(--green);color:#000;border:none;border-radius:4px;font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:1.5px;cursor:pointer;transition:all .2s;text-transform:uppercase;}
+.nav-cta:hover{background:#00d07a;transform:translateY(-1px);}
+.nav-user{display:flex;align-items:center;gap:12px;}
+.nav-plan{font-size:10px;font-family:var(--font);letter-spacing:1.5px;padding:4px 10px;border-radius:10px;}
+.nav-plan.free{background:#ffffff11;color:var(--txt);}
+.nav-plan.pro{background:#00ff9422;color:var(--green);}
+.nav-plan.elite{background:#ffcc0022;color:var(--gold);}
+.nav-username{font-size:13px;color:var(--txb);}
+.nav-logout{padding:6px 14px;background:transparent;color:var(--txt);border:1px solid var(--bord2);border-radius:3px;cursor:pointer;font-family:var(--font);font-size:9px;letter-spacing:1px;transition:all .2s;}
+.nav-logout:hover{border-color:var(--red);color:var(--red);}
+
+section{position:relative;z-index:1;}
+#landingPage{position:relative;z-index:1;}
+.page-inner{max-width:1100px;margin:0 auto;padding:0 24px;}
+
+/* HERO */
+#hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:100px 24px 80px;}
+.hero-inner{max-width:860px;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--green);border-radius:20px;padding:6px 16px;margin-bottom:32px;font-size:11px;font-family:var(--font);letter-spacing:2px;color:var(--green);animation:fadeUp .6s ease both;}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.5s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+h1{font-family:'Archivo Black',sans-serif;font-size:clamp(42px,7vw,82px);line-height:1.0;color:var(--white);letter-spacing:-1px;margin-bottom:8px;animation:fadeUp .6s .1s ease both;}
+h1 em{font-style:normal;background:linear-gradient(135deg,var(--green),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-sub{font-size:clamp(15px,2vw,21px);color:var(--txb);font-weight:300;max-width:620px;margin:22px auto 44px;line-height:1.7;animation:fadeUp .6s .2s ease both;}
+.hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;animation:fadeUp .6s .3s ease both;}
+.btn-primary{padding:16px 36px;background:linear-gradient(135deg,var(--green),#00cc78);color:#000;border:none;border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:14px;letter-spacing:1.5px;transition:all .25s;text-transform:uppercase;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px #00ff9440;}
+.btn-secondary{padding:16px 36px;background:transparent;color:var(--txb);border:1px solid var(--bord2);border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:500;font-size:14px;transition:all .25s;}
+.btn-secondary:hover{border-color:var(--txb);color:var(--white);}
+.hero-stats{display:flex;gap:0;justify-content:center;margin-top:64px;border:1px solid var(--bord2);border-radius:8px;overflow:hidden;max-width:600px;margin-left:auto;margin-right:auto;animation:fadeUp .6s .4s ease both;}
+.hst{flex:1;padding:18px 14px;text-align:center;border-right:1px solid var(--bord2);}
+.hst:last-child{border-right:none;}
+.hst-n{font-family:'Archivo Black',sans-serif;font-size:26px;color:var(--white);margin-bottom:4px;}
+.hst-l{font-size:9px;color:var(--txt);letter-spacing:1.5px;font-family:var(--font);}
+
+/* FEATURES */
+#features{padding:100px 24px;}
+.section-label{font-family:var(--font);font-size:9px;letter-spacing:3px;color:var(--green);margin-bottom:14px;text-transform:uppercase;}
+.section-title{font-family:'Archivo Black',sans-serif;font-size:clamp(26px,4vw,46px);color:var(--white);margin-bottom:14px;line-height:1.1;}
+.section-sub{font-size:16px;color:var(--txt);max-width:480px;line-height:1.7;font-weight:300;}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px;margin-top:56px;border:1px solid var(--bord2);border-radius:8px;overflow:hidden;}
+.feat-card{background:var(--s1);padding:30px 26px;border-right:1px solid var(--bord2);border-bottom:1px solid var(--bord2);transition:background .2s;}
+.feat-card:hover{background:var(--s2);}
+.feat-icon{font-size:26px;margin-bottom:14px;}
+.feat-title{font-family:'Archivo Black',sans-serif;font-size:15px;color:var(--white);margin-bottom:8px;}
+.feat-desc{font-size:13px;color:var(--txt);line-height:1.7;font-weight:300;}
+.feat-tag{display:inline-block;margin-top:12px;font-size:8px;font-family:var(--font);letter-spacing:1.5px;padding:3px 8px;border-radius:2px;font-weight:700;}
+
+/* PRICING */
+#pricing{padding:100px 24px;}
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;margin-top:40px;max-width:920px;margin-left:auto;margin-right:auto;}
+.plan-card{background:var(--s1);border:1px solid var(--bord2);border-radius:10px;padding:34px 30px;position:relative;transition:all .25s;}
+.plan-card:hover{transform:translateY(-3px);}
+.plan-card.popular{border-color:var(--green);box-shadow:0 0 60px #00ff9415;}
+.plan-popular-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-size:9px;font-family:var(--font);font-weight:700;letter-spacing:2px;padding:4px 14px;border-radius:10px;white-space:nowrap;}
+.plan-name{font-family:'Archivo Black',sans-serif;font-size:12px;letter-spacing:2px;color:var(--txt);margin-bottom:14px;text-transform:uppercase;}
+.plan-price{display:flex;align-items:baseline;gap:3px;margin-bottom:5px;}
+.plan-price-n{font-family:'Archivo Black',sans-serif;font-size:50px;color:var(--white);line-height:1;}
+.plan-price-sym{font-size:20px;color:var(--txb);align-self:flex-start;margin-top:8px;}
+.plan-price-per{font-size:12px;color:var(--txt);font-weight:300;}
+.plan-desc{font-size:12px;color:var(--txt);margin-bottom:24px;line-height:1.6;font-weight:300;}
+.plan-divider{height:1px;background:var(--bord2);margin-bottom:20px;}
+.plan-feature{display:flex;align-items:flex-start;gap:9px;margin-bottom:11px;font-size:13px;color:var(--txb);line-height:1.5;font-weight:300;}
+.plan-check{color:var(--green);font-size:11px;margin-top:2px;flex-shrink:0;}
+.plan-x{color:#333348;font-size:11px;margin-top:2px;flex-shrink:0;}
+.plan-btn{width:100%;margin-top:24px;padding:13px;border:none;border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1px;transition:all .2s;text-transform:uppercase;}
+.plan-btn-primary{background:var(--green);color:#000;}
+.plan-btn-primary:hover{background:#00d07a;}
+.plan-btn-secondary{background:transparent;color:var(--txb);border:1px solid var(--bord2);}
+.plan-btn-secondary:hover{border-color:var(--txb);color:var(--white);}
+.plan-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
+.current-plan-badge{width:100%;margin-top:24px;padding:13px;border-radius:5px;background:#00ff9415;border:1px solid var(--green);color:var(--green);font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1px;text-align:center;text-transform:uppercase;}
+.billing-toggle{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px;}
+.billing-opt{font-size:13px;color:var(--txt);cursor:pointer;transition:color .2s;}
+.billing-opt.active{color:var(--white);font-weight:500;}
+.toggle-switch{width:44px;height:24px;background:var(--bord2);border-radius:12px;position:relative;cursor:pointer;transition:background .2s;}
+.toggle-switch.on{background:var(--green);}
+.toggle-knob{width:18px;height:18px;background:var(--white);border-radius:50%;position:absolute;top:3px;left:3px;transition:transform .2s;}
+.toggle-switch.on .toggle-knob{transform:translateX(20px);}
+.billing-save{font-size:9px;font-family:var(--font);letter-spacing:1px;background:#00ff9422;color:var(--green);padding:2px 8px;border-radius:10px;}
+.disclaimer{max-width:720px;margin:44px auto 0;padding:18px 22px;background:var(--s1);border:1px solid var(--bord2);border-radius:6px;font-size:11px;color:var(--txt);line-height:1.8;text-align:center;font-family:var(--font);}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:24px;}
+.modal-overlay.open{display:flex;}
+.modal-card{background:var(--s1);border:1px solid var(--bord2);border-radius:10px;padding:40px;max-width:440px;width:100%;box-shadow:0 0 80px #00ff9410;position:relative;}
+.modal-close{position:absolute;top:16px;right:20px;background:none;border:none;color:var(--txt);font-size:22px;cursor:pointer;transition:color .2s;line-height:1;}
+.modal-close:hover{color:var(--white);}
+.modal-logo{font-family:'Archivo Black',sans-serif;font-size:18px;color:var(--white);display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.modal-logo span{color:var(--green);}
+
+/* AUTH TABS */
+.auth-tabs{display:flex;border-bottom:1px solid var(--bord2);margin-bottom:28px;margin-top:20px;}
+.auth-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-family:var(--font);letter-spacing:1.5px;color:var(--txt);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;}
+.auth-tab.active{color:var(--green);border-bottom-color:var(--green);}
+.auth-form{display:none;}
+.auth-form.active{display:block;}
+.auth-lbl{font-size:10px;letter-spacing:2px;color:var(--txt);margin-bottom:7px;font-family:var(--font);}
+.auth-inp{width:100%;background:var(--bg);border:1px solid var(--bord2);border-radius:5px;padding:12px 16px;color:var(--white);font-family:var(--font);font-size:12px;outline:none;transition:border-color .2s,box-shadow .2s;letter-spacing:.5px;margin-bottom:16px;}
+.auth-inp:focus{border-color:var(--green);box-shadow:0 0 0 3px #00ff9412;}
+.auth-inp::placeholder{color:#1e1e35;}
+.auth-btn{width:100%;padding:14px;border:none;border-radius:5px;cursor:pointer;background:linear-gradient(135deg,var(--green),#00cc78);color:#000;font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:2px;text-transform:uppercase;transition:all .2s;margin-top:4px;}
+.auth-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px #00ff9440;}
+.auth-btn:disabled{background:#111120;color:#2a2a40;cursor:not-allowed;transform:none;box-shadow:none;}
+.auth-err{display:none;color:var(--red);font-size:10px;margin-top:-8px;margin-bottom:12px;font-family:var(--font);line-height:1.6;padding:8px 12px;background:#ff2d5515;border-radius:4px;border:1px solid #ff2d5533;}
+.auth-ok{display:none;color:var(--green);font-size:10px;margin-bottom:12px;font-family:var(--font);line-height:1.6;padding:8px 12px;background:#00ff9415;border-radius:4px;border:1px solid #00ff9433;}
+.auth-divider{text-align:center;font-size:10px;color:var(--txt);font-family:var(--font);margin:16px 0;}
+.auth-forgot{text-align:right;font-size:10px;color:var(--txt);font-family:var(--font);cursor:pointer;margin-top:-10px;margin-bottom:14px;transition:color .2s;}
+.auth-forgot:hover{color:var(--green);}
+.auth-foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--bord);font-size:9px;color:#2a2a45;line-height:2;font-family:var(--font);text-align:center;}
+.auth-foot b{color:var(--green);}
+
+/* TOAST */
+.toast{position:fixed;bottom:32px;right:32px;z-index:999;background:var(--s1);border:1px solid var(--bord2);border-radius:8px;padding:14px 20px;font-size:13px;color:var(--white);font-family:var(--sans);box-shadow:0 8px 32px #00000060;transform:translateY(20px);opacity:0;transition:all .3s;pointer-events:none;max-width:320px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{border-color:var(--green);}
+.toast.error{border-color:var(--red);}
+
+/* FOOTER */
+footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;position:relative;z-index:1;}
+.footer-logo{font-family:'Archivo Black',sans-serif;font-size:15px;color:var(--white);}
+.footer-logo span{color:var(--green);}
+.footer-copy{font-size:10px;color:var(--txt);font-family:var(--font);}
+
+/* USER DASHBOARD SECTION */
+#userDash{display:none;padding:80px 24px 60px;margin-top:60px;position:relative;z-index:1;}
+.dash-card{background:var(--s1);border:1px solid var(--bord2);border-radius:10px;padding:36px;max-width:700px;margin:0 auto;}
+.dash-title{font-family:'Archivo Black',sans-serif;font-size:24px;color:var(--white);margin-bottom:6px;}
+.dash-sub{font-size:13px;color:var(--txt);margin-bottom:32px;}
+.dash-plan{display:flex;align-items:center;gap:12px;padding:16px 20px;background:var(--bg);border:1px solid var(--bord2);border-radius:8px;margin-bottom:24px;}
+.dash-plan-icon{font-size:28px;}
+.dash-plan-name{font-family:'Archivo Black',sans-serif;font-size:18px;color:var(--white);}
+.dash-plan-desc{font-size:12px;color:var(--txt);margin-top:2px;}
+.dash-actions{display:flex;gap:12px;flex-wrap:wrap;}
+.dash-btn{padding:12px 24px;border:none;border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1px;transition:all .2s;text-transform:uppercase;}
+.dash-btn-green{background:var(--green);color:#000;}
+.dash-btn-green:hover{background:#00d07a;}
+.dash-btn-outline{background:transparent;color:var(--txb);border:1px solid var(--bord2);}
+.dash-btn-outline:hover{border-color:var(--txb);color:var(--white);}
+.dash-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:24px;}
+.dash-stat{background:var(--bg);border:1px solid var(--bord2);border-radius:6px;padding:16px;text-align:center;}
+.dash-stat-n{font-family:'Archivo Black',sans-serif;font-size:24px;color:var(--white);}
+.dash-stat-l{font-size:9px;color:var(--txt);letter-spacing:1.5px;font-family:var(--font);margin-top:4px;}
+
+/* ── SETTINGS ── */
+.dash-tabs{display:flex;gap:0;border-bottom:1px solid var(--bord2);margin:28px 0 0;}
+.dash-tab{padding:11px 20px;font-size:12px;font-family:var(--font);letter-spacing:1.5px;color:var(--txt);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;user-select:none;}
+.dash-tab.active{color:var(--green);border-bottom-color:var(--green);}
+.dash-tab:hover:not(.active){color:var(--txb);}
+.dash-section{display:none;padding-top:28px;}
+.dash-section.active{display:block;}
+.settings-group{margin-bottom:32px;}
+.settings-group-title{font-size:9px;font-family:var(--font);letter-spacing:2px;color:var(--txt);text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--bord2);}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--bord);gap:16px;}
+.settings-row:last-child{border-bottom:none;}
+.settings-label{font-size:14px;color:var(--white);font-weight:500;}
+.settings-desc{font-size:12px;color:var(--txt);margin-top:3px;line-height:1.5;}
+.settings-left{flex:1;}
+.lang-selector{display:flex;gap:8px;}
+.lang-btn{padding:8px 18px;background:transparent;border:1px solid var(--bord2);border-radius:5px;color:var(--txt);font-family:var(--font);font-size:11px;letter-spacing:1px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px;}
+.lang-btn:hover{border-color:var(--txb);color:var(--white);}
+.lang-btn.active{border-color:var(--green);color:var(--green);background:#00ff9410;}
+.lang-flag{font-size:16px;}
+.settings-save{margin-top:24px;padding:12px 28px;background:var(--green);color:#000;border:none;border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1px;transition:all .2s;text-transform:uppercase;}
+.settings-save:hover{background:#00d07a;transform:translateY(-1px);}
+.settings-saved{display:none;font-size:11px;color:var(--green);font-family:var(--font);margin-left:14px;letter-spacing:1px;}
+
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<!-- CONFIG — replace with your actual keys -->
+<script>
+// ══════════════════════════════════════════
+// CONFIGURATION — REPLACE THESE VALUES
+// ══════════════════════════════════════════
+const CONFIG = {
+  supabaseUrl:  'https://ruqcgyctwlpjrlzmietj.supabase.co',
+  supabaseKey:  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1cWNneWN0d2xwanJsem1pZXRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzQwMTAsImV4cCI6MjA4ODkxMDAxMH0.tkhdkbPOZqQI7brgIo24zWftVbEr6EXLSF3jAmog6YM',
+  stripeProPriceId:   'price_1TAEuUPBvHji1PcvXwJq1LH0',
+  stripeElitePriceId: 'price_1TAEwwPBvHji1PcvtSMHJMWK',
+  netlifyFnUrl: '/.netlify/functions/stripe',
+};
+</script>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo" onclick="scrollToTop()">
+    <div class="nav-icon">🦅</div>
+    Stock<span>Raptor</span>
+  </div>
+  <div class="nav-links" id="navLinks">
+    <span class="nav-link" onclick="goTo('features')">Features</span>
+    <span class="nav-link" onclick="goTo('pricing')">Pricing</span>
+  </div>
+  <div id="navAuth">
+    <!-- filled by JS depending on auth state -->
+    <button class="nav-cta" onclick="openAuth('login')">Log In</button>
+  </div>
+</nav>
+
+<!-- ══ LANDING ══ -->
+<div id="landingPage">
+
+<!-- HERO -->
+<section id="hero" style="padding-top:100px">
+  <div class="hero-inner">
+    <div class="hero-badge"><div class="badge-dot"></div>AI-POWERED · REAL-TIME · 14 SCORING FACTORS</div>
+    <h1>Hunt Small Caps<br>Like a <em>Raptor</em></h1>
+    <p class="hero-sub">The only small cap scanner that combines fundamental analysis, news sentiment, insider trading, short squeeze detection and volume anomalies — scored in real time.</p>
+    <div class="hero-ctas">
+      <button class="btn-primary" onclick="openAuth('register')">▶ Start Free — No Card</button>
+      <button class="btn-secondary" onclick="goTo('features')">See How It Works</button>
+    </div>
+    <div class="hero-stats">
+      <div class="hst"><div class="hst-n" style="color:var(--green)">14</div><div class="hst-l">SCORING FACTORS</div></div>
+      <div class="hst"><div class="hst-n" style="color:var(--gold)">200</div><div class="hst-l">TRACKED TODAY</div></div>
+      <div class="hst"><div class="hst-n" style="color:var(--blue)">Live</div><div class="hst-l">MARKET DATA</div></div>
+      <div class="hst"><div class="hst-n" style="color:var(--purple)">$0</div><div class="hst-l">TO START</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="page-inner">
+    <div class="section-label">What makes StockRaptor different</div>
+    <div class="section-title">Every edge, in one place.</div>
+    <div class="section-sub">Most scanners show raw numbers. StockRaptor scores each company across 14 weighted factors so you know exactly what to focus on.</div>
+    <div class="features-grid">
+      <div class="feat-card"><div class="feat-icon">📊</div><div class="feat-title">Sector-Adjusted Fundamentals</div><div class="feat-desc">P/E, P/B, debt, ROE and revenue growth benchmarked against each company's own sector, not a generic average.</div><span class="feat-tag" style="background:#00b4ff22;color:var(--blue)">FUNDAMENTAL · 25 PTS</span></div>
+      <div class="feat-card"><div class="feat-icon">📰</div><div class="feat-title">News Sentiment Analysis</div><div class="feat-desc">Automatically reads and scores the last 14 days of company news, cross-referenced with insider activity.</div><span class="feat-tag" style="background:#bf5fff22;color:var(--purple)">SENTIMENT · 20 PTS</span></div>
+      <div class="feat-card"><div class="feat-icon">⚡</div><div class="feat-title">Volume Anomaly Detector</div><div class="feat-desc">When volume spikes 2.5x or more without obvious news, something is likely moving before it goes public.</div><span class="feat-tag" style="background:#ff4fa022;color:var(--pink)">VOLUME SIGNAL</span></div>
+      <div class="feat-card"><div class="feat-icon">🎯</div><div class="feat-title">Short Squeeze Radar</div><div class="feat-desc">High short interest combined with positive momentum flags squeeze setups before they happen.</div><span class="feat-tag" style="background:#00e5cc22;color:var(--teal)">SHORT INTEREST</span></div>
+      <div class="feat-card"><div class="feat-icon">👥</div><div class="feat-title">Insider MSPR Tracking</div><div class="feat-desc">Net insider buying vs selling over 90 days. When executives buy their own stock, that's a signal.</div><span class="feat-tag" style="background:#00ff9422;color:var(--green)">INSIDER DATA</span></div>
+      <div class="feat-card"><div class="feat-icon">⚠️</div><div class="feat-title">Dilution Penalty Engine</div><div class="feat-desc">Penalizes companies with share count growth above 8% annually — eliminating the most common value traps.</div><span class="feat-tag" style="background:#ff2d5522;color:var(--red)">RISK FILTER</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="page-inner">
+    <div style="text-align:center;margin-bottom:6px;"><div class="section-label" style="display:inline-block">Transparent pricing</div></div>
+    <div class="section-title" style="text-align:center">Start free. Scale when ready.</div>
+    <div class="billing-toggle" style="margin-top:24px;">
+      <span class="billing-opt active" id="billMonthly" onclick="setBilling('monthly')">Monthly</span>
+      <div class="toggle-switch" id="billToggle" onclick="toggleBilling()"><div class="toggle-knob"></div></div>
+      <span class="billing-opt" id="billAnnual" onclick="setBilling('annual')">Annual</span>
+      <span class="billing-save">SAVE 20%</span>
+    </div>
+    <div class="pricing-grid" id="pricingGrid">
+      <!-- Free -->
+      <div class="plan-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-price"><span class="plan-price-sym">$</span><span class="plan-price-n">0</span><span class="plan-price-per">/month</span></div>
+        <div class="plan-desc">Explore the scanner and validate signals before committing.</div>
+        <div class="plan-divider"></div>
+        <div class="plan-feature"><span class="plan-check">✓</span>40 small caps analyzed</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>14 scoring factors</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Volume & short squeeze alerts</div>
+        <div class="plan-feature"><span class="plan-x">✗</span><span style="color:#2a2a45">Daily automated ranking</span></div>
+        <div class="plan-feature"><span class="plan-x">✗</span><span style="color:#2a2a45">AI summaries</span></div>
+        <button class="plan-btn plan-btn-secondary" onclick="openAuth('register')" id="btnFree">Get Started Free</button>
+      </div>
+      <!-- Pro -->
+      <div class="plan-card popular">
+        <div class="plan-popular-badge">MOST POPULAR</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price"><span class="plan-price-sym">$</span><span class="plan-price-n" id="proPrice">19</span><span class="plan-price-per">/month</span></div>
+        <div class="plan-desc">Daily signals and AI summaries for active investors.</div>
+        <div class="plan-divider"></div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Everything in Free</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>200 small caps — full list</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Daily automated ranking</div>
+        <div class="plan-feature"><span class="plan-check">✓</span><strong style="color:var(--white)">AI summaries</strong> in plain English</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Morning email digest</div>
+        <button class="plan-btn plan-btn-primary" onclick="handleUpgrade('pro')" id="btnPro">Start 7-Day Free Trial</button>
+      </div>
+      <!-- Elite -->
+      <div class="plan-card">
+        <div class="plan-name">Elite</div>
+        <div class="plan-price"><span class="plan-price-sym">$</span><span class="plan-price-n" id="elitePrice">49</span><span class="plan-price-per">/month</span></div>
+        <div class="plan-desc">Full market coverage for serious investors.</div>
+        <div class="plan-divider"></div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Everything in Pro</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>400+ companies — full universe</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>2× daily updates</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>AI chat — ask about any company</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Priority support</div>
+        <button class="plan-btn plan-btn-secondary" onclick="handleUpgrade('elite')" id="btnElite">Start 7-Day Free Trial</button>
+      </div>
+    </div>
+    <div class="disclaimer">⚠️ <strong style="color:var(--txb)">Disclaimer:</strong> StockRaptor provides financial data and algorithmic scores for informational and educational purposes only. This is not financial advice. Always conduct your own research and consult a qualified financial advisor.</div>
+  </div>
+</section>
+
+</div><!-- end landingPage -->
+
+<!-- ══ USER DASHBOARD ══ -->
+<div id="userDash">
+  <div class="page-inner">
+    <div class="dash-card">
+
+      <!-- HEADER -->
+      <div class="dash-title" id="dashWelcome">Welcome back 👋</div>
+      <div class="dash-sub" id="dashEmail">Loading your account...</div>
+
+      <!-- PLAN INFO -->
+      <div class="dash-plan" id="dashPlan">
+        <div class="dash-plan-icon">🦅</div>
+        <div>
+          <div class="dash-plan-name" id="dashPlanName">Free Plan</div>
+          <div class="dash-plan-desc" id="dashPlanDesc">40 companies · Manual scan</div>
+        </div>
+      </div>
+
+      <!-- TABS -->
+      <div class="dash-tabs">
+        <div class="dash-tab active" onclick="switchDashTab('overview')" id="tabOverview">Overview</div>
+        <div class="dash-tab" onclick="switchDashTab('settings')" id="tabSettings">⚙ Settings</div>
+      </div>
+
+      <!-- OVERVIEW TAB -->
+      <div class="dash-section active" id="sectionOverview">
+        <div class="dash-actions">
+          <button class="dash-btn dash-btn-green" id="btnOpenScanner" onclick="window.location.href='scanner.html'">▶ Open Scanner</button>
+          <button class="dash-btn dash-btn-outline" id="dashUpgradeBtn" onclick="goTo('pricing')">⬆ Upgrade Plan</button>
+          <button class="dash-btn dash-btn-outline" id="btnSignOut" onclick="signOut()">Sign Out</button>
+        </div>
+        <div class="dash-stats" id="dashStats">
+          <div class="dash-stat"><div class="dash-stat-n" id="statCompanies">40</div><div class="dash-stat-l" id="statCompaniesL">COMPANIES</div></div>
+          <div class="dash-stat"><div class="dash-stat-n" style="color:var(--green)" id="statPlan">FREE</div><div class="dash-stat-l" id="statPlanL">CURRENT PLAN</div></div>
+          <div class="dash-stat"><div class="dash-stat-n" style="color:var(--gold)" id="statScans">0</div><div class="dash-stat-l" id="statScansL">SCANS TODAY</div></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS TAB -->
+      <div class="dash-section" id="sectionSettings">
+
+        <div class="settings-group">
+          <div class="settings-group-title" id="sgLanguage">Language · Idioma</div>
+          <div class="settings-row">
+            <div class="settings-left">
+              <div class="settings-label" id="slLangTitle">Interface Language</div>
+              <div class="settings-desc" id="slLangDesc">Changes the language of the dashboard and scanner interface.</div>
+            </div>
+            <div class="lang-selector">
+              <button class="lang-btn active" id="langEN" onclick="setLang('en')">
+                <span class="lang-flag">🇬🇧</span> English
+              </button>
+              <button class="lang-btn" id="langES" onclick="setLang('es')">
+                <span class="lang-flag">🇪🇸</span> Español
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-title" id="sgAccount">Account</div>
+          <div class="settings-row">
+            <div class="settings-left">
+              <div class="settings-label" id="slEmailTitle">Email Address</div>
+              <div class="settings-desc" id="dashEmailSettings">—</div>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-left">
+              <div class="settings-label" id="slPlanTitle">Current Plan</div>
+              <div class="settings-desc" id="dashPlanSettings">Free</div>
+            </div>
+            <button class="dash-btn dash-btn-outline" id="btnUpgradeSettings" onclick="goTo('pricing')" style="white-space:nowrap;padding:8px 16px;font-size:12px;">⬆ Upgrade</button>
+          </div>
+          <div class="settings-row">
+            <div class="settings-left">
+              <div class="settings-label" id="slSignOutTitle">Sign Out</div>
+              <div class="settings-desc" id="slSignOutDesc">Sign out from this device.</div>
+            </div>
+            <button class="dash-btn dash-btn-outline" onclick="signOut()" style="padding:8px 16px;font-size:12px;border-color:var(--red);color:var(--red);" id="btnSignOutSettings">Sign Out</button>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;">
+          <button class="settings-save" onclick="saveSettings()" id="btnSaveSettings">Save Settings</button>
+          <span class="settings-saved" id="settingsSaved">✓ Saved!</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Stock<span>Raptor</span></div>
+  <div style="display:flex;gap:22px;">
+    <span style="font-size:12px;color:var(--txt);cursor:pointer;" onclick="goTo('features')">Features</span>
+    <span style="font-size:12px;color:var(--txt);cursor:pointer;" onclick="goTo('pricing')">Pricing</span>
+  </div>
+  <div class="footer-copy">© 2026 StockRaptor · Not financial advice · Educational use only</div>
+</footer>
+
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-logo">🦅 Stock<span>Raptor</span></div>
+    <div style="font-size:12px;color:var(--txt);font-family:var(--font);">Your edge in small cap markets</div>
+
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tabLogin" onclick="switchTab('login')">LOG IN</div>
+      <div class="auth-tab" id="tabRegister" onclick="switchTab('register')">REGISTER</div>
+    </div>
+
+    <!-- LOGIN -->
+    <div class="auth-form active" id="formLogin">
+      <div class="auth-lbl">EMAIL</div>
+      <input class="auth-inp" id="loginEmail" type="email" placeholder="your@email.com"/>
+      <div class="auth-lbl">PASSWORD</div>
+      <input class="auth-inp" id="loginPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <div class="auth-forgot" onclick="doForgotPassword()">Forgot password?</div>
+      <div class="auth-err" id="loginErr"></div>
+      <div class="auth-ok" id="loginOk"></div>
+      <button class="auth-btn" id="loginBtn" onclick="doLogin()">LOG IN →</button>
+      <div class="auth-foot"><b>✓</b> Secure · Encrypted · Never shared</div>
+    </div>
+
+    <!-- REGISTER -->
+    <div class="auth-form" id="formRegister">
+      <div class="auth-lbl">EMAIL</div>
+      <input class="auth-inp" id="regEmail" type="email" placeholder="your@email.com"/>
+      <div class="auth-lbl">PASSWORD</div>
+      <input class="auth-inp" id="regPass" type="password" placeholder="Min. 8 characters" onkeydown="if(event.key==='Enter')doRegister()"/>
+      <div class="auth-lbl">CONFIRM PASSWORD</div>
+      <input class="auth-inp" id="regPass2" type="password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')doRegister()"/>
+      <div class="auth-err" id="regErr"></div>
+      <div class="auth-ok" id="regOk"></div>
+      <button class="auth-btn" id="regBtn" onclick="doRegister()">CREATE ACCOUNT →</button>
+      <div class="auth-foot"><b>✓</b> Free forever · No credit card needed</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// SUPABASE INIT
+// ══════════════════════════════════════════
+const { createClient } = supabase;
+let sb, currentUser = null, currentProfile = null;
+
+function initSupabase() {
+  if (CONFIG.supabaseUrl === 'YOUR_SUPABASE_URL') {
+    console.warn('⚠ Configure Supabase keys in CONFIG object');
+    return false;
+  }
+  sb = createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
+  return true;
+}
+
+// ══════════════════════════════════════════
+// AUTH STATE
+// ══════════════════════════════════════════
+async function checkAuth() {
+  if (!sb) return;
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    await loadProfile();
+    showUserState();
+  } else {
+    showGuestState();
+  }
+}
+
+async function loadProfile() {
+  if (!currentUser) return;
+  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  currentProfile = data;
+  return data;
+}
+
+function showGuestState() {
+  document.getElementById('navAuth').innerHTML = `<button class="nav-cta" onclick="openAuth('login')">Log In</button>`;
+  document.getElementById('userDash').style.display = 'none';
+  document.getElementById('landingPage').style.display = 'block';
+  updatePricingButtons(null);
+}
+
+function showUserState() {
+  const plan = currentProfile?.plan || 'free';
+  const email = currentUser.email;
+  const planColors = { free: '#ffffff33', pro: 'var(--green)', elite: 'var(--gold)' };
+
+  document.getElementById('navAuth').innerHTML = `
+    <div class="nav-user">
+      <span class="nav-plan ${plan}">${plan.toUpperCase()}</span>
+      <span class="nav-username">${email.split('@')[0]}</span>
+      <button class="nav-logout" onclick="signOut()">Sign Out</button>
+    </div>`;
+
+  // Show dashboard
+  document.getElementById('landingPage').style.display = 'none';
+  document.getElementById('userDash').style.display = 'block';
+
+  const planNames = { free: 'Free Plan 🦅', pro: 'Pro Plan ⚡', elite: 'Elite Plan 🔥' };
+  const planDescs = { free: '40 companies · Manual scan only', pro: '200 companies · Daily updates · AI summaries', elite: '400+ companies · 2× daily · AI chat' };
+  const companyCounts = { free: '40', pro: '200', elite: '400+' };
+
+  document.getElementById('dashEmail').textContent = email;
+  document.getElementById('dashPlanName').textContent = planNames[plan] || 'Free Plan';
+  document.getElementById('dashPlanDesc').textContent = planDescs[plan] || '';
+  document.getElementById('statCompanies').textContent = companyCounts[plan] || '40';
+  document.getElementById('statPlan').textContent = plan.toUpperCase();
+  document.getElementById('statScans').textContent = currentProfile?.scans_today || 0;
+  // populate settings panel
+  const emailSet = document.getElementById('dashEmailSettings');
+  const planSet = document.getElementById('dashPlanSettings');
+  if (emailSet) emailSet.textContent = email;
+  if (planSet) planSet.textContent = plan.toUpperCase();
+  // apply current language
+  applyLang(localStorage.getItem('sr_lang') || 'en');
+
+  if (plan !== 'free') {
+    document.getElementById('dashUpgradeBtn').style.display = plan === 'elite' ? 'none' : '';
+  }
+
+  updatePricingButtons(plan);
+
+  // Check for successful payment redirect
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('upgraded')) {
+    showToast('🎉 Plan upgraded successfully! Welcome to ' + plan.toUpperCase(), 'success');
+    window.history.replaceState({}, '', '/');
+  }
+}
+
+function updatePricingButtons(plan) {
+  const btns = { free: 'btnFree', pro: 'btnPro', elite: 'btnElite' };
+  Object.entries(btns).forEach(([p, id]) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    if (plan === p) {
+      btn.outerHTML = `<div class="current-plan-badge">✓ Current Plan</div>`;
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+// AUTH ACTIONS
+// ══════════════════════════════════════════
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginErr');
+  const ok = document.getElementById('loginOk');
+
+  err.style.display = 'none'; ok.style.display = 'none';
+  if (!email || !pass) { showErr(err, 'Please enter your email and password.'); return; }
+
+  btn.disabled = true; btn.textContent = 'LOGGING IN...';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+
+  if (error) {
+    showErr(err, error.message === 'Invalid login credentials' ? '⚠ Wrong email or password.' : error.message);
+    btn.disabled = false; btn.textContent = 'LOG IN →';
+    return;
+  }
+
+  currentUser = data.user;
+  await loadProfile();
+  closeModal();
+  showUserState();
+  showToast('Welcome back! 👋', 'success');
+}
+
+async function doRegister() {
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPass').value;
+  const pass2 = document.getElementById('regPass2').value;
+  const btn = document.getElementById('regBtn');
+  const err = document.getElementById('regErr');
+  const ok = document.getElementById('regOk');
+
+  err.style.display = 'none'; ok.style.display = 'none';
+  if (!email || !pass) { showErr(err, 'Please fill in all fields.'); return; }
+  if (pass.length < 8) { showErr(err, 'Password must be at least 8 characters.'); return; }
+  if (pass !== pass2) { showErr(err, 'Passwords do not match.'); return; }
+
+  btn.disabled = true; btn.textContent = 'CREATING ACCOUNT...';
+  const { data, error } = await sb.auth.signUp({ email, password: pass });
+
+  if (error) {
+    showErr(err, error.message);
+    btn.disabled = false; btn.textContent = 'CREATE ACCOUNT →';
+    return;
+  }
+
+  ok.textContent = '✓ Account created! Check your email to confirm, then log in.';
+  ok.style.display = 'block';
+  btn.disabled = false; btn.textContent = 'CREATE ACCOUNT →';
+  setTimeout(() => switchTab('login'), 3000);
+}
+
+async function doForgotPassword() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const err = document.getElementById('loginErr');
+  const ok = document.getElementById('loginOk');
+  if (!email) { showErr(err, 'Enter your email above first.'); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+  if (error) { showErr(err, error.message); return; }
+  ok.textContent = '✓ Reset link sent! Check your inbox.';
+  ok.style.display = 'block';
+  err.style.display = 'none';
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  currentUser = null; currentProfile = null;
+  showToast('Signed out. See you soon! 👋', 'success');
+  setTimeout(() => { showGuestState(); window.scrollTo(0,0); }, 500);
+}
+
+// ══════════════════════════════════════════
+// STRIPE CHECKOUT
+// ══════════════════════════════════════════
+async function handleUpgrade(plan) {
+  if (!currentUser) {
+    openAuth('register');
+    showToast('Create a free account first, then upgrade.', 'success');
+    return;
+  }
+
+  const priceId = plan === 'pro' ? CONFIG.stripeProPriceId : CONFIG.stripeElitePriceId;
+
+  if (priceId.startsWith('YOUR_')) {
+    showToast('⚠ Stripe price IDs not configured yet.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn' + plan.charAt(0).toUpperCase() + plan.slice(1));
+  if (btn) { btn.disabled = true; btn.textContent = 'REDIRECTING...'; }
+
+  try {
+    const res = await fetch(`${CONFIG.netlifyFnUrl}/create-checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        priceId,
+        userId: currentUser.id,
+        userEmail: currentUser.email,
+        plan
+      })
+    });
+
+    const { url, error } = await res.json();
+    if (error) throw new Error(error);
+    window.location.href = url; // redirect to Stripe checkout
+  } catch (e) {
+    showToast('Payment error: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Start 7-Day Free Trial'; }
+  }
+}
+
+// ══════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════
+function openAuth(tab = 'login') {
+  document.getElementById('authModal').classList.add('open');
+  switchTab(tab);
+  setTimeout(() => {
+    document.getElementById(tab === 'login' ? 'loginEmail' : 'regEmail').focus();
+  }, 100);
+}
+function closeModal() { document.getElementById('authModal').classList.remove('open'); }
+document.getElementById('authModal').addEventListener('click', e => { if (e.target === document.getElementById('authModal')) closeModal(); });
+
+function switchTab(tab) {
+  ['login','register'].forEach(t => {
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+    document.getElementById('form' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+  });
+}
+
+function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function goTo(id) { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); }
+function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+let billingAnnual = false;
+function toggleBilling() { setBilling(billingAnnual ? 'monthly' : 'annual'); }
+function setBilling(mode) {
+  billingAnnual = (mode === 'annual');
+  document.getElementById('billToggle').classList.toggle('on', billingAnnual);
+  document.getElementById('billMonthly').classList.toggle('active', !billingAnnual);
+  document.getElementById('billAnnual').classList.toggle('active', billingAnnual);
+  document.getElementById('proPrice').textContent = billingAnnual ? '15' : '19';
+  document.getElementById('elitePrice').textContent = billingAnnual ? '39' : '49';
+}
+
+// ══════════════════════════════════════════
+
+// ══════════════════════════════════════════
+// i18n — LANGUAGE SYSTEM
+// ══════════════════════════════════════════
+const LANG = {
+  en: {
+    dashWelcome: 'Welcome back 👋',
+    tabOverview: 'Overview', tabSettings: '⚙ Settings',
+    btnOpenScanner: '▶ Open Scanner', dashUpgradeBtn: '⬆ Upgrade Plan', btnSignOut: 'Sign Out',
+    statCompaniesL: 'COMPANIES', statPlanL: 'CURRENT PLAN', statScansL: 'SCANS TODAY',
+    sgLanguage: 'Language · Idioma', slLangTitle: 'Interface Language',
+    slLangDesc: 'Changes the language of the dashboard and scanner interface.',
+    sgAccount: 'Account', slEmailTitle: 'Email Address', slPlanTitle: 'Current Plan',
+    slSignOutTitle: 'Sign Out', slSignOutDesc: 'Sign out from this device.',
+    btnUpgradeSettings: '⬆ Upgrade', btnSaveSettings: 'Save Settings', settingsSaved: '✓ Saved!',
+    planFree:'Free Plan 🦅', planPro:'Pro Plan ⚡', planElite:'Elite Plan 🔥',
+    planDescFree:'40 companies · Manual scan only',
+    planDescPro:'200 companies · Daily updates · AI summaries',
+    planDescElite:'400+ companies · 2× daily · AI chat',
+  },
+  es: {
+    dashWelcome: 'Bienvenido 👋',
+    tabOverview: 'Resumen', tabSettings: '⚙ Ajustes',
+    btnOpenScanner: '▶ Abrir Scanner', dashUpgradeBtn: '⬆ Mejorar Plan', btnSignOut: 'Cerrar Sesión',
+    statCompaniesL: 'EMPRESAS', statPlanL: 'PLAN ACTUAL', statScansL: 'SCANS HOY',
+    sgLanguage: 'Idioma · Language', slLangTitle: 'Idioma de la interfaz',
+    slLangDesc: 'Cambia el idioma del panel y del scanner.',
+    sgAccount: 'Cuenta', slEmailTitle: 'Correo electrónico', slPlanTitle: 'Plan actual',
+    slSignOutTitle: 'Cerrar sesión', slSignOutDesc: 'Cerrar sesión en este dispositivo.',
+    btnUpgradeSettings: '⬆ Mejorar', btnSaveSettings: 'Guardar ajustes', settingsSaved: '✓ ¡Guardado!',
+    planFree:'Plan Gratuito 🦅', planPro:'Plan Pro ⚡', planElite:'Plan Elite 🔥',
+    planDescFree:'40 empresas · Scan manual',
+    planDescPro:'200 empresas · Actualizaciones diarias · Resúmenes IA',
+    planDescElite:'400+ empresas · 2× al día · Chat IA',
+  }
+};
+
+let currentLang = localStorage.getItem('sr_lang') || 'en';
+
+function applyLang(lang) {
+  currentLang = lang;
+  const t = LANG[lang];
+  if (!t) return;
+  Object.entries(t).forEach(([id, text]) => {
+    const el = document.getElementById(id);
+    if (el && !['dashEmail','dashEmailSettings','dashPlanSettings','statCompanies','statPlan','statScans','dashPlanName','dashPlanDesc'].includes(id)) {
+      el.textContent = text;
+    }
+  });
+  document.getElementById('langEN')?.classList.toggle('active', lang === 'en');
+  document.getElementById('langES')?.classList.toggle('active', lang === 'es');
+}
+
+function setLang(lang) { applyLang(lang); }
+
+function saveSettings() {
+  localStorage.setItem('sr_lang', currentLang);
+  if (sb && currentUser) sb.from('profiles').update({ lang: currentLang }).eq('id', currentUser.id);
+  const saved = document.getElementById('settingsSaved');
+  saved.style.display = 'inline';
+  setTimeout(() => saved.style.display = 'none', 2500);
+}
+
+function switchDashTab(tab) {
+  ['overview','settings'].forEach(t => {
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1))?.classList.toggle('active', t === tab);
+    document.getElementById('section' + t.charAt(0).toUpperCase() + t.slice(1))?.classList.toggle('active', t === tab);
+  });
+}
+
+// INIT
+// ══════════════════════════════════════════
+window.addEventListener('load', () => {
+  if (initSupabase()) {
+    checkAuth();
+    sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') showGuestState();
+    });
+  }
+  // Apply saved language
+  applyLang(localStorage.getItem('sr_lang') || 'en');
+
+  // Handle URL params
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('canceled')) {
+    showToast('Payment canceled. You can upgrade anytime.', 'error');
+    window.history.replaceState({}, '', '/');
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockRaptor — AI-Powered Small Cap Scanner</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Archivo+Black&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#020209;--s1:#06060f;--s2:#09091a;--bord:#0f0f20;--bord2:#181828;
+  --green:#00ff94;--gold:#ffcc00;--red:#ff2d55;--blue:#00b4ff;
+  --purple:#bf5fff;--orange:#ff7040;--teal:#00e5cc;--pink:#ff4fa0;
+  --txt:#7070a0;--txb:#b0b0d0;--white:#e8e8f8;
+  --font:'JetBrains Mono',monospace;--sans:'Barlow',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;min-height:100vh;overflow-x:hidden;}
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% -5%,#0d0d3a55,transparent),radial-gradient(ellipse 40% 30% at 90% 80%,#0a1a0a33,transparent),linear-gradient(var(--bord) 1px,transparent 1px),linear-gradient(90deg,var(--bord) 1px,transparent 1px);background-size:auto,auto,36px 36px,36px 36px;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:60px;background:rgba(2,2,9,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--bord2);}
+.nav-logo{font-family:'Archivo Black',sans-serif;font-size:20px;color:var(--white);letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:10px;}
+.nav-logo span{color:var(--green);}
+.nav-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--green),#00996a);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.nav-links{display:flex;gap:28px;align-items:center;}
+.nav-link{color:var(--txt);text-decoration:none;font-size:13px;font-weight:500;letter-spacing:.5px;transition:color .2s;cursor:pointer;}
+.nav-link:hover{color:var(--white);}
+.nav-cta{padding:8px 20px;background:var(--green);color:#000;border:none;border-radius:4px;font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:1.5px;cursor:pointer;transition:all .2s;text-transform:uppercase;}
+.nav-cta:hover{background:#00d07a;transform:translateY(-1px);}
+
+section{position:relative;z-index:1;}
+.page-inner{max-width:1100px;margin:0 auto;padding:0 24px;}
+
+/* HERO */
+#hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:100px 24px 80px;}
+.hero-inner{max-width:860px;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--green);border-radius:20px;padding:6px 16px;margin-bottom:32px;font-size:11px;font-family:var(--font);letter-spacing:2px;color:var(--green);animation:fadeUp .6s ease both;}
+.hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.5s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+h1{font-family:'Archivo Black',sans-serif;font-size:clamp(42px,7vw,82px);line-height:1.0;color:var(--white);letter-spacing:-1px;margin-bottom:8px;animation:fadeUp .6s .1s ease both;}
+h1 em{font-style:normal;background:linear-gradient(135deg,var(--green),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-sub{font-size:clamp(15px,2vw,21px);color:var(--txb);font-weight:300;max-width:620px;margin:22px auto 44px;line-height:1.7;animation:fadeUp .6s .2s ease both;}
+.hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;animation:fadeUp .6s .3s ease both;}
+.btn-primary{padding:16px 36px;background:linear-gradient(135deg,var(--green),#00cc78);color:#000;border:none;border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:14px;letter-spacing:1.5px;transition:all .25s;text-transform:uppercase;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px #00ff9440;}
+.btn-secondary{padding:16px 36px;background:transparent;color:var(--txb);border:1px solid var(--bord2);border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:500;font-size:14px;transition:all .25s;}
+.btn-secondary:hover{border-color:var(--txb);color:var(--white);}
+.hero-stats{display:flex;gap:0;justify-content:center;margin-top:64px;border:1px solid var(--bord2);border-radius:8px;overflow:hidden;max-width:600px;margin-left:auto;margin-right:auto;animation:fadeUp .6s .4s ease both;}
+.hst{flex:1;padding:18px 14px;text-align:center;border-right:1px solid var(--bord2);}
+.hst:last-child{border-right:none;}
+.hst-n{font-family:'Archivo Black',sans-serif;font-size:26px;color:var(--white);margin-bottom:4px;}
+.hst-l{font-size:9px;color:var(--txt);letter-spacing:1.5px;font-family:var(--font);}
+
+/* FEATURES */
+#features{padding:100px 24px;}
+.section-label{font-family:var(--font);font-size:9px;letter-spacing:3px;color:var(--green);margin-bottom:14px;text-transform:uppercase;}
+.section-title{font-family:'Archivo Black',sans-serif;font-size:clamp(26px,4vw,46px);color:var(--white);margin-bottom:14px;line-height:1.1;}
+.section-sub{font-size:16px;color:var(--txt);max-width:480px;line-height:1.7;font-weight:300;}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px;margin-top:56px;border:1px solid var(--bord2);border-radius:8px;overflow:hidden;}
+.feat-card{background:var(--s1);padding:30px 26px;border-right:1px solid var(--bord2);border-bottom:1px solid var(--bord2);transition:background .2s;}
+.feat-card:hover{background:var(--s2);}
+.feat-icon{font-size:26px;margin-bottom:14px;}
+.feat-title{font-family:'Archivo Black',sans-serif;font-size:15px;color:var(--white);margin-bottom:8px;}
+.feat-desc{font-size:13px;color:var(--txt);line-height:1.7;font-weight:300;}
+.feat-tag{display:inline-block;margin-top:12px;font-size:8px;font-family:var(--font);letter-spacing:1.5px;padding:3px 8px;border-radius:2px;font-weight:700;}
+
+/* HOW */
+#how{padding:100px 24px;background:linear-gradient(var(--s1),var(--bg));}
+.steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:28px;margin-top:56px;}
+.step-card{text-align:center;}
+.step-num{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--green),#00996a);color:#000;font-family:'Archivo Black',sans-serif;font-size:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;}
+.step-title{font-family:'Archivo Black',sans-serif;font-size:15px;color:var(--white);margin-bottom:8px;}
+.step-desc{font-size:13px;color:var(--txt);line-height:1.7;font-weight:300;}
+
+/* PRICING */
+#pricing{padding:100px 24px;}
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;margin-top:56px;max-width:920px;margin-left:auto;margin-right:auto;}
+.plan-card{background:var(--s1);border:1px solid var(--bord2);border-radius:10px;padding:34px 30px;position:relative;transition:all .25s;}
+.plan-card:hover{transform:translateY(-3px);}
+.plan-card.popular{border-color:var(--green);box-shadow:0 0 60px #00ff9415;}
+.plan-popular-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-size:9px;font-family:var(--font);font-weight:700;letter-spacing:2px;padding:4px 14px;border-radius:10px;white-space:nowrap;}
+.plan-name{font-family:'Archivo Black',sans-serif;font-size:12px;letter-spacing:2px;color:var(--txt);margin-bottom:14px;text-transform:uppercase;}
+.plan-price{display:flex;align-items:baseline;gap:3px;margin-bottom:5px;}
+.plan-price-n{font-family:'Archivo Black',sans-serif;font-size:50px;color:var(--white);line-height:1;}
+.plan-price-sym{font-size:20px;color:var(--txb);align-self:flex-start;margin-top:8px;}
+.plan-price-per{font-size:12px;color:var(--txt);font-weight:300;}
+.plan-desc{font-size:12px;color:var(--txt);margin-bottom:24px;line-height:1.6;font-weight:300;}
+.plan-divider{height:1px;background:var(--bord2);margin-bottom:20px;}
+.plan-feature{display:flex;align-items:flex-start;gap:9px;margin-bottom:11px;font-size:13px;color:var(--txb);line-height:1.5;font-weight:300;}
+.plan-check{color:var(--green);font-size:11px;margin-top:2px;flex-shrink:0;}
+.plan-x{color:#333348;font-size:11px;margin-top:2px;flex-shrink:0;}
+.plan-btn{width:100%;margin-top:24px;padding:13px;border:none;border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1px;transition:all .2s;text-transform:uppercase;}
+.plan-btn-primary{background:var(--green);color:#000;}
+.plan-btn-primary:hover{background:#00d07a;}
+.plan-btn-secondary{background:transparent;color:var(--txb);border:1px solid var(--bord2);}
+.plan-btn-secondary:hover{border-color:var(--txb);color:var(--white);}
+.billing-toggle{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px;}
+.billing-opt{font-size:13px;color:var(--txt);cursor:pointer;transition:color .2s;}
+.billing-opt.active{color:var(--white);font-weight:500;}
+.toggle-switch{width:44px;height:24px;background:var(--bord2);border-radius:12px;position:relative;cursor:pointer;transition:background .2s;}
+.toggle-switch.on{background:var(--green);}
+.toggle-knob{width:18px;height:18px;background:var(--white);border-radius:50%;position:absolute;top:3px;left:3px;transition:transform .2s;}
+.toggle-switch.on .toggle-knob{transform:translateX(20px);}
+.billing-save{font-size:9px;font-family:var(--font);letter-spacing:1px;background:#00ff9422;color:var(--green);padding:2px 8px;border-radius:10px;}
+.disclaimer{max-width:720px;margin:44px auto 0;padding:18px 22px;background:var(--s1);border:1px solid var(--bord2);border-radius:6px;font-size:11px;color:var(--txt);line-height:1.8;text-align:center;font-family:var(--font);}
+
+/* FAQ */
+#faq{padding:80px 24px;}
+.faq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px;margin-top:44px;max-width:920px;margin-left:auto;margin-right:auto;}
+.faq-item{background:var(--s1);border:1px solid var(--bord2);border-radius:6px;padding:20px 22px;cursor:pointer;transition:border-color .2s;}
+.faq-item:hover{border-color:var(--bord);}
+.faq-q{font-family:'Archivo Black',sans-serif;font-size:13px;color:var(--white);display:flex;justify-content:space-between;align-items:center;gap:12px;}
+.faq-arrow{color:var(--green);font-size:16px;transition:transform .2s;flex-shrink:0;}
+.faq-arrow.open{transform:rotate(45deg);}
+.faq-a{display:none;font-size:13px;color:var(--txt);margin-top:12px;line-height:1.7;font-weight:300;}
+.faq-a.open{display:block;}
+
+/* FOOTER */
+footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;position:relative;z-index:1;}
+.footer-logo{font-family:'Archivo Black',sans-serif;font-size:15px;color:var(--white);}
+.footer-logo span{color:var(--green);}
+.footer-links{display:flex;gap:22px;}
+.footer-link{font-size:12px;color:var(--txt);text-decoration:none;transition:color .2s;cursor:pointer;}
+.footer-link:hover{color:var(--txb);}
+.footer-copy{font-size:10px;color:var(--txt);font-family:var(--font);}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:24px;}
+.modal-overlay.open{display:flex;}
+.modal-card{background:var(--s1);border:1px solid var(--bord2);border-radius:10px;padding:38px;max-width:460px;width:100%;box-shadow:0 0 80px #00ff9410;}
+.modal-title{font-family:'Archivo Black',sans-serif;font-size:21px;color:var(--white);margin-bottom:5px;}
+.modal-sub{font-size:11px;color:var(--txt);margin-bottom:26px;line-height:1.7;font-family:var(--font);letter-spacing:.3px;}
+.modal-step{display:flex;gap:12px;margin-bottom:16px;align-items:flex-start;}
+.modal-sn{width:24px;height:24px;border-radius:50%;flex-shrink:0;margin-top:1px;background:linear-gradient(135deg,var(--green),#00a860);color:#000;font-weight:700;font-size:11px;font-family:var(--font);display:flex;align-items:center;justify-content:center;}
+.modal-st{font-size:12px;line-height:1.8;color:var(--txb);}
+.modal-st a{color:var(--green);text-decoration:none;border-bottom:1px solid #00ff9433;}
+.modal-st strong{color:var(--white);}
+.modal-lbl{font-size:9px;letter-spacing:2px;color:var(--txt);margin-bottom:8px;margin-top:20px;font-family:var(--font);}
+.modal-inp{width:100%;background:var(--bg);border:1px solid var(--bord2);border-radius:5px;padding:12px 16px;color:var(--white);font-family:var(--font);font-size:12px;outline:none;transition:border-color .2s,box-shadow .2s;letter-spacing:.5px;}
+.modal-inp:focus{border-color:var(--green);box-shadow:0 0 0 3px #00ff9412;}
+.modal-inp::placeholder{color:#1e1e35;}
+.modal-err{display:none;color:var(--red);font-size:9px;margin-top:8px;font-family:var(--font);}
+.modal-btn{width:100%;margin-top:14px;padding:14px;border:none;border-radius:5px;cursor:pointer;background:linear-gradient(135deg,var(--green),#00cc78);color:#000;font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:2px;text-transform:uppercase;transition:all .2s;}
+.modal-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px #00ff9440;}
+.modal-btn:disabled{background:#111120;color:#2a2a40;cursor:not-allowed;transform:none;box-shadow:none;}
+.modal-close{float:right;background:none;border:none;color:var(--txt);font-size:20px;cursor:pointer;margin-top:-8px;margin-right:-8px;padding:4px;transition:color .2s;}
+.modal-close:hover{color:var(--white);}
+.modal-foot{margin-top:16px;padding-top:12px;border-top:1px solid var(--bord);font-size:9px;color:#2a2a45;line-height:2;font-family:var(--font);}
+.modal-foot b{color:var(--green);}
+
+/* SCANNER PAGE */
+#scannerPage{display:none;position:relative;z-index:1;}
+.scanner-nav{display:none!important;}
+.scanner-logo{font-family:'Archivo Black',sans-serif;font-size:17px;color:var(--white);display:flex;align-items:center;gap:8px;}
+.scanner-logo span{color:var(--green);}
+.scanner-back{padding:7px 16px;background:transparent;border:1px solid var(--bord2);color:var(--txt);border-radius:3px;cursor:pointer;font-family:var(--font);font-size:9px;letter-spacing:1px;transition:all .2s;}
+.scanner-back:hover{border-color:var(--txb);color:var(--white);}
+.spage{max-width:1500px;margin:0 auto;padding:22px 16px;font-family:var(--font);}
+
+/* Scanner internals */
+.hdr{display:none!important;}
+.hbrand{font-family:'Archivo Black',sans-serif;font-size:21px;letter-spacing:2px;color:var(--white);display:flex;align-items:center;gap:10px;}
+.livdot{width:8px;height:8px;border-radius:50%;background:var(--txt);transition:all .4s;}
+.livdot.scan{background:var(--gold);box-shadow:0 0 12px var(--gold);animation:ldpulse 1s infinite;}
+.livdot.done{background:var(--green);box-shadow:0 0 12px var(--green);}
+@keyframes ldpulse{0%,100%{opacity:1}50%{opacity:.2}}
+.hmeta{font-size:11px;color:#8080b0;letter-spacing:1px;margin-top:4px;}
+.hstats{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;}
+.hstat-n2{font-family:'Archivo Black',sans-serif;font-size:22px;line-height:1;}
+.hstat-l2{font-size:10px;color:#8080b0;letter-spacing:2px;margin-top:2px;}
+.cbar{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;align-items:center;}
+.btn-scan{padding:9px 20px;background:var(--green);color:#000;border:none;border-radius:4px;cursor:pointer;font-family:var(--font);font-weight:700;font-size:10px;letter-spacing:2px;transition:all .2s;}
+.btn-scan:hover{background:#00d07a;}
+.btn-scan:disabled{background:#0f0f1f;color:#2a2a3a;cursor:not-allowed;}
+.vd{width:1px;height:18px;background:var(--bord2);margin:0 3px;}
+.bf{padding:6px 10px;background:transparent;border:1px solid var(--bord2);color:#2e2e50;border-radius:3px;cursor:pointer;font-family:var(--font);font-size:10px;letter-spacing:1px;transition:all .2s;}
+.bf:hover,.bf.on{border-color:var(--green);color:var(--green);background:#00ff9406;}
+.bs{padding:5px 9px;background:transparent;border:1px solid var(--bord2);color:#2e2e50;border-radius:3px;cursor:pointer;font-family:var(--font);font-size:10px;letter-spacing:1px;transition:all .2s;}
+.bs.on{border-color:var(--gold);color:var(--gold);}
+.ml{margin-left:auto;}
+.legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#8080b0;}
+.leg-dot{width:8px;height:8px;border-radius:2px;}
+.prog-wrap{display:none;margin-bottom:16px;}
+.prog-track{height:2px;background:var(--bord2);border-radius:1px;overflow:hidden;margin-bottom:7px;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--teal));border-radius:1px;transition:width .5s ease;}
+.prog-row{display:flex;justify-content:space-between;align-items:center;}
+.prog-msg{font-size:11px;color:var(--txt);letter-spacing:.5px;}
+.prog-pct{font-size:9px;color:var(--gold);font-weight:700;}
+.rl-warn{display:none;margin-bottom:12px;padding:9px 13px;background:#180800;border:1px solid var(--orange);border-radius:4px;font-size:11px;color:var(--orange);letter-spacing:.5px;line-height:1.8;}
+.sum-grid{display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:9px;margin-bottom:18px;}
+.scard{background:var(--s1);border:1px solid var(--bord);border-radius:6px;padding:12px 11px;cursor:pointer;transition:all .2s;}
+.scard:hover{transform:translateY(-2px);}
+.sc-n{font-family:'Archivo Black',sans-serif;font-size:28px;line-height:1;margin-bottom:3px;}
+.sc-l{font-size:10px;color:#8080b0;letter-spacing:2px;}
+.flag-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;}
+.flag{font-size:9px;padding:2px 6px;border-radius:2px;border:1px solid;letter-spacing:.5px;font-weight:600;}
+.tbl-outer{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;display:none;}
+thead tr{border-bottom:1px solid var(--bord2);}
+th{padding:8px 9px;text-align:left;font-size:10px;color:#9090c0;letter-spacing:2px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;}
+th:hover{color:var(--white);}
+.th-arrow{font-size:9px;margin-left:3px;color:var(--green);}
+tbody tr.mr{border-bottom:1px solid #0d0d1e;cursor:pointer;transition:background .15s;animation:rowIn .25s ease;}
+tbody tr.mr:hover{background:#0a0a1a;}
+tbody tr.dr{display:none;background:#07071a;border-bottom:1px solid var(--bord2);}
+tbody tr.dr.open{display:table-row;}
+@keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+td{padding:9px 9px;white-space:nowrap;vertical-align:middle;}
+.tsym{font-family:'Archivo Black',sans-serif;font-size:14px;color:var(--white);letter-spacing:.5px;}
+.tsec{font-size:10px;color:#6868a8;margin-top:2px;max-width:120px;overflow:hidden;text-overflow:ellipsis;}
+.badge{font-size:10px;letter-spacing:.8px;padding:4px 8px;border-radius:2px;border:1px solid;white-space:nowrap;font-weight:600;}
+.sw{display:flex;align-items:center;gap:6px;}
+.sv{font-family:'Archivo Black',sans-serif;font-size:17px;}
+.bkd{display:flex;gap:2px;margin-top:3px;}
+.bseg{height:4px;border-radius:1px;min-width:1px;}
+.subbar-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.subbar-lbl{font-size:10px;color:#8080b0;width:90px;flex-shrink:0;}
+.subbar-bg{flex:1;height:4px;background:var(--bord2);border-radius:2px;overflow:hidden;max-width:80px;}
+.subbar-fill{height:100%;border-radius:2px;}
+.subbar-val{font-size:10px;font-weight:600;width:24px;text-align:right;flex-shrink:0;}
+.cg{color:var(--green);}.cau{color:var(--gold);}.cr{color:var(--red);}.cb{color:var(--blue);}.cp{color:var(--purple);}.co{color:var(--orange);}.ct{color:var(--teal);}.ck{color:var(--pink);}.cd{color:#8080b0;}
+.det-inner{padding:16px 14px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
+.det-card{background:#08081a;border:1px solid #1e1e38;border-radius:6px;padding:12px 13px;}
+.det-title{font-size:10px;letter-spacing:2px;color:var(--txb);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--bord2);display:flex;align-items:center;gap:6px;}
+.det-r{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:8px;}
+.dk{font-size:11px;color:#6060a0;}
+.dv{font-size:11px;font-weight:600;color:var(--txb);}
+.hr-mini{height:1px;background:var(--bord);margin:8px 0;}
+.stkbar{height:6px;background:var(--bord2);border-radius:3px;overflow:hidden;display:flex;margin:6px 0;}
+.stkbar div{height:100%;transition:width .9s ease;}
+.eps-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-top:7px;}
+.eps-cell{background:var(--bg);border:1px solid var(--bord);border-radius:3px;padding:5px;text-align:center;}
+.eps-q{font-size:10px;color:#8080b0;margin-bottom:3px;letter-spacing:.5px;}
+.eps-v{font-size:10px;font-weight:700;}
+.news-item{padding:12px 0;border-bottom:1px solid var(--bord2);display:flex;flex-direction:column;gap:5px;}
+.news-item:last-child{border:none;padding-bottom:0;}
+.news-h{font-size:12px;color:var(--white);line-height:1.65;white-space:normal;word-break:break-word;}
+.news-m{font-size:10px;color:#6868a8;display:flex;align-items:center;flex-wrap:wrap;gap:4px;}
+.news-s{font-size:10px;font-weight:700;padding:1px 6px;border-radius:2px;}
+.arr{font-size:9px;color:#252540;transition:transform .2s;display:inline-block;}
+.arr.op{transform:rotate(90deg);color:var(--green);}
+.vol-spike{color:var(--pink);font-weight:700;}
+.empty{text-align:center;padding:80px 20px;}
+.empty-s{font-size:52px;margin-bottom:12px;}
+.empty-t{font-size:10px;color:#181828;letter-spacing:3px;}
+
+/* ── AUTH GATE ── */
+#authGate{position:fixed;inset:0;z-index:500;background:rgba(2,2,9,.97);display:none;align-items:center;justify-content:center;backdrop-filter:blur(12px);}
+.gate-card{background:#06060f;border:1px solid #181828;border-radius:12px;padding:48px 40px;max-width:400px;width:100%;text-align:center;box-shadow:0 0 80px #00ff9410;}
+.gate-logo{font-family:'Archivo Black',sans-serif;font-size:22px;color:#e8e8f8;margin-bottom:6px;}
+.gate-logo span{color:#00ff94;}
+.gate-sub{font-size:12px;color:#7070a0;font-family:'JetBrains Mono',monospace;letter-spacing:1px;margin-bottom:28px;}
+.gate-msg{font-size:13px;color:#b0b0d0;margin-bottom:28px;line-height:1.7;}
+.gate-btn{display:block;width:100%;padding:14px;border:none;border-radius:5px;cursor:pointer;font-family:'Barlow',sans-serif;font-weight:700;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;transition:all .2s;margin-bottom:10px;text-decoration:none;text-align:center;}
+.gate-btn-green{background:linear-gradient(135deg,#00ff94,#00cc78);color:#000;}
+.gate-btn-green:hover{transform:translateY(-2px);box-shadow:0 6px 24px #00ff9440;}
+.gate-btn-outline{background:transparent;color:#b0b0d0;border:1px solid #181828;}
+.gate-btn-outline:hover{border-color:#b0b0d0;color:#e8e8f8;}
+/* plan upgrade gate */
+#upgradeGate{display:none;position:fixed;inset:0;z-index:400;background:rgba(2,2,9,.9);align-items:center;justify-content:center;backdrop-filter:blur(8px);}
+#upgradeGate.open{display:flex;}
+.upgrade-card{background:#06060f;border:1px solid #ffcc0033;border-radius:12px;padding:44px 38px;max-width:420px;width:100%;text-align:center;}
+.upgrade-icon{font-size:44px;margin-bottom:16px;}
+.upgrade-title{font-family:'Archivo Black',sans-serif;font-size:22px;color:#e8e8f8;margin-bottom:8px;}
+.upgrade-desc{font-size:13px;color:#7070a0;line-height:1.7;margin-bottom:28px;}
+/* plan badge in nav */
+#scannerNav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;background:rgba(2,2,9,.9);backdrop-filter:blur(12px);border-bottom:1px solid #181828;}
+.sn-logo{font-family:'Archivo Black',sans-serif;font-size:16px;color:#e8e8f8;display:flex;align-items:center;gap:8px;cursor:pointer;}
+.sn-logo span{color:#00ff94;}
+.sn-right{display:flex;align-items:center;gap:12px;}
+.sn-plan{font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;padding:4px 10px;border-radius:10px;}
+.sn-plan.free{background:#ffffff11;color:#7070a0;}
+.sn-plan.pro{background:#00ff9422;color:#00ff94;}
+.sn-plan.elite{background:#ffcc0022;color:#ffcc00;}
+.sn-user{font-size:12px;color:#b0b0d0;}
+.sn-back{padding:6px 14px;background:transparent;border:1px solid #181828;color:#7070a0;border-radius:3px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;transition:all .2s;}
+.sn-back:hover{border-color:#b0b0d0;color:#e8e8f8;}
+
+
+/* ── TOOLTIPS ── */
+.tt{cursor:help;border-bottom:1px dashed #3a3a60;}
+#sr-tooltip{
+  position:fixed;z-index:9999;pointer-events:none;
+  background:#0e0e1e;border:1px solid #1e1e38;color:#b0b0d0;
+  font-size:12px;font-family:'Barlow',sans-serif;font-weight:400;letter-spacing:0;
+  line-height:1.65;padding:10px 14px;border-radius:7px;
+  width:230px;text-align:left;box-shadow:0 6px 28px #00000090;
+  opacity:0;transition:opacity .15s;white-space:normal;
+}
+#sr-tooltip.visible{opacity:1;}
+
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<script>
+const CONFIG = {
+  supabaseUrl: 'https://ruqcgyctwlpjrlzmietj.supabase.co',
+  supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1cWNneWN0d2xwanJsem1pZXRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzQwMTAsImV4cCI6MjA4ODkxMDAxMH0.tkhdkbPOZqQI7brgIo24zWftVbEr6EXLSF3jAmog6YM',
+};
+const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
+</script>
+
+<!-- Scanner Nav (shown after auth) -->
+<div id="scannerNav" style="display:none">
+  <div class="sn-logo" onclick="window.location.href='/'">🦅 Stock<span>Raptor</span></div>
+  <div class="sn-right">
+    <span class="sn-plan free" id="snPlan">FREE</span>
+    <span class="sn-user" id="snUser"></span>
+    <button class="sn-back" onclick="window.location.href='/'">← Home</button>
+  </div>
+</div>
+
+<!-- Auth Gate (shown if not logged in) -->
+<div id="authGate" style="display:none">
+  <div class="gate-card">
+    <div class="gate-logo">🦅 Stock<span>Raptor</span></div>
+    <div class="gate-sub">AI-POWERED · SMALL CAP SCANNER</div>
+    <div class="gate-msg">You need an account to access the scanner.<br>It's free — no credit card required.</div>
+    <a href="/" class="gate-btn gate-btn-green">Create Free Account</a>
+    <a href="/" class="gate-btn gate-btn-outline">Log In</a>
+  </div>
+</div>
+
+<!-- Upgrade Gate (shown if free plan tries to use pro features) -->
+<div id="upgradeGate">
+  <div class="upgrade-card">
+    <div class="upgrade-icon">⚡</div>
+    <div class="upgrade-title">Pro Feature</div>
+    <div class="upgrade-desc" id="upgradeDesc">This feature requires a Pro or Elite plan.</div>
+    <a href="/#pricing" class="gate-btn gate-btn-green" style="display:block;text-decoration:none;padding:14px;border-radius:5px;background:linear-gradient(135deg,#00ff94,#00cc78);color:#000;font-weight:700;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">⬆ Upgrade Now</a>
+    <button onclick="document.getElementById('upgradeGate').classList.remove('open')" class="gate-btn gate-btn-outline" style="width:100%;background:transparent;border:1px solid #181828;color:#7070a0;border-radius:5px;padding:12px;cursor:pointer;">Continue on Free</button>
+  </div>
+</div>
+
+
+<!-- NAV -->
+<nav id="mainNav" style="display:none">
+  <div class="nav-logo" onclick="showLanding()">
+    <div class="nav-icon">🦅</div>
+    Stock<span>Raptor</span>
+  </div>
+  <div class="nav-links">
+    <span class="nav-link" onclick="goTo('features')">Features</span>
+    <span class="nav-link" onclick="goTo('how')">How it works</span>
+    <span class="nav-link" onclick="goTo('pricing')">Pricing</span>
+    <span class="nav-link" onclick="goTo('faq')">FAQ</span>
+  </div>
+  <button class="nav-cta" onclick="openModal()">Start Free Trial</button>
+</nav>
+
+<!-- ══ LANDING ══ -->
+<div id="landingPage">
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-inner">
+    <div class="hero-badge"><div class="hero-badge-dot"></div>AI-POWERED · REAL-TIME · 14 SCORING FACTORS</div>
+    <h1>Hunt Small Caps<br>Like a <em>Raptor</em></h1>
+    <p class="hero-sub">The only small cap scanner that combines fundamental analysis, news sentiment, insider trading, short squeeze detection and volume anomalies — scored in real time.</p>
+    <div class="hero-ctas">
+      <button class="btn-primary" onclick="openModal()">▶ Start Free — No Card</button>
+      <button class="btn-secondary" onclick="goTo('features')">See How It Works</button>
+    </div>
+    <div class="hero-stats">
+      <div class="hst"><div class="hst-n" style="color:var(--green)">14</div><div class="hst-l">SCORING FACTORS</div></div>
+      <div class="hst"><div class="hst-n" style="color:var(--gold)">200</div><div class="hst-l">TRACKED TODAY</div></div>
+      <div class="hst"><div class="hst-n" style="color:var(--blue)">Live</div><div class="hst-l">MARKET DATA</div></div>
+      <div class="hst"><div class="hst-n" style="color:var(--purple)">$0</div><div class="hst-l">TO START</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="page-inner">
+    <div class="section-label">What makes StockRaptor different</div>
+    <div class="section-title">Every edge, in one place.</div>
+    <div class="section-sub">Most scanners show you raw numbers. StockRaptor scores each company across 14 weighted factors so you know exactly what to focus on.</div>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-icon">📊</div>
+        <div class="feat-title">Sector-Adjusted Fundamentals</div>
+        <div class="feat-desc">P/E, P/B, debt, ROE, ROA and revenue growth benchmarked against each company's own sector. A tech P/E of 28 is very different from an industrial P/E of 28.</div>
+        <span class="feat-tag" style="background:#00b4ff22;color:var(--blue)">FUNDAMENTAL · 25 PTS</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📰</div>
+        <div class="feat-title">News Sentiment Analysis</div>
+        <div class="feat-desc">Automatically reads and scores the last 14 days of company news. Detects tone and keyword signals, cross-referenced with insider activity for a composite sentiment score.</div>
+        <span class="feat-tag" style="background:#bf5fff22;color:var(--purple)">SENTIMENT · 20 PTS</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <div class="feat-title">Volume Anomaly Detector</div>
+        <div class="feat-desc">Compares today's volume against the 10-day average. When volume spikes 2.5x or more without obvious news, something is likely moving before it becomes public.</div>
+        <span class="feat-tag" style="background:#ff4fa022;color:var(--pink)">VOLUME SIGNAL</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🎯</div>
+        <div class="feat-title">Short Squeeze Radar</div>
+        <div class="feat-desc">Tracks short interest as % of float. When high short interest combines with positive price momentum, StockRaptor flags the setup before the squeeze happens.</div>
+        <span class="feat-tag" style="background:#00e5cc22;color:var(--teal)">SHORT INTEREST</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">👥</div>
+        <div class="feat-title">Insider MSPR Tracking</div>
+        <div class="feat-desc">The MSPR ratio measures net insider buying vs selling over 90 days. When executives are buying their own stock, it's one of the strongest available signals for retail investors.</div>
+        <span class="feat-tag" style="background:#00ff9422;color:var(--green)">INSIDER DATA</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📅</div>
+        <div class="feat-title">Earnings Catalyst Timing</div>
+        <div class="feat-desc">Upcoming earnings dates with countdown. Companies within 20 days of reporting get maximum catalyst score — because that's when small caps move the most.</div>
+        <span class="feat-tag" style="background:#ffcc0022;color:var(--gold)">CATALYST · 10 PTS</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">📈</div>
+        <div class="feat-title">EPS Streak History</div>
+        <div class="feat-desc">Tracks the last 4 quarters of earnings surprises. A company beating estimates consistently is structurally different from one that got lucky once. 4/4 streak = maximum bonus.</div>
+        <span class="feat-tag" style="background:#ff703022;color:var(--orange)">EARNINGS QUALITY</span>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⚠️</div>
+        <div class="feat-title">Dilution Penalty Engine</div>
+        <div class="feat-desc">Many small caps destroy value by issuing new shares constantly. StockRaptor penalizes companies with share count growth above 8% annually — eliminating the most common value traps.</div>
+        <span class="feat-tag" style="background:#ff2d5522;color:var(--red)">RISK FILTER</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="page-inner">
+    <div class="section-label">Simple process, institutional results</div>
+    <div class="section-title">Up and running in 3 minutes.</div>
+    <div class="steps-grid">
+      <div class="step-card"><div class="step-num">1</div><div class="step-title">Get your free API key</div><div class="step-desc">Create a free account at Finnhub.io — just email and password, no credit card. Takes under 60 seconds.</div></div>
+      <div class="step-card"><div class="step-num">2</div><div class="step-title">Connect to StockRaptor</div><div class="step-desc">Paste your API key into StockRaptor. It verifies instantly and your key is stored only in your browser — never on our servers.</div></div>
+      <div class="step-card"><div class="step-num">3</div><div class="step-title">Run your analysis</div><div class="step-desc">Hit Analyze. StockRaptor pulls real-time data across 8 endpoints per company simultaneously and scores everything in minutes.</div></div>
+      <div class="step-card"><div class="step-num">4</div><div class="step-title">Act on ranked signals</div><div class="step-desc">Filter by signal strength, volume spikes, squeeze setups or upcoming earnings. Click any row for the full breakdown.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="page-inner">
+    <div style="text-align:center;margin-bottom:6px;"><div class="section-label" style="display:inline-block">Transparent pricing</div></div>
+    <div class="section-title" style="text-align:center">Start free. Scale when ready.</div>
+    <div class="billing-toggle" style="margin-top:24px;">
+      <span class="billing-opt active" id="billMonthly" onclick="setBilling('monthly')">Monthly</span>
+      <div class="toggle-switch" id="billToggle" onclick="toggleBilling()"><div class="toggle-knob"></div></div>
+      <span class="billing-opt" id="billAnnual" onclick="setBilling('annual')">Annual</span>
+      <span class="billing-save">SAVE 20%</span>
+    </div>
+    <div class="pricing-grid">
+      <div class="plan-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-price"><span class="plan-price-sym">$</span><span class="plan-price-n">0</span><span class="plan-price-per">/month</span></div>
+        <div class="plan-desc">Explore the scanner and validate the signals yourself before committing.</div>
+        <div class="plan-divider"></div>
+        <div class="plan-feature"><span class="plan-check">✓</span>40 small caps analyzed</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>All 14 scoring factors</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Volume & short squeeze alerts</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>EPS history · Insider data</div>
+        <div class="plan-feature"><span class="plan-x">✗</span><span style="color:#2a2a45">Daily automated ranking</span></div>
+        <div class="plan-feature"><span class="plan-x">✗</span><span style="color:#2a2a45">Email alerts</span></div>
+        <div class="plan-feature"><span class="plan-x">✗</span><span style="color:#2a2a45">AI summaries</span></div>
+        <button class="plan-btn plan-btn-secondary" onclick="openModal()">Get Started Free</button>
+      </div>
+      <div class="plan-card popular">
+        <div class="plan-popular-badge">MOST POPULAR</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price"><span class="plan-price-sym">$</span><span class="plan-price-n" id="proPrice">19</span><span class="plan-price-per">/month</span></div>
+        <div class="plan-desc">Daily signals and AI-powered summaries for active investors who want an edge.</div>
+        <div class="plan-divider"></div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Everything in Free</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Daily automated ranking update</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Morning email digest — Top 10</div>
+        <div class="plan-feature"><span class="plan-check">✓</span><strong style="color:var(--white)">AI summaries</strong> in plain English</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Volume spike email alerts</div>
+        <div class="plan-feature"><span class="plan-x">✗</span><span style="color:#2a2a45">Full universe 400+ companies</span></div>
+        <button class="plan-btn plan-btn-primary" onclick="openModal()">Start 7-Day Free Trial</button>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Elite</div>
+        <div class="plan-price"><span class="plan-price-sym">$</span><span class="plan-price-n" id="elitePrice">49</span><span class="plan-price-per">/month</span></div>
+        <div class="plan-desc">Full market coverage and maximum signal quality for serious investors.</div>
+        <div class="plan-divider"></div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Everything in Pro</div>
+        <div class="plan-feature"><span class="plan-check">✓</span><strong style="color:var(--white)">400+ small caps</strong> — full universe</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>2× daily updates</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>AI chat — ask about any company</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Sector rotation signals</div>
+        <div class="plan-feature"><span class="plan-check">✓</span>Priority support</div>
+        <button class="plan-btn plan-btn-secondary" onclick="openModal()">Start 7-Day Free Trial</button>
+      </div>
+    </div>
+    <div class="disclaimer">⚠️ <strong style="color:var(--txb)">Disclaimer:</strong> StockRaptor provides financial data and algorithmic scores for informational and educational purposes only. This is not financial advice and does not constitute a recommendation to buy or sell any security. Always conduct your own research and consult a qualified financial advisor. Past performance is not indicative of future results.</div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="page-inner">
+    <div style="text-align:center"><div class="section-label" style="display:inline-block">Frequently asked questions</div><div class="section-title">Everything you need to know.</div></div>
+    <div class="faq-grid">
+      <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">Do I need to know how to code? <span class="faq-arrow">+</span></div><div class="faq-a">No coding required at all. You just need a free Finnhub API key (takes 60 seconds to get) and StockRaptor handles everything else. All analysis runs directly in your browser.</div></div>
+      <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">Where does the data come from? <span class="faq-arrow">+</span></div><div class="faq-a">All data is sourced from Finnhub's financial API — fundamentals, real-time quotes, news, insider transactions, analyst recommendations and short interest. Data is fetched live each time you run an analysis.</div></div>
+      <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">Is my API key safe? <span class="faq-arrow">+</span></div><div class="faq-a">Your Finnhub API key is stored only in your browser's local storage and sent directly from your browser to Finnhub's servers. It never passes through StockRaptor's servers. We never see or store it.</div></div>
+      <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">How is the score calculated? <span class="faq-arrow">+</span></div><div class="faq-a">Each company is scored across 14 factors: sector-adjusted fundamentals (25pts), revenue quality (5pts), news sentiment (12pts), insider MSPR (8pts), analyst consensus and upside (15pts), 52-week and 4-week momentum (14pts), beta (3pts), earnings proximity (10pts), EPS streak (5pts), volume anomaly (8pts) and short squeeze potential (5pts). Dilution and high debt with negative growth apply score penalties.</div></div>
+      <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">What is a short squeeze signal? <span class="faq-arrow">+</span></div><div class="faq-a">When a company has more than 15% of its float sold short and the price has been rising over the past 4 weeks, a squeeze setup is flagged. If short interest exceeds 20% and momentum is strong, it's marked HIGH. This is the same setup that drove major moves in heavily-shorted small caps historically.</div></div>
+      <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">Does this guarantee returns? <span class="faq-arrow">+</span></div><div class="faq-a">Absolutely not. StockRaptor is an analytical tool that helps identify statistically interesting setups. It does not predict the future, does not give financial advice, and cannot guarantee any returns. All investing involves risk. Always do your own research.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Stock<span>Raptor</span></div>
+  <div class="footer-links">
+    <span class="footer-link" onclick="goTo('features')">Features</span>
+    <span class="footer-link" onclick="goTo('pricing')">Pricing</span>
+    <span class="footer-link" onclick="goTo('faq')">FAQ</span>
+  </div>
+  <div class="footer-copy">© 2026 StockRaptor · Not financial advice · Educational use only</div>
+</footer>
+
+</div><!-- end landingPage -->
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-title">🦅 Activate Scanner</div>
+    <div class="modal-sub">Connect your free Finnhub API key to start analyzing small caps in real time.</div>
+    <div class="modal-step"><div class="modal-sn">1</div><div class="modal-st">Go to <a href="https://finnhub.io/register" target="_blank">finnhub.io/register</a> — free, no credit card needed.</div></div>
+    <div class="modal-step"><div class="modal-sn">2</div><div class="modal-st">Copy your <strong>API Key</strong> from the Finnhub dashboard.</div></div>
+    <div class="modal-step"><div class="modal-sn">3</div><div class="modal-st">Paste it below and hit activate. You're ready.</div></div>
+    <div class="modal-lbl">FINNHUB API KEY</div>
+    <input class="modal-inp" id="modalKeyInp" type="text" placeholder="Paste your API key here..." autocomplete="off" spellcheck="false"/>
+    <div class="modal-err" id="modalErr"></div>
+    <button class="modal-btn" id="modalBtn" onclick="activateScanner()">▶ ACTIVATE STOCKRAPTOR</button>
+    <div class="modal-foot"><b>✓</b> Free · No credit card · 60 calls/min<br><b>✓</b> Your key stays in your browser only — never on our servers</div>
+  </div>
+</div>
+
+<!-- SCANNER PAGE -->
+<div id="scannerPage">
+
+  <div class="spage">
+    <div class="hdr">
+      <div>
+        <div class="hbrand"><div class="livdot" id="livdot"></div>Small Cap Scanner</div>
+        <div class="hmeta" id="hmeta">USA · NYSE/NASDAQ · Ready · Click any row for full breakdown</div>
+      </div>
+      <div class="hstats" id="hstats"></div>
+    </div>
+    <div class="cbar">
+      <button class="btn-scan" id="btnScan" onclick="runScan()" id="btnScan">▶ ANALYZE NOW</button>
+      <div class="vd"></div>
+      <button class="bf on" onclick="setF('ALL',this)" id="fAll">ALL</button>
+      <button class="bf"    onclick="setF('FUERTE COMPRA',this)" id="fStrongBuy">🟢 STRONG BUY</button>
+      <button class="bf"    onclick="setF('INTERESANTE',this)" id="fInteresting">🟡 INTERESTING</button>
+      <button class="bf"    onclick="setF('VIGILAR',this)" id="fWatch">🟠 WATCH</button>
+      <button class="bf"    onclick="setF('DÉBIL',this)" id="fWeak">🔴 WEAK</button>
+      <div class="vd"></div>
+      <button class="bf"    onclick="setF('VOL_SPIKE',this)" id="fVolSpike">⚡ VOL SPIKE</button>
+      <button class="bf"    onclick="setF('SHORT_SQ',this)" id="fShortSq">🎯 SHORT SQUEEZE</button>
+      <div class="vd ml"></div>
+      <button class="bs on" onclick="setS('score',this)" id="ssScore">SCORE</button>
+      <button class="bs"    onclick="setS('fund',this)" id="ssFund">FUND.</button>
+      <button class="bs"    onclick="setS('sent',this)" id="ssSent">SENTIMENT</button>
+      <button class="bs"    onclick="setS('momentum',this)" id="ssMomentum">MOMENTUM</button>
+      <button class="bs"    onclick="setS('short',this)">SHORT%</button>
+      <button class="bs"    onclick="setS('earnings',this)" id="ssEarnings">EARNINGS</button>
+    </div>
+    <div class="legend">
+      <span style="font-size:8px;color:var(--txt);letter-spacing:1px;">SCORE:</span>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div>Fundamental</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--purple)"></div>Sentiment</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div>Analysts</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--gold)"></div>Momentum</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--orange)"></div>Earnings</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--teal)"></div>Vol/Short</div>
+    </div>
+    <div class="prog-wrap" id="progWrap">
+      <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+      <div class="prog-row"><div class="prog-msg" id="progMsg">Starting...</div><div class="prog-pct" id="progPct">0%</div></div>
+    </div>
+    <div class="rl-warn" id="rlWarn">⚡ Rate limit — pausing 13s and continuing... (200 stocks takes ~25 min total)</div>
+    <div class="sum-grid" id="sumGrid"></div>
+    <div class="tbl-outer">
+      <table id="tbl">
+        <thead><tr id="theadRow">
+          <th></th>
+          <th onclick="thSort('ticker')">TICKER / SECTOR <span class="th-arrow" id="th-ticker"></span></th>
+          <th onclick="thSort('signal')"><span class="tt" data-tip="Overall verdict based on the total score. STRONG BUY ≥72 · INTERESTING ≥48 · WATCH ≥25 · WEAK &lt;25">SIGNAL</span> <span class="th-arrow" id="th-signal"></span></th>
+          <th onclick="thSort('score')"><span class="tt" data-tip="Composite score from 0–100 combining 14 factors: fundamentals, sentiment, analyst consensus, momentum, earnings, volume and short squeeze potential.">TOTAL SCORE</span> <span class="th-arrow" id="th-score">▾</span></th>
+          <th onclick="thSort('fund')"><span class="tt" data-tip="Fundamental score (0–25 pts). Evaluates P/E ratio vs sector average, P/B ratio, debt/equity, revenue growth, gross margin and ROE. Penalizes share dilution &gt;8%/yr.">FUND.</span> <span class="th-arrow" id="th-fund"></span></th>
+          <th onclick="thSort('sent')"><span class="tt" data-tip="News sentiment score (0–12 pts). Analyzes the tone of news headlines from the last 14 days. Positive news coverage pushes this score up.">SENTIMENT</span> <span class="th-arrow" id="th-sent"></span></th>
+          <th onclick="thSort('analyst')"><span class="tt" data-tip="Analyst score (0–15 pts). Combines Wall Street consensus (Buy/Hold/Sell ratings) and average price target upside vs current price.">ANALYSTS</span> <span class="th-arrow" id="th-analyst"></span></th>
+          <th onclick="thSort('momentum')"><span class="tt" data-tip="Momentum score (0–17 pts). Measures 52-week price performance, 4-week trend, and volatility (Beta). High momentum = stock trending strongly upward.">MOMENTUM</span> <span class="th-arrow" id="th-momentum"></span></th>
+          <th onclick="thSort('earnings')"><span class="tt" data-tip="Earnings score (0–15 pts). Rewards companies with upcoming earnings dates and consecutive quarterly EPS beats. A 3+ quarter beat streak is a strong signal.">EARNINGS</span> <span class="th-arrow" id="th-earnings"></span></th>
+          <th onclick="thSort('short')"><span class="tt" data-tip="Volume &amp; short interest score (0–13 pts). Detects volume spikes vs 10-day average, and high short float % which can trigger a short squeeze.">VOL/SHORT</span> <span class="th-arrow" id="th-short"></span></th>
+          <th><span class="tt" data-tip="Special alerts: ⚡ Volume spike &gt;2.5x average · 🎯 Short squeeze setup · 📅 Earnings within 20 days · ⚠ Dilution detected">⚠ FLAGS</span></th>
+          <th onclick="thSort('price')">PRICE <span class="th-arrow" id="th-price"></span></th>
+          <th onclick="thSort('upside')"><span class="tt" data-tip="Analyst price target upside. The % difference between the current price and the average analyst 12-month price target. &gt;20% is considered high upside.">UPSIDE</span> <span class="th-arrow" id="th-upside"></span></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty">
+      <div class="empty-s">🦅</div>
+      <div class="empty-t" style="font-family:var(--font)">READY TO HUNT · 200 STOCKS · ~25 MIN</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── NAVIGATION ──
+function showLanding(){document.getElementById('landingPage').style.display='none';document.getElementById('scannerPage').style.display='block';document.getElementById('mainNav').style.display='none';}
+function showScanner(){document.getElementById('landingPage').style.display='none';document.getElementById('scannerPage').style.display='block';document.getElementById('mainNav').style.display='none';}
+function goTo(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth'});}
+function openModal(){document.getElementById('modal').classList.add('open');setTimeout(()=>document.getElementById('modalKeyInp').focus(),100);}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
+
+// ── BILLING ──
+let billingAnnual=false;
+function toggleBilling(){setBilling(billingAnnual?'monthly':'annual');}
+function setBilling(mode){
+  billingAnnual=(mode==='annual');
+  document.getElementById('billToggle').classList.toggle('on',billingAnnual);
+  document.getElementById('billMonthly').classList.toggle('active',!billingAnnual);
+  document.getElementById('billAnnual').classList.toggle('active',billingAnnual);
+  document.getElementById('proPrice').textContent=billingAnnual?'15':'19';
+  document.getElementById('elitePrice').textContent=billingAnnual?'39':'49';
+}
+
+// ── FAQ ──
+function toggleFaq(el){const a=el.querySelector('.faq-a'),ar=el.querySelector('.faq-arrow'),open=a.classList.contains('open');document.querySelectorAll('.faq-a').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.faq-arrow').forEach(x=>x.classList.remove('open'));if(!open){a.classList.add('open');ar.classList.add('open');}}
+
+// ── SCANNER ENGINE ──
+const TICKERS=[
+  // Tech & Software
+  "ACMR","AMBA","CLFD","SEMR","LASR","AIOT","ALKT","ACVA","VERX","YEXT",
+  "RSKD","SDGR","RMBS","PAYO","FTDR","LQDT","RCUS","XPOF","GBTG","IIPR",
+  "BAND","BIGC","BLZE","CARG","CEVA","DOMO","EGAN","ENVX","EVCM","EVTC",
+  "FORA","FOUR","FRSH","HCAT","HLIO","HURN","IOTS","ITOS","KTOS","NCNO",
+  "NTNX","NTST","NVEI","OPEN","OPRX","OUST","PLAB","PLUS","POWI","PWSC",
+  // Biotech & Healthcare
+  "CRVS","DVAX","GERN","INVA","KIDS","KROS","MGNX","OPCH","PGNY","TBPH",
+  "TARS","ACRS","ADMA","AGIO","AGEN","AKBA","ALDX","AMRX","ANIK","ANIP",
+  "APLS","ARDX","ARQT","ARVN","ATRC","AVDL","AVNS","AXGN","BEAM","BHVN",
+  "BLFS","BNGO","BTAI","CADL","CMRX","CPRX","FATE","FIXX","FOLD","FWRD",
+  "GLYC","GRFS","HALO","HRMY","IMVT","INBX","IONS","IOVA","IRWD","ITCI",
+  // Industrials & Energy
+  "CNMD","FLNC","SWBI","PRCT","AEIS","ALGT","AMRC","AMSC","AMWD","APOG",
+  "AQUA","ARCB","ARKO","ARLO","AROC","ASTE","ATNI","AVAV","AZTA","BCPC",
+  "BFAM","BWXT","CACI","CAKE","CALM","CATO","CECO","CENX","CIEN","CIGI",
+  "CLNE","CMCO","CMTL","CNDT","CNOB","CODI","COHU","CORE","CORT","COVA",
+  // Consumer & Retail
+  "RVLV","BOOT","HIMS","ACLS","ACTG","ADNT","AFRM","AFYA","AGCO","AMEH",
+  "ANGI","AOSL","APAM","APLE","ARCH","ARHS","ASIX","ASPS","ATEX","ATLO",
+  "AYTU","BJRI","BLMN","BLNK","BMBL","BNED","BODY","DRVN","DXPE","ECPG",
+  // Financial & REITs
+  "PEBO","PFBC","PFIS","PFLT","PFSI","ABCB","ACNB","AFBI","AMNB","AMTB",
+  "ANCX","APRE","CBNK","CBSH","CCBG","CFFN","CFFI","CFNL","CHMG","CHMI",
+  // Specialty & Diversified
+  "PDCO","ALKS","AMPH","ASND","ATIF","BLRX","BPMC","CARA","CBPO","CBRL"
+];
+const SECTOR_PE={'Technology':28,'Biotechnology':35,'Healthcare':22,'Software':32,'Consumer Cyclical':18,'Financial Services':14,'Industrials':18,'Energy':12,'Real Estate':20,'Communication Services':20,'Consumer Defensive':20,'Utilities':16,'Basic Materials':14,'default':22};
+const SIG={'FUERTE COMPRA':'#00ff94','INTERESANTE':'#ffcc00','VIGILAR':'#ff7040','DÉBIL':'#ff2d55'};
+const SIG_EN={'FUERTE COMPRA':'STRONG BUY','INTERESANTE':'INTERESTING','VIGILAR':'WATCH','DÉBIL':'WEAK'};
+let KEY='d6pfc69r01qo88aivvbgd6pfc69r01qo88aivvc0',allData=[],curF='ALL',curS='score',sortDir=1,running=false;
+const slp=ms=>new Promise(r=>setTimeout(r,ms));
+const toDay=()=>new Date().toISOString().slice(0,10);
+const futD=d=>{const t=new Date();t.setDate(t.getDate()+d);return t.toISOString().slice(0,10);}
+const pasD=d=>{const t=new Date();t.setDate(t.getDate()-d);return t.toISOString().slice(0,10);}
+
+function computeScores(d){
+  const sPE=SECTOR_PE[d.sector]||SECTOR_PE.default;
+  let fund=0;
+  if(d.pe>0){const r=d.pe/sPE;if(r<0.5)fund+=12;else if(r<0.8)fund+=9;else if(r<1.0)fund+=6;else if(r<1.3)fund+=3;}
+  if(d.pb>0&&d.pb<1.5)fund+=5;else if(d.pb>0&&d.pb<3)fund+=3;else if(d.pb>0&&d.pb<5)fund+=1;
+  if(d.currentRatio>=2)fund+=4;else if(d.currentRatio>=1.5)fund+=2;else if(d.currentRatio<1)fund-=3;
+  if(d.roe>20)fund+=4;else if(d.roe>10)fund+=2;
+  fund=Math.max(0,Math.min(25,fund));
+  let revQ=0;
+  if(d.revenueGrowth>30)revQ=5;else if(d.revenueGrowth>15)revQ=4;else if(d.revenueGrowth>5)revQ=2;else if(d.revenueGrowth>0)revQ=1;
+  if(d.grossMargin>50)revQ=Math.min(5,revQ+1);
+  let dilPenalty=0;
+  if(d.sharesDilution>15)dilPenalty=-10;else if(d.sharesDilution>8)dilPenalty=-6;else if(d.sharesDilution>3)dilPenalty=-3;
+  let debtPenalty=0;
+  if(d.de>1.5&&d.revenueGrowth<0)debtPenalty=-5;else if(d.de>2&&d.revenueGrowth<5)debtPenalty=-3;
+  let sent=0;
+  if(d.newsSent!==null)sent+=Math.round(((Math.max(-1,Math.min(1,d.newsSent))+1)/2)*10);
+  sent=Math.min(12,sent);
+  let insider=0;
+  if(d.mspr!==null)insider=Math.round(((Math.max(-100,Math.min(100,d.mspr))+100)/200)*8);
+  let analyst=0;
+  if(d.recMean!==null){if(d.recMean<=1.5)analyst=10;else if(d.recMean<=2.2)analyst=7;else if(d.recMean<=2.8)analyst=4;else if(d.recMean<=3.5)analyst=2;}
+  let upsideScore=0;
+  if(d.upside>40)upsideScore=5;else if(d.upside>25)upsideScore=4;else if(d.upside>15)upsideScore=2;else if(d.upside>5)upsideScore=1;
+  let momentum=0;
+  if(d.pct52Low!==null){if(d.pct52Low>=15&&d.pct52Low<=50)momentum+=8;else if(d.pct52Low<15)momentum+=4;else if(d.pct52Low<=80)momentum+=3;else momentum+=1;}
+  let trend=0;
+  if(d.priceChange4W>15)trend=6;else if(d.priceChange4W>5)trend=4;else if(d.priceChange4W>0)trend=2;else if(d.priceChange4W>-10)trend=1;
+  let betaB=0;
+  if(d.beta>=0.7&&d.beta<=1.6)betaB=3;else if(d.beta>0&&d.beta<2.2)betaB=1;
+  let earPts=0;
+  if(d.earningsDays!==null){if(d.earningsDays<=14)earPts=10;else if(d.earningsDays<=30)earPts=8;else if(d.earningsDays<=60)earPts=5;else if(d.earningsDays<=90)earPts=3;}
+  const streak=d.epsHistory.filter(e=>e.surprise>3).length;
+  let epsStreak=streak>=4?5:streak>=3?4:streak>=2?2:streak>=1?1:0;
+  let volScore=0;
+  if(d.volRatio!==null){if(d.volRatio>4)volScore=8;else if(d.volRatio>2.5)volScore=6;else if(d.volRatio>1.5)volScore=4;else if(d.volRatio>1.2)volScore=2;}
+  let shortSq=0;
+  if(d.shortPct!==null){if(d.shortPct>20&&d.priceChange4W>5)shortSq=5;else if(d.shortPct>15&&d.priceChange4W>0)shortSq=3;else if(d.shortPct>10)shortSq=1;}
+  const total=Math.max(0,Math.min(100,fund+revQ+dilPenalty+debtPenalty+sent+insider+analyst+upsideScore+momentum+trend+betaB+earPts+epsStreak+volScore+shortSq));
+  return{total,fund:Math.max(0,fund+revQ+dilPenalty+debtPenalty),sent:Math.max(0,sent+insider),analyst:Math.max(0,analyst+upsideScore),momentum:Math.max(0,momentum+trend+betaB),earPts:Math.max(0,earPts+epsStreak),volShort:Math.max(0,volScore+shortSq),dilPenalty,debtPenalty,epsStreak,streak};
+}
+function toSig(s){return s>=72?'FUERTE COMPRA':s>=48?'INTERESANTE':s>=25?'VIGILAR':'DÉBIL';}
+
+async function apiFetch(url,tries=3){
+  for(let i=0;i<tries;i++){
+    try{const r=await fetch(url,{signal:AbortSignal.timeout(11000)});if(r.status===429){document.getElementById('rlWarn').style.display='block';await slp(13500);continue;}document.getElementById('rlWarn').style.display='none';if(!r.ok)return null;return await r.json();}catch{if(i<tries-1)await slp(1500);}
+  }return null;
+}
+
+async function fetchTicker(sym){
+  const B='https://finnhub.io/api/v1',T=`token=${KEY}`;
+  const [prof,metr,earn,quote,news,insiderS,rec,shorts]=await Promise.all([
+    apiFetch(`${B}/stock/profile2?symbol=${sym}&${T}`),apiFetch(`${B}/stock/metric?symbol=${sym}&metric=all&${T}`),
+    apiFetch(`${B}/calendar/earnings?symbol=${sym}&from=${toDay()}&to=${futD(120)}&${T}`),apiFetch(`${B}/quote?symbol=${sym}&${T}`),
+    apiFetch(`${B}/company-news?symbol=${sym}&from=${pasD(14)}&to=${toDay()}&${T}`),apiFetch(`${B}/stock/insider-sentiment?symbol=${sym}&from=${pasD(90)}&to=${toDay()}&${T}`),
+    apiFetch(`${B}/stock/recommendation?symbol=${sym}&${T}`),apiFetch(`${B}/stock/short-interest?symbol=${sym}&from=${pasD(60)}&to=${toDay()}&${T}`)
+  ]);
+  if(!metr?.metric)return null;
+  const m=metr.metric;
+  const pe=m['peBasicExclExtraTTM']||m['peTTM']||null;
+  const pb=m['pbAnnual']||m['pbQuarterly']||null;
+  const de=m['totalDebt/totalEquityAnnual']!=null?m['totalDebt/totalEquityAnnual']/100:null;
+  const revenueGrowth=m['revenueGrowthTTMYoy']!=null?Math.round(m['revenueGrowthTTMYoy']*100):m['revenueGrowth3Y']!=null?Math.round(m['revenueGrowth3Y']):null;
+  const grossMargin=m['grossMarginTTM']!=null?Math.round(m['grossMarginTTM']*100):null;
+  const roa=m['roaTTM']!=null?Math.round(m['roaTTM']*100):null;
+  const roe=m['roeTTM']!=null?Math.round(m['roeTTM']*100):null;
+  const currentRatio=m['currentRatioAnnual']||null;
+  const cap=prof?.marketCapitalization?prof.marketCapitalization*1e6:null;
+  const sector=prof?.finnhubIndustry||null;
+  const sharesNow=m['sharesOutstanding']||m['shareOutstanding']||null;
+  const sharesDilution=m['shareOutstandingGrowth']!=null?Math.round(m['shareOutstandingGrowth']*100):m['shareGrowthTTMYoy']!=null?Math.round(m['shareGrowthTTMYoy']*100):null;
+  const price=quote?.c||null,prevClose=quote?.pc||null;
+  const priceChange1D=(price&&prevClose)?Math.round((price-prevClose)/prevClose*1000)/10:null;
+  const hi52=m['52WeekHigh']||null,lo52=m['52WeekLow']||null;
+  const pct52Low=(price&&lo52)?Math.round((price-lo52)/lo52*100):null;
+  const pct52High=(price&&hi52)?Math.round((price-hi52)/hi52*100):null;
+  const priceChange4W=m['4WeekPriceReturnDaily']!=null?Math.round(m['4WeekPriceReturnDaily']*10)/10:null;
+  const beta=m['beta']||null;
+  const vol10d=m['10DayAverageTradingVolume']||null,volCurrent=quote?.v||null;
+  const volRatio=(volCurrent&&vol10d&&vol10d>0)?Math.round(volCurrent/vol10d*10)/10:null;
+  let shortPct=null;
+  if(shorts?.data?.length){const l=shorts.data[shorts.data.length-1];const fl=m['float']||sharesNow;if(l.shortInterest&&fl)shortPct=Math.round(l.shortInterest/fl*1000)/10;}
+  if(shortPct===null&&m['shortInterestPercent']!=null)shortPct=Math.round(m['shortInterestPercent']*10)/10;
+  const targetPrice=m['targetMeanConsensus']||null;
+  const upside=(price&&targetPrice)?Math.round((targetPrice-price)/price*100):null;
+  let recMean=null,recBuy=0,recHold=0,recSell=0;
+  if(rec?.length){const r0=rec[0];recBuy=(r0.strongBuy||0)+(r0.buy||0);recHold=r0.hold||0;recSell=(r0.sell||0)+(r0.strongSell||0);const tot=recBuy+recHold+recSell;if(tot>0)recMean=(recBuy*1+recHold*3+recSell*5)/tot;}
+  let newsSent=null,newsItems=[];
+  if(news?.length){
+    newsItems=news.slice(0,8).map(n=>({headline:n.headline,source:n.source,time:n.datetime?new Date(n.datetime*1000).toLocaleDateString('en-US',{day:'2-digit',month:'short'}):'',sentiment:n.sentiment||null}));
+    const ws=newsItems.filter(n=>n.sentiment);
+    if(ws.length)newsSent=ws.reduce((a,n)=>a+(n.sentiment==='positive'?1:n.sentiment==='negative'?-1:0),0)/ws.length;
+    else{const txt=news.slice(0,6).map(n=>(n.headline||'').toLowerCase()).join(' ');const pos=['beat','growth','record','surge','rally','upgrade','strong','profit','raise','patent','fda','approval','deal','contract'],neg=['miss','decline','fall','loss','cut','downgrade','weak','debt','fraud','concern','lawsuit','secondary','dilut'];let sc=0;pos.forEach(w=>{if(txt.includes(w))sc+=0.12;});neg.forEach(w=>{if(txt.includes(w))sc-=0.15;});newsSent=Math.max(-1,Math.min(1,sc));}
+  }
+  let mspr=null,insiderChange=null;
+  if(insiderS?.data?.length){const r=insiderS.data.slice(-3);if(r.length){mspr=r[r.length-1].mspr||null;insiderChange=r.reduce((a,d)=>a+(d.change||0),0);}}
+  let earningsDays=null,earningsDate=null;const epsHistory=[];
+  const earList=earn?.earningsCalendar;
+  if(earList?.length){
+    const t0=new Date();t0.setHours(0,0,0,0);
+    for(const e of earList){if(!e.date)continue;const d=new Date(e.date);const diff=Math.ceil((d-t0)/86400000);if(diff>=0&&earningsDays===null){earningsDays=diff;earningsDate=e.date;}if(e.epsActual!=null&&e.epsEstimate!=null){const surp=e.epsEstimate!==0?Math.round((e.epsActual-e.epsEstimate)/Math.abs(e.epsEstimate)*100):0;epsHistory.push({q:e.period||e.date,actual:e.epsActual,est:e.epsEstimate,surprise:surp});}if(epsHistory.length>=4)break;}
+  }
+  const flags=[];
+  if(volRatio&&volRatio>2.5)flags.push({label:`VOL ${volRatio}x`,color:'var(--pink)'});
+  if(shortPct&&shortPct>15&&priceChange4W>3)flags.push({label:`SHORT SQ ${shortPct}%`,color:'var(--teal)'});
+  if(sharesDilution&&sharesDilution>8)flags.push({label:`DILUTION +${sharesDilution}%`,color:'var(--red)'});
+  if(earningsDays!==null&&earningsDays<=20)flags.push({label:`EARN ${earningsDays}d`,color:'var(--gold)'});
+  if(mspr&&mspr>30)flags.push({label:'INSIDER BUY',color:'var(--green)'});
+  if(de&&de>2)flags.push({label:'HIGH DEBT',color:'var(--orange)'});
+  const raw={sym,pe:pe?Math.round(pe*10)/10:null,pb:pb?Math.round(pb*10)/10:null,de,revenueGrowth,grossMargin,roa,roe,currentRatio,cap,sector,sharesDilution,price,prevClose,priceChange1D,hi52,lo52,pct52Low,pct52High,priceChange4W,beta,volRatio,shortPct,targetPrice,upside,recMean,recBuy,recHold,recSell,newsSent,newsItems,mspr,insiderChange,earningsDays,earningsDate,epsHistory,flags};
+  const sc=computeScores(raw);
+  return{...raw,...sc,signal:toSig(sc.total)};
+}
+
+const fmtCap=v=>{if(!v)return'—';if(v>=1e9)return`$${(v/1e9).toFixed(1)}B`;return`$${(v/1e6).toFixed(0)}M`;};
+const fmtD=s=>{if(!s)return null;return new Date(s).toLocaleDateString('en-US',{day:'2-digit',month:'short'});};
+const sgn=v=>v>0?'+':'';
+function sbr(val,max,color,label){return`<div class="subbar-row"><div class="subbar-lbl">${label}</div><div class="subbar-bg"><div class="subbar-fill" style="width:${Math.min(100,Math.max(0,val/max*100))}%;background:${color}"></div></div><div class="subbar-val" style="color:${color}">${val}</div></div>`;}
+function recLbl(v){return(window._recLbl||function(v){if(v===null)return'<span class="cd">—</span>';if(v<=1.5)return'<span class="cg">STRONG BUY</span>';if(v<=2.5)return'<span class="cg">BUY</span>';if(v<=3.5)return'<span class="cd">HOLD</span>';if(v<=4.5)return'<span class="co">SELL</span>';return'<span class="cr">STRONG SELL</span>';})(v);}
+function msprLbl(v){if(v===null)return'<span class="cd">—</span>';const r=Math.round(v);if(v>30)return`<span class="cg">↑ Buying (${r})</span>`;if(v>0)return`<span class="cau">→ Neutral+ (${r})</span>`;if(v>-20)return`<span class="co">→ Neutral- (${r})</span>`;return`<span class="cr">↓ Selling (${r})</span>`;}
+function sentLbl(v){if(v===null)return'<span class="cd">—</span>';if(v>0.35)return'<span class="cg">😊 Positive</span>';if(v>0.05)return'<span class="cau">🙂 Slightly+</span>';if(v>-0.2)return'<span class="co">😐 Neutral</span>';return'<span class="cr">😟 Negative</span>';}
+
+function renderSum(){
+  const g=document.getElementById('sumGrid');g.style.display='grid';
+  const lbl={'FUERTE COMPRA':'STRONG BUY','INTERESANTE':'INTERESTING','VIGILAR':'WATCH','DÉBIL':'WEAK'};
+  g.innerHTML=Object.keys(SIG).map(s=>{const c=SIG[s],n=allData.filter(d=>d.signal===s).length;return`<div class="scard" onclick="fClick('${s}')" style="border-color:${c}22"><div class="sc-n" style="color:${c}">${n}</div><div class="sc-l">${lbl[s]}</div></div>`;}).join('');
+  if(window._renderHStats){window._renderHStats();}else{document.getElementById('hstats').innerHTML=`<div style="text-align:right"><div class="hstat-n2" style="color:var(--green)">${allData.length}</div><div class="hstat-l2">ANALYZED</div></div><div style="text-align:right"><div class="hstat-n2" style="color:var(--pink)">${allData.filter(d=>d.volRatio&&d.volRatio>2).length}</div><div class="hstat-l2">VOL SPIKE</div></div><div style="text-align:right"><div class="hstat-n2" style="color:var(--teal)">${allData.filter(d=>d.shortPct&&d.shortPct>15).length}</div><div class="hstat-l2">SHORT&gt;15%</div></div><div style="text-align:right"><div class="hstat-n2" style="color:var(--gold)">${allData.filter(d=>d.earningsDays!==null&&d.earningsDays<=30).length}</div><div class="hstat-l2">EARN&lt;30D</div></div>`;}
+}
+
+function renderTable(){
+  let rows=[...allData].filter(d=>{if(curF==='ALL')return true;if(curF==='VOL_SPIKE')return d.volRatio&&d.volRatio>2;if(curF==='SHORT_SQ')return d.shortPct&&d.shortPct>15;return d.signal===curF;});
+  rows.sort((a,b)=>{
+    let v=0;
+    if(curS==='score')v=b.total-a.total;
+    else if(curS==='fund')v=b.fund-a.fund;
+    else if(curS==='sent')v=(b.sent+b.analyst)-(a.sent+a.analyst);
+    else if(curS==='analyst')v=b.analyst-a.analyst;
+    else if(curS==='momentum')v=b.momentum-a.momentum;
+    else if(curS==='short')v=(b.shortPct||0)-(a.shortPct||0);
+    else if(curS==='earnings')v=(a.earningsDays??999)-(b.earningsDays??999);
+    else if(curS==='price')v=(b.price||0)-(a.price||0);
+    else if(curS==='upside')v=(b.upside||0)-(a.upside||0);
+    else if(curS==='ticker')v=a.sym.localeCompare(b.sym);
+    else if(curS==='signal'){const o={'FUERTE COMPRA':0,'INTERESANTE':1,'VIGILAR':2,'DÉBIL':3};v=(o[a.signal]||0)-(o[b.signal]||0);}
+    return v*sortDir;
+  });
+  document.getElementById('tbl').style.display=rows.length?'table':'none';
+  document.getElementById('empty').style.display=rows.length?'none':'block';
+  const maxes=[25,20,15,17,15,13],cols=['var(--blue)','var(--purple)','var(--green)','var(--gold)','var(--orange)','var(--teal)'];
+  document.getElementById('tbody').innerHTML=rows.map(d=>{
+    const c=SIG[d.signal],vals=[d.fund,d.sent,d.analyst,d.momentum,d.earPts,d.volShort];
+    const bkd=`<div class="bkd">${vals.map((v,j)=>`<div class="bseg" style="width:${Math.max(2,Math.min(28,v/maxes[j]*28))}px;background:${cols[j]}"></div>`).join('')}</div>`;
+    const flagsHtml=d.flags.map(f=>`<span class="flag" style="color:${f.color};border-color:${f.color}44">${f.label}</span>`).join('');
+    const ef=fmtD(d.earningsDate);
+    const edHtml=d.earningsDays!==null?`<span style="color:${d.earningsDays<=20?'var(--gold)':d.earningsDays<=45?'var(--orange)':'var(--txt)'}">📅 ${ef} <span style="opacity:.4;font-size:7px">${d.earningsDays}d</span></span>`:'<span class="cd">—</span>';
+    const vsHtml=`${d.volRatio?`<span class="${d.volRatio>2?'vol-spike':'cd'}">${d.volRatio>2?'⚡':''}${d.volRatio}x</span>`:''} ${d.shortPct?`<span class="${d.shortPct>15?'ct':'cd'}" style="margin-left:3px">${d.shortPct>15?'🎯':''}${d.shortPct}%</span>`:''}${!d.volRatio&&!d.shortPct?'<span class="cd">—</span>':''}`;
+    const ch=d.priceChange1D;
+    const prHtml=d.price?`$${d.price.toFixed(2)}<span style="font-size:8px;color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!==null?sgn(ch)+ch+'%':''}</span>`:'—';
+    const upHtml=d.upside!==null?`<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>`:'<span class="cd">—</span>';
+    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div><div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return({'FUERTE COMPRA':'STRONG BUY','INTERESANTE':'INTERESTING','VIGILAR':'WATCH','DÉBIL':'WEAK'}[s]||s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td>${sbr(d.fund,25,'var(--blue)','')}</td><td>${sbr(d.sent,20,'var(--purple)','')}</td><td>${sbr(d.analyst,15,'var(--green)','')}</td><td>${sbr(d.momentum,17,'var(--gold)','')}</td><td>${edHtml}</td><td>${vsHtml}</td><td><div class="flag-row">${flagsHtml||'<span class="cd" style="font-size:8px">—</span>'}</div></td><td style="font-size:11px;color:var(--txb)">${prHtml}</td><td>${upHtml}</td></tr><tr class="dr" id="dt-${d.sym}"><td colspan="13">${renderDet(d)}</td></tr>`;
+  }).join('');
+}
+
+function renderDet(d){
+  const sentPct=d.newsSent!==null?Math.round(((d.newsSent+1)/2)*100):50;
+  const epsHtml=d.epsHistory.length?`<div class="eps-grid">${d.epsHistory.slice(0,4).map(e=>`<div class="eps-cell"><div class="eps-q">${e.q}</div><div class="eps-v" style="color:${e.surprise>3?'var(--green)':e.surprise<-3?'var(--red)':'var(--txt)'}">${e.surprise>0?'+':''}${e.surprise}%</div><div style="font-size:7px;color:var(--txt);margin-top:2px">${e.actual} vs ${e.est}</div></div>`).join('')}</div>`:'<span class="cd" style="font-size:9px">No history</span>';
+  const newsHtml=d.newsItems?.length?d.newsItems.slice(0,6).map(n=>`<div class="news-item"><div class="news-h">${n.headline}</div><div class="news-m">${n.source} · ${n.time}${n.sentiment?`<span class="news-s" style="color:${n.sentiment==='positive'?'var(--green)':n.sentiment==='negative'?'var(--red)':'var(--txt)'}">${n.sentiment==='positive'?'▲ Pos':n.sentiment==='negative'?'▼ Neg':'→ Neu'}</span>`:''}</div></div>`).join(''):'<span class="cd" style="font-size:9px">No recent news</span>';
+  return`<div class="det-inner">
+  <div class="det-card"><div class="det-title">${(window._detTitles&&window._detTitles().fund)||"📊 FUNDAMENTALS"} <span style="font-size:7px;color:#1e1e30;margin-left:4px">sector P/E benchmark: ${SECTOR_PE[d.sector]||22}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipPE)||"Price-to-Earnings. How much you pay per $1 of company profit.">P/E Ratio</span><span class="dv ${d.pe&&d.pe<(SECTOR_PE[d.sector]||22)?'cg':'cd'}">${d.pe??'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipPB)||"Price-to-Book.">P/B Ratio</span><span class="dv ${d.pb&&d.pb<2?'cg':'cd'}">${d.pb??'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipDE)||"Debt/Equity ratio.">Debt/Equity</span><span class="dv ${d.de!==null&&d.de<0.5?'cg':d.de>1.5?'cr':'cd'}">${d.de!==null?Math.round(d.de*100)+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipRevGrowth)||"Revenue growth YoY.">Revenue Growth</span><span class="dv ${d.revenueGrowth>15?'cg':d.revenueGrowth<0?'cr':'cd'}">${d.revenueGrowth!==null?sgn(d.revenueGrowth)+d.revenueGrowth+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipGrossMargin)||"Gross margin %.">Gross Margin</span><span class="dv ${d.grossMargin>40?'cg':'cd'}">${d.grossMargin!==null?d.grossMargin+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipROE)||"Return on Equity.">ROE</span><span class="dv ${d.roe>15?'cg':d.roe<0?'cr':'cd'}">${d.roe!==null?d.roe+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipROA)||"Return on Assets.">ROA</span><span class="dv ${d.roa>8?'cg':d.roa<0?'cr':'cd'}">${d.roa!==null?d.roa+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipCurrentRatio)||"Current ratio.">Current Ratio</span><span class="dv ${d.currentRatio>=1.5?'cg':d.currentRatio<1?'cr':'cd'}">${d.currentRatio?Math.round(d.currentRatio*100)/100:'—'}</span></div>
+    <div class="hr-mini"></div>
+    <div class="det-r"><span class="dk" style="color:${d.dilPenalty<-3?'var(--red)':'var(--txt)'}">⚠ Share dilution/yr</span><span class="dv ${d.sharesDilution>8?'cr':d.sharesDilution>3?'co':'cg'}">${d.sharesDilution!==null?sgn(d.sharesDilution)+d.sharesDilution+'%':'—'} ${d.dilPenalty<0?`(${d.dilPenalty}pts)`:''}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipMarketCap)||"Market cap.">Market Cap</span><span class="dv cd">${fmtCap(d.cap)}</span></div>
+  </div>
+  <div class="det-card"><div class="det-title">${(window._detTitles&&window._detTitles().momentum)||"⚡ PRICE & MOMENTUM"}</div>
+    <div class="det-r"><span class="dk">Price</span><span class="dv cd">${d.price?'$'+d.price.toFixed(2):'—'}</span></div>
+    <div class="det-r"><span class="dk">1-Day</span><span class="dv ${d.priceChange1D>0?'cg':d.priceChange1D<0?'cr':'cd'}">${d.priceChange1D!==null?sgn(d.priceChange1D)+d.priceChange1D+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tip4W)||"4-week price change.">4-Week</span><span class="dv ${d.priceChange4W>5?'cg':d.priceChange4W<-5?'cr':'cd'}">${d.priceChange4W!==null?sgn(d.priceChange4W)+d.priceChange4W+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tip52WLow)||"52-week low.">52W Low</span><span class="dv cd">${d.lo52?'$'+d.lo52.toFixed(2):'—'} ${d.pct52Low!==null?'(+'+d.pct52Low+'%)':''}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tip52WHigh)||"52-week high.">52W High</span><span class="dv cd">${d.hi52?'$'+d.hi52.toFixed(2):'—'} ${d.pct52High!==null?'('+d.pct52High+'%)':''}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipVolAvg)||"Volume vs 10D average.">Volume vs 10D avg</span><span class="dv ${d.volRatio>2.5?'ck':d.volRatio>1.5?'cau':'cd'}">${d.volRatio?d.volRatio+'x':'—'}${d.volRatio>2.5?' ⚡':''}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipShortFloat)||"Short % of float.">Short % float</span><span class="dv ${d.shortPct>20?'ct':d.shortPct>10?'cau':'cd'}">${d.shortPct!==null?d.shortPct+'%':'—'}${d.shortPct>20?' 🎯':''}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipSqueeze)||"Short squeeze potential.">Squeeze Potential</span><span class="dv ${d.shortPct>15&&d.priceChange4W>3?'ct':'cd'}">${d.shortPct>20&&d.priceChange4W>5?(window._st&&window._st.lSqHigh)||'🔥 HIGH':d.shortPct>15&&d.priceChange4W>0?(window._st&&window._st.lSqMod)||'📈 MOD':d.shortPct>10?(window._st&&window._st.lSqWatch)||'👁 WATCH':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipBeta)||"Beta volatility.">Beta</span><span class="dv cd">${d.beta?Math.round(d.beta*100)/100:'—'}</span></div>
+  </div>
+  <div class="det-card"><div class="det-title">${(window._detTitles&&window._detTitles().analysts)||"👥 ANALYSTS & INSIDER"}</div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipConsensus)||"Analyst consensus.">Consensus</span><span class="dv">${recLbl(d.recMean)}</span></div>
+    <div class="det-r"><span class="dk">Buy / Hold / Sell</span><span class="dv cd">${d.recBuy} / ${d.recHold} / ${d.recSell}</span></div>
+    <div class="stkbar">${(d.recBuy+d.recHold+d.recSell)>0?`<div style="width:${d.recBuy/(d.recBuy+d.recHold+d.recSell)*100}%;background:var(--green)"></div><div style="width:${d.recHold/(d.recBuy+d.recHold+d.recSell)*100}%;background:#1e1e35"></div><div style="width:${d.recSell/(d.recBuy+d.recHold+d.recSell)*100}%;background:var(--red)"></div>`:''}</div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipPriceTarget)||"Analyst price target.">Price Target</span><span class="dv ${d.upside>20?'cg':'cd'}">${d.targetPrice?'$'+d.targetPrice.toFixed(2):'—'} ${d.upside!==null?'('+sgn(d.upside)+d.upside+'%)':''}</span></div>
+    <div class="hr-mini"></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipInsiderMSPR)||"Insider MSPR.">Insider MSPR (3M)</span><span class="dv">${msprLbl(d.mspr)}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipInsiderFlow)||"Net insider flow.">Net Insider Flow</span><span class="dv ${d.insiderChange>0?'cg':d.insiderChange<0?'cr':'cd'}">${d.insiderChange!==null?(d.insiderChange>0?(window._st&&window._st.lInsiderBuying)||'↑ Net buying':(window._st&&window._st.lInsiderSelling)||'↓ Net selling'):'—'}</span></div>
+  </div>
+  <div class="det-card"><div class="det-title">${(window._detTitles&&window._detTitles().earnings)||"📅 EARNINGS & EPS"}</div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipNextEarnings)||"Next earnings date.">Next earnings</span><span class="dv ${d.earningsDays!==null&&d.earningsDays<=20?'cau':'cd'}">${d.earningsDate?fmtD(d.earningsDate)+' ('+d.earningsDays+'d)':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipBeatStreak)||"EPS beat streak.">Beat streak</span><span class="dv ${d.streak>=3?'cg':d.streak>=2?'cau':'cd'}">${d.streak}/4 quarters ${d.streak>=3?'🔥':''}</span></div>
+    <div class="hr-mini"></div>
+    <div style="font-size:7px;color:var(--txt);letter-spacing:1.5px;margin-bottom:6px;">EPS SURPRISE VS ESTIMATE</div>
+    ${epsHtml}
+    <div class="hr-mini"></div>
+    <div style="font-size:7px;letter-spacing:2px;color:var(--txt);margin-bottom:8px;margin-top:4px;">🔵 SCORE BREAKDOWN</div>
+    ${sbr(d.fund,25,'var(--blue)','Fundamental')}${sbr(d.sent,20,'var(--purple)','Sentiment')}${sbr(d.analyst,15,'var(--green)','Analysts')}${sbr(d.momentum,17,'var(--gold)','Momentum')}${sbr(d.earPts,15,'var(--orange)','Earnings')}${sbr(d.volShort,13,'var(--teal)','Vol/Short')}
+    ${d.dilPenalty<0?`<div style="font-size:8px;color:var(--red);margin-top:5px;">⚠ Dilution: ${d.dilPenalty}pts</div>`:''}${d.debtPenalty<0?`<div style="font-size:8px;color:var(--orange);">⚠ Debt+growth: ${d.debtPenalty}pts</div>`:''}
+  </div>
+  <div class="det-card" style="grid-column:1/-1"><div class="det-title">📰 RECENT NEWS (14 days) &nbsp; ${sentLbl(d.newsSent)} ${d.newsSent!==null?`<div style="width:90px;height:4px;background:var(--bord2);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:7px"><div style="width:${sentPct}%;height:100%;background:${d.newsSent>0?'var(--green)':'var(--red)'};border-radius:2px"></div></div>`:''}</div>
+    <div style="display:flex;flex-direction:column;gap:0">${newsHtml}</div>
+  </div></div>`;
+}
+
+function toggleDet(sym){
+  const dt=document.getElementById('dt-'+sym),ar=document.getElementById('ar-'+sym),was=dt.classList.contains('open');
+  document.querySelectorAll('.dr.open').forEach(r=>r.classList.remove('open'));document.querySelectorAll('.arr.op').forEach(a=>a.classList.remove('op'));
+  if(!was){dt.classList.add('open');ar.classList.add('op');}
+}
+
+async function runScan(){
+  if(running)return;running=true;allData=[];
+  const btn=document.getElementById('btnScan');
+  btn.disabled=true;btn.textContent='ANALYZING...';
+  document.getElementById('livdot').className='livdot scan';
+  document.getElementById('progWrap').style.display='block';
+  document.getElementById('empty').style.display='none';
+  document.getElementById('tbl').style.display='none';
+  document.getElementById('sumGrid').style.display='none';
+  for(let i=0;i<TICKERS.length;i++){
+    const sym=TICKERS[i];const pct=Math.round(((i+1)/TICKERS.length)*100);
+    document.getElementById('progFill').style.width=pct+'%';
+    document.getElementById('progMsg').textContent=`[${i+1}/${TICKERS.length}] ${sym} · fundamentals · volume · short · EPS · insider · news...`;
+    document.getElementById('progPct').textContent=pct+'%';
+    const d=await fetchTicker(sym);
+    if(d){allData.push(d);allData.sort((a,b)=>b.total-a.total);renderSum();renderTable();}
+    await slp(420);
+  }
+  const now=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('hmeta').textContent=`USA · NYSE/NASDAQ · ${allData.length} companies analyzed · Updated ${now} · Click any row for full breakdown`;
+  document.getElementById('livdot').className='livdot done';
+  btn.disabled=false;btn.textContent='↻ UPDATE';
+  document.getElementById('progWrap').style.display='none';
+  document.getElementById('rlWarn').style.display='none';
+  running=false;
+}
+
+function setF(v,btn){curF=v;document.querySelectorAll('.bf').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');renderTable();}
+function fClick(v){curF=v;renderTable();}
+function setS(v,btn){curS=v;sortDir=1;document.querySelectorAll('.bs').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');updateArrows();renderTable();}
+function thSort(v){
+  if(curS===v){sortDir*=-1;}else{curS=v;sortDir=1;}
+  document.querySelectorAll('.bs').forEach(b=>b.classList.remove('on'));
+  updateArrows();renderTable();
+}
+function updateArrows(){
+  const cols=['ticker','signal','score','fund','sent','analyst','momentum','earnings','short','price','upside'];
+  cols.forEach(c=>{
+    const el=document.getElementById('th-'+c);
+    if(!el)return;
+    if(curS===c){el.textContent=sortDir===1?'▾':'▴';el.style.color='var(--green)';}
+    else{el.textContent='';el.style.color='';}
+  });
+}
+
+async function activateScanner(){
+  const key=document.getElementById('modalKeyInp').value.trim();
+  if(!key||key.length<8){document.getElementById('modalErr').innerHTML='Please enter a valid API Key from finnhub.io/dashboard';document.getElementById('modalErr').style.display='block';return;}
+  const btn=document.getElementById('modalBtn');btn.disabled=true;btn.textContent='VERIFYING...';document.getElementById('modalErr').style.display='none';
+  try{const r=await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=AAPL&token=${key}`,{signal:AbortSignal.timeout(9000)});const j=await r.json();if(!j?.name)throw new Error();}
+  catch{document.getElementById('modalErr').innerHTML='⚠ Invalid API Key. Copy it exactly from finnhub.io/dashboard.';document.getElementById('modalErr').style.display='block';btn.disabled=false;btn.textContent='▶ ACTIVATE STOCKRAPTOR';return;}
+  KEY=key;try{localStorage.setItem('sr_key',key);}catch{}
+  closeModal();showScanner();
+}
+
+window.addEventListener('load',()=>{
+  try{const k=localStorage.getItem('sr_key');if(k)document.getElementById('modalKeyInp').value=k;}catch{}
+  document.getElementById('modalKeyInp').addEventListener('keydown',e=>{if(e.key==='Enter')activateScanner();});
+});
+</script>
+
+<script>
+// ══════════════════════════════════════════
+// SCANNER AUTH GUARD
+// ══════════════════════════════════════════
+const { createClient } = supabase;
+let sb2, scanUser = null, scanProfile = null;
+
+async function initScannerAuth() {
+  if (CONFIG.supabaseUrl === 'YOUR_SUPABASE_URL') {
+    // Dev mode: skip auth gate for local testing
+    document.getElementById('authGate').style.display = 'none';
+    document.getElementById('scannerNav').style.display = 'flex';
+    document.querySelector('#scannerNav + *') && (document.querySelector('body > div:not(#authGate):not(#upgradeGate):not(#scannerNav):not(.bg-grid)').style.marginTop = '52px');
+    addBodyPadding();
+    return;
+  }
+
+  sb2 = createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
+  const { data: { session } } = await sb2.auth.getSession();
+
+  if (!session?.user) {
+    // Not logged in — show gate, keep scanner hidden
+    document.getElementById('authGate').style.display = 'flex';
+    return;
+  }
+
+  scanUser = session.user;
+  const { data: profile } = await sb2.from('profiles').select('*').eq('id', scanUser.id).single();
+  scanProfile = profile;
+
+  // Hide gate, show nav
+  document.getElementById('authGate').style.display = 'none';
+  document.getElementById('scannerNav').style.display = 'flex';
+  addBodyPadding();
+
+  // Update nav
+  const plan = scanProfile?.plan || 'free';
+  const snPlan = document.getElementById('snPlan');
+  snPlan.textContent = plan.toUpperCase();
+  snPlan.className = 'sn-plan ' + plan;
+  document.getElementById('snUser').textContent = scanUser.email.split('@')[0];
+
+  // Limit tickers by plan
+  applyPlanLimits(plan);
+
+  // Handle upgrade success redirect
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('session_id')) {
+    showUpgradeSuccess(params.get('plan') || plan);
+    window.history.replaceState({}, '', '/scanner.html');
+  }
+}
+
+function addBodyPadding() {
+  document.body.style.paddingTop = '52px';
+}
+
+function applyPlanLimits(plan) {
+  // Free plan: limit to first 40 tickers
+  if (plan === 'free' && typeof TICKERS !== 'undefined') {
+    const original = [...TICKERS];
+    TICKERS.length = 0;
+    TICKERS.push(...original.slice(0, 40));
+
+    // Show upgrade banner in scanner header
+    const hdr = document.getElementById('scanner-header') || document.querySelector('.scanner-wrap');
+    if (hdr) {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'background:#ffcc0011;border:1px solid #ffcc0033;border-radius:6px;padding:10px 16px;margin-bottom:14px;font-size:11px;color:#ffcc00;font-family:JetBrains Mono,monospace;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between;gap:12px;';
+      banner.innerHTML = '<span>⚡ Free plan: scanning 40 of 200 companies.</span><a href="/#pricing" style="color:#00ff94;font-weight:700;text-decoration:none;">Upgrade to Pro →</a>';
+      hdr.insertBefore(banner, hdr.firstChild);
+    }
+  }
+}
+
+function showUpgradeGate(msg) {
+  document.getElementById('upgradeDesc').textContent = msg || 'This feature requires a Pro or Elite plan.';
+  document.getElementById('upgradeGate').classList.add('open');
+}
+
+function showUpgradeSuccess(plan) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:32px;right:32px;z-index:999;background:#06060f;border:1px solid #00ff94;border-radius:8px;padding:16px 22px;font-size:14px;color:#e8e8f8;font-family:Barlow,sans-serif;box-shadow:0 8px 32px #00000060;transition:all .3s;max-width:320px;';
+  t.textContent = '🎉 Welcome to ' + plan.toUpperCase() + '! Scanner fully unlocked.';
+  document.body.appendChild(t);
+  setTimeout(() => t.style.opacity = '0', 4000);
+  setTimeout(() => t.remove(), 4500);
+}
+
+window.addEventListener('load', initScannerAuth);
+window.addEventListener('load', function(){ showScanner(); });
+</script>
+
+
+<!-- Floating tooltip -->
+<div id="sr-tooltip"></div>
+<script>
+(function(){
+  const tip = document.getElementById('sr-tooltip');
+  let hideTimer;
+
+  document.addEventListener('mouseover', function(e){
+    const el = e.target.closest('.tt');
+    if (!el) return;
+    const text = el.getAttribute('data-tip');
+    if (!text) return;
+
+    clearTimeout(hideTimer);
+    tip.textContent = text;
+    tip.classList.add('visible');
+    positionTip(e);
+  });
+
+  document.addEventListener('mousemove', function(e){
+    if (!tip.classList.contains('visible')) return;
+    positionTip(e);
+  });
+
+  document.addEventListener('mouseout', function(e){
+    const el = e.target.closest('.tt');
+    if (!el) return;
+    hideTimer = setTimeout(() => tip.classList.remove('visible'), 80);
+  });
+
+  function positionTip(e){
+    const W = window.innerWidth, H = window.innerHeight;
+    const tw = 230, th = tip.offsetHeight || 80;
+    const pad = 12;
+    let x = e.clientX + 14;
+    let y = e.clientY - th - 12;
+
+    // flip right→left if overflows right edge
+    if (x + tw + pad > W) x = e.clientX - tw - 14;
+    // flip above→below if overflows top
+    if (y < pad) y = e.clientY + 20;
+    // clamp left
+    if (x < pad) x = pad;
+    // clamp bottom
+    if (y + th + pad > H) y = H - th - pad;
+
+    tip.style.left = x + 'px';
+    tip.style.top  = y + 'px';
+  }
+})();
+</script>
+
+<script>
+
+// ══════════════════════════════════════════════════════════════
+// CACHE LOADER — carga el análisis diario desde Supabase
+// ══════════════════════════════════════════════════════════════
+async function loadDailyCache() {
+  if (!sb2) return;
+
+  // Show loading indicator
+  const cacheLoading = document.getElementById('cacheLoading');
+  const emptyState   = document.getElementById('emptyState');
+  const cacheBanner  = document.getElementById('cacheBanner');
+  if (cacheLoading) cacheLoading.style.display = 'block';
+  if (emptyState)   emptyState.style.display   = 'none';
+
+  try {
+    const { data, error } = await sb2
+      .from('scan_cache')
+      .select('results, scan_date, scanned_at, total_count')
+      .eq('id', 'daily')
+      .single();
+
+    if (error || !data?.results?.length) {
+      // No cache yet — show normal empty state
+      if (cacheLoading) cacheLoading.style.display = 'none';
+      if (emptyState)   emptyState.style.display   = 'block';
+      return;
+    }
+
+    // Load results from cache
+    allData = data.results;
+
+    // Show cache banner
+    const scanDate = new Date(data.scanned_at);
+    const dateStr  = scanDate.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    const timeStr  = scanDate.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+    const lang     = localStorage.getItem('sr_lang') || 'en';
+
+    const stampEl  = document.getElementById('cacheStamp');
+    const rescanEl = document.getElementById('btnRescan');
+
+    if (stampEl) stampEl.innerHTML = lang === 'es'
+      ? `Análisis automático del <b>${dateStr} a las ${timeStr}</b> · ${data.total_count} empresas analizadas`
+      : `Daily scan from <b>${dateStr} at ${timeStr}</b> · ${data.total_count} companies analyzed`;
+
+    if (rescanEl) rescanEl.textContent = lang === 'es' ? '↻ NUEVO SCAN' : '↻ RE-SCAN NOW';
+
+    if (cacheBanner) cacheBanner.style.display = 'flex';
+    if (cacheLoading) cacheLoading.style.display = 'none';
+
+    // Update header meta
+    const hmeta = document.getElementById('hmeta');
+    if (hmeta) hmeta.textContent = lang === 'es'
+      ? `USA · NYSE/NASDAQ · ${allData.length} empresas · Actualizado ${dateStr} · Haz clic en cualquier fila para ver el análisis completo`
+      : `USA · NYSE/NASDAQ · ${allData.length} companies analyzed · Updated ${dateStr} · Click any row for full breakdown`;
+
+    // Update live dot
+    const livdot = document.getElementById('livdot');
+    if (livdot) livdot.className = 'livdot done';
+
+    renderSum();
+    renderTable();
+    applyScannerLang();
+
+  } catch (e) {
+    console.warn('Cache load failed:', e);
+    if (cacheLoading) cacheLoading.style.display = 'none';
+    if (emptyState)   emptyState.style.display   = 'block';
+  }
+}
+
+// ══════════════════════════════════════════
+// SCANNER i18n
+// ══════════════════════════════════════════
+const SCANNER_LANG = {
+  en: {
+    // toolbar
+    btnScan:'▶ ANALYZE NOW', fAll:'ALL', fStrongBuy:'🟢 STRONG BUY', fInteresting:'🟡 INTERESTING',
+    fWatch:'🟠 WATCH', fWeak:'🔴 WEAK', fVolSpike:'⚡ VOL SPIKE', fShortSq:'🎯 SHORT SQUEEZE',
+    ssScore:'SCORE', ssFund:'FUND.', ssSent:'SENTIMENT', ssMomentum:'MOMENTUM', ssEarnings:'EARNINGS',
+    // table headers
+    thTicker:'TICKER / SECTOR', thSignal:'SIGNAL', thScore:'TOTAL SCORE', thFund:'FUND.',
+    thSent:'SENTIMENT', thAnalyst:'ANALYSTS', thMomentum:'MOMENTUM', thEarnings:'EARNINGS',
+    thShort:'VOL/SHORT', thFlags:'⚠ FLAGS', thPrice:'PRICE', thUpside:'UPSIDE',
+    // empty / stats
+    emptyState:'READY TO HUNT · 200 STOCKS · ~25 MIN',
+    hAnalyzed:'ANALYZED', hVolSpike:'VOL SPIKE', hShort:'SHORT>15%', hEarn:'EARN<30D',
+    // signals
+    sigStrongBuy:'STRONG BUY', sigInteresting:'INTERESTING', sigWatch:'WATCH', sigWeak:'WEAK',
+    // analyst labels
+    recStrongBuy:'STRONG BUY', recBuy:'BUY', recHold:'HOLD', recSell:'SELL', recStrongSell:'STRONG SELL',
+    // detail section titles
+    detFundamentals:'📊 FUNDAMENTALS', detMomentum:'⚡ PRICE & MOMENTUM',
+    detAnalysts:'👥 ANALYSTS & INSIDER', detEarnings:'📅 EARNINGS & EPS', detNews:'📰 RECENT NEWS (14 days)',
+    // nav
+    snBack:'← Home', scanRunning:'SCANNING...', scanDone:'✓ SCAN COMPLETE',
+    // detail labels
+    lPE:'P/E Ratio', lPB:'P/B Ratio', lDE:'Debt/Equity', lRevGrowth:'Revenue Growth',
+    lGrossMargin:'Gross Margin', lROE:'ROE', lROA:'ROA', lCurrentRatio:'Current Ratio',
+    lMarketCap:'Market Cap', lShareDilution:'⚠ Share dilution/yr',
+    lPrice:'Price', l1D:'1-Day', l4W:'4-Week', l52WLow:'52W Low', l52WHigh:'52W High',
+    lVolAvg:'Volume vs 10D avg', lShortFloat:'Short % float', lSqueeze:'Squeeze Potential', lBeta:'Beta',
+    lConsensus:'Consensus', lBuyHoldSell:'Buy / Hold / Sell', lPriceTarget:'Price Target',
+    lInsiderMSPR:'Insider MSPR (3M)', lInsiderFlow:'Net Insider Flow',
+    lNextEarnings:'Next earnings', lBeatStreak:'Beat streak', lEpsTitle:'EPS SURPRISE VS ESTIMATE',
+    lScoreBreakdown:'🔵 SCORE BREAKDOWN',
+    lInsiderBuying:(window._st&&window._st.lInsiderBuying)||'↑ Net buying', lInsiderSelling:(window._st&&window._st.lInsiderSelling)||'↓ Net selling',
+    lQtrSuffix:(window._st&&window._st.lQtrSuffix)||'quarters', lNoHistory:(window._st&&window._st.lNoHistory)||'No history', lNoNews:(window._st&&window._st.lNoNews)||'No recent news',
+    lSqHigh:(window._st&&window._st.lSqHigh)||'🔥 HIGH', lSqMod:(window._st&&window._st.lSqMod)||'📈 MOD', lSqWatch:(window._st&&window._st.lSqWatch)||'👁 WATCH',
+    // column tooltips
+    tipSignal:'Overall verdict based on the total score. STRONG BUY ≥72 · INTERESTING ≥48 · WATCH ≥25 · WEAK <25',
+    tipScore:'Composite score from 0–100 combining 14 factors: fundamentals, sentiment, analyst consensus, momentum, earnings, volume and short squeeze potential.',
+    tipFund:'Fundamental score (0–25 pts). Evaluates P/E ratio vs sector average, P/B ratio, debt/equity, revenue growth, gross margin and ROE. Penalizes share dilution >8%/yr.',
+    tipSent:'News sentiment score (0–12 pts). Analyzes the tone of news headlines from the last 14 days. Positive news coverage pushes this score up.',
+    tipAnalyst:'Analyst score (0–15 pts). Combines Wall Street consensus (Buy/Hold/Sell ratings) and average price target upside vs current price.',
+    tipMomentum:'Momentum score (0–17 pts). Measures 52-week price performance, 4-week trend, and volatility (Beta). High momentum = stock trending strongly upward.',
+    tipEarnings:'Earnings score (0–15 pts). Rewards companies with upcoming earnings dates and consecutive quarterly EPS beats. A 3+ quarter beat streak is a strong signal.',
+    tipShort:'Volume & short interest score (0–13 pts). Detects volume spikes vs 10-day average, and high short float % which can trigger a short squeeze.',
+    tipFlags:'Special alerts: ⚡ Volume spike >2.5x average · 🎯 Short squeeze setup · 📅 Earnings within 20 days · ⚠ Dilution detected',
+    tipUpside:'Analyst price target upside. The % difference between the current price and the average analyst 12-month price target. >20% is considered high upside.',
+    // detail tooltips
+    tipPE:'Price-to-Earnings. How much you pay per $1 of company profit. Lower is cheaper vs the sector average. Negative means the company is losing money.',
+    tipPB:(window._st&&window._st.tipPB)||"Price-to-Book.",
+    tipDE:'Debt divided by shareholder equity. Above 1.5 = heavily leveraged. Below 0.5 = financially conservative. High debt + slow growth is a red flag.',
+    tipRevGrowth:'Year-over-year revenue growth rate. Above 15% is strong for a small cap. Negative means the company is shrinking.',
+    tipGrossMargin:'Revenue minus cost of goods sold, as a %. Above 40% indicates a high-quality business with pricing power (e.g. software). Low margins are common in retail/manufacturing.',
+    tipROE:(window._st&&window._st.tipROE)||"Return on Equity.",
+    tipROA:'Return on Assets. How efficiently a company uses its total assets to generate profit. Above 8% is solid. Useful for comparing capital-intensive businesses.',
+    tipCurrentRatio:'Current assets divided by current liabilities. Above 1.5 = healthy, the company can comfortably pay short-term debts. Below 1 = potential liquidity risk.',
+    tipMarketCap:'Total market value of all shares. Small cap = $300M–$2B. Below $300M is micro-cap (higher risk). This scanner focuses on the small cap range.',
+    tip4W:'Price change over the last 4 weeks. A strong upward trend (+5% or more) is a positive momentum signal.',
+    tip52WLow:'The lowest price in the last 52 weeks. The % shown is how far the current price is above that low — useful to gauge recovery strength.',
+    tip52WHigh:'The highest price in the last 52 weeks. A negative % means the stock is trading below its annual peak — could be a pullback opportunity or a downtrend.',
+    tipVolAvg:(window._st&&window._st.tipVolAvg)||"Volume vs 10D average.",
+    tipShortFloat:'Percentage of the tradable shares currently sold short (bet against). Above 10% is elevated. Above 20% with rising price = potential short squeeze setup.',
+    tipSqueeze:'Short squeeze risk: when heavily shorted stocks start rising, short sellers must buy to cover their losses, accelerating the price rise. HIGH = short% >20% + rising price.',
+    tipBeta:'Volatility relative to the market. Beta 1 = moves with the market. Beta 2 = twice as volatile. High beta = bigger swings up AND down.',
+    tipConsensus:'Average Wall Street analyst recommendation. Strong Buy → Buy → Hold → Sell → Strong Sell. Based on all active analyst ratings.',
+    tipPriceTarget:'Average analyst 12-month price target. The % in brackets is the upside vs current price. Above +20% suggests analysts see significant room to grow.',
+    tipInsiderMSPR:'Mean Sentiment of Purchases vs Sales Ratio over 3 months. Positive = net insider buying (executives buying their own stock — bullish signal). Negative = net selling.',
+    tipInsiderFlow:'Whether company insiders (executives, directors) have been net buyers or sellers of their own stock in the last 3 months. Net buying is a strong bullish signal.',
+    tipNextEarnings:'Date of the next quarterly earnings report. Stocks often move sharply after earnings. Within 20 days = elevated near-term catalyst risk/opportunity.',
+    tipBeatStreak:'How many of the last 4 quarterly earnings reports beat analyst EPS estimates. 3–4 consecutive beats = the company consistently outperforms expectations.',
+  },
+  es: {
+    // toolbar
+    btnScan:'▶ ANALIZAR AHORA', fAll:'TODO', fStrongBuy:'🟢 COMPRA FUERTE', fInteresting:'🟡 INTERESANTE',
+    fWatch:'🟠 VIGILAR', fWeak:'🔴 DÉBIL', fVolSpike:'⚡ PICO VOLUMEN', fShortSq:'🎯 SHORT SQUEEZE',
+    ssScore:'SCORE', ssFund:'FUND.', ssSent:'SENTIMIENTO', ssMomentum:'MOMENTUM', ssEarnings:'RESULTADOS',
+    // table headers
+    thTicker:'TICKER / SECTOR', thSignal:'SEÑAL', thScore:'SCORE TOTAL', thFund:'FUND.',
+    thSent:'SENTIMIENTO', thAnalyst:'ANALISTAS', thMomentum:'MOMENTUM', thEarnings:'RESULTADOS',
+    thShort:'VOL/CORTOS', thFlags:'⚠ ALERTAS', thPrice:'PRECIO', thUpside:'POTENCIAL',
+    // empty / stats
+    emptyState:'LISTO PARA CAZAR · 200 ACCIONES · ~25 MIN',
+    hAnalyzed:'ANALIZADAS', hVolSpike:'PICO VOL', hShort:'CORTOS>15%', hEarn:'RESULT<30D',
+    // signals
+    sigStrongBuy:'COMPRA FUERTE', sigInteresting:'INTERESANTE', sigWatch:'VIGILAR', sigWeak:'DÉBIL',
+    // analyst labels
+    recStrongBuy:'COMPRA FUERTE', recBuy:'COMPRAR', recHold:'MANTENER', recSell:'VENDER', recStrongSell:'VENTA FUERTE',
+    // detail section titles
+    detFundamentals:'📊 FUNDAMENTALES', detMomentum:'⚡ PRECIO Y MOMENTUM',
+    detAnalysts:'👥 ANALISTAS E INSIDER', detEarnings:'📅 RESULTADOS Y EPS', detNews:'📰 NOTICIAS RECIENTES (14 días)',
+    // nav
+    snBack:'← Inicio', scanRunning:'ESCANEANDO...', scanDone:'✓ ANÁLISIS COMPLETO',
+    // detail labels
+    lPE:'Ratio P/E', lPB:'Ratio P/B', lDE:'Deuda/Capital', lRevGrowth:'Crecimiento ingresos',
+    lGrossMargin:'Margen bruto', lROE:'ROE', lROA:'ROA', lCurrentRatio:'Ratio corriente',
+    lMarketCap:'Cap. de mercado', lShareDilution:'⚠ Dilución acciones/año',
+    lPrice:'Precio', l1D:'1 día', l4W:'4 semanas', l52WLow:'Mín. 52 sem.', l52WHigh:'Máx. 52 sem.',
+    lVolAvg:'Volumen vs media 10D', lShortFloat:'% cortos en circulación', lSqueeze:'Potencial squeeze', lBeta:'Beta',
+    lConsensus:'Consenso', lBuyHoldSell:'Comprar / Mantener / Vender', lPriceTarget:'Precio objetivo',
+    lInsiderMSPR:'MSPR Insider (3M)', lInsiderFlow:'Flujo neto insider',
+    lNextEarnings:'Próx. resultados', lBeatStreak:'Rachas de batir estimaciones', lEpsTitle:'SORPRESA EPS VS ESTIMACIÓN',
+    lScoreBreakdown:'🔵 DESGLOSE DE SCORE',
+    lInsiderBuying:'↑ Compra neta', lInsiderSelling:'↓ Venta neta',
+    lQtrSuffix:'trimestres', lNoHistory:'Sin historial', lNoNews:'Sin noticias recientes',
+    lSqHigh:'🔥 ALTO', lSqMod:'📈 MODERADO', lSqWatch:'👁 VIGILAR',
+    // column tooltips
+    tipSignal:'Veredicto general basado en el score total. COMPRA FUERTE ≥72 · INTERESANTE ≥48 · VIGILAR ≥25 · DÉBIL <25',
+    tipScore:'Score compuesto de 0 a 100 que combina 14 factores: fundamentales, sentimiento, consenso de analistas, momentum, resultados, volumen y potencial de short squeeze.',
+    tipFund:'Score fundamental (0–25 pts). Evalúa el P/E vs la media sectorial, P/B, deuda/capital, crecimiento de ingresos, margen bruto y ROE. Penaliza la dilución >8%/año.',
+    tipSent:'Score de sentimiento de noticias (0–12 pts). Analiza el tono de los titulares de los últimos 14 días. Una cobertura positiva sube este score.',
+    tipAnalyst:'Score de analistas (0–15 pts). Combina el consenso de Wall Street (comprar/mantener/vender) y el potencial de subida respecto al precio objetivo.',
+    tipMomentum:'Score de momentum (0–17 pts). Mide el rendimiento en 52 semanas, la tendencia de 4 semanas y la volatilidad (Beta). Momentum alto = acción en fuerte tendencia alcista.',
+    tipEarnings:'Score de resultados (0–15 pts). Premia a empresas con fechas de resultados próximas y rachas consecutivas de batir el BPA estimado. 3+ trimestres consecutivos es una señal fuerte.',
+    tipShort:'Score de volumen e interés corto (0–13 pts). Detecta picos de volumen vs la media de 10 días, y un % alto de posiciones cortas que puede desencadenar un short squeeze.',
+    tipFlags:'Alertas especiales: ⚡ Pico de volumen >2.5x la media · 🎯 Posible short squeeze · 📅 Resultados en menos de 20 días · ⚠ Dilución detectada',
+    tipUpside:'Potencial alcista según el precio objetivo de los analistas. La diferencia % entre el precio actual y el precio objetivo medio a 12 meses. >20% indica alto potencial.',
+    // detail tooltips
+    tipPE:'Precio/Beneficio. Lo que pagas por cada $1 de beneficio. Más bajo = más barato respecto a la media sectorial. Negativo = la empresa pierde dinero.',
+    tipPB:'Precio/Valor en libros. Compara el precio de mercado con los activos netos. Por debajo de 1 = cotiza por debajo del valor contable — potencialmente infravalorada.',
+    tipDE:'Deuda dividida entre el capital de los accionistas. >1.5 = muy apalancada. <0.5 = financieramente conservadora. Alta deuda + crecimiento negativo es una señal de alerta.',
+    tipRevGrowth:'Tasa de crecimiento de ingresos año a año. Por encima del 15% es fuerte para una small cap. Negativo significa que la empresa está encogiendo.',
+    tipGrossMargin:'Ingresos menos coste de ventas, en %. Por encima del 40% indica un negocio de alta calidad con poder de fijación de precios (ej. software). Márgenes bajos son comunes en retail/manufactura.',
+    tipROE:'Rentabilidad sobre recursos propios. Mide con qué eficiencia genera beneficios con el dinero de los accionistas. >15% es fuerte. Negativo = pérdidas.',
+    tipROA:'Rentabilidad sobre activos totales. Mide la eficiencia con que usa sus activos para generar beneficio. >8% es sólido. Útil para comparar negocios intensivos en capital.',
+    tipCurrentRatio:'Activos corrientes divididos entre pasivos corrientes. >1.5 = saludable, puede pagar sus deudas a corto plazo. <1 = posible riesgo de liquidez.',
+    tipMarketCap:'Valor total de mercado de todas las acciones. Small cap = $300M–$2B. Por debajo de $300M es micro-cap (mayor riesgo). Este scanner se centra en el rango small cap.',
+    tip4W:'Variación del precio en las últimas 4 semanas. Una tendencia alcista fuerte (+5% o más) es una señal de momentum positivo.',
+    tip52WLow:'El precio más bajo de las últimas 52 semanas. El % muestra cuánto ha subido el precio desde ese mínimo — útil para medir la fuerza de la recuperación.',
+    tip52WHigh:'El precio más alto de las últimas 52 semanas. Un % negativo significa que cotiza por debajo del máximo anual — puede ser una oportunidad de entrada o una tendencia bajista.',
+    tipVolAvg:'El volumen de hoy dividido entre la media de 10 días. 2x = el doble de actividad normal. Un pico >2.5x sin malas noticias suele indicar compra institucional.',
+    tipShortFloat:'Porcentaje de las acciones en circulación actualmente vendidas en corto (apostando a la baja). >10% es elevado. >20% con precio subiendo = posible short squeeze.',
+    tipSqueeze:'Riesgo de short squeeze: cuando acciones muy corteadas empiezan a subir, los bajistas deben comprar para cubrir pérdidas, acelerando la subida. ALTO = cortos >20% + precio subiendo.',
+    tipBeta:'Volatilidad relativa al mercado. Beta 1 = se mueve con el mercado. Beta 2 = el doble de volátil. Beta alto = oscilaciones mayores tanto al alza como a la baja.',
+    tipConsensus:'Recomendación media de los analistas de Wall Street. Compra Fuerte → Comprar → Mantener → Vender → Venta Fuerte. Basado en todas las valoraciones activas.',
+    tipPriceTarget:'Precio objetivo medio de analistas a 12 meses. El % entre paréntesis es el potencial vs el precio actual. >+20% sugiere que los analistas ven mucho recorrido al alza.',
+    tipInsiderMSPR:'Ratio medio de sentimiento de compras vs ventas en 3 meses. Positivo = compra neta por insiders (ejecutivos comprando sus propias acciones — señal alcista). Negativo = venta neta.',
+    tipInsiderFlow:'Si los insiders de la empresa (ejecutivos, consejeros) han sido compradores o vendedores netos de sus propias acciones en los últimos 3 meses. Compra neta = señal alcista fuerte.',
+    tipNextEarnings:'Fecha del próximo informe trimestral de resultados. Las acciones suelen moverse bruscamente tras los resultados. En menos de 20 días = riesgo/oportunidad de catalizador próximo.',
+    tipBeatStreak:'Cuántos de los últimos 4 informes trimestrales superaron las estimaciones de BPA de los analistas. 3–4 consecutivos = la empresa supera sistemáticamente las expectativas.',
+  }
+};
+
+};
+
+function applyScannerLang() {
+  const lang = localStorage.getItem('sr_lang') || 'en';
+  const t = SCANNER_LANG[lang];
+  if (!t) return;
+  window._st = t;
+
+  // Toolbar buttons
+  ['btnScan','fAll','fStrongBuy','fInteresting','fWatch','fWeak','fVolSpike','fShortSq',
+   'ssScore','ssFund','ssSent','ssMomentum','ssEarnings'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t[id];
+  });
+
+  // Empty state & back btn
+  const es = document.getElementById('emptyState');
+  if (es) es.textContent = t.emptyState;
+  const back = document.querySelector('.sn-back');
+  if (back) back.textContent = t.snBack;
+
+  // Table headers text + tooltips
+  const thMap = {
+    'th-signal':   {label: t.thSignal,   tip: t.tipSignal},
+    'th-score':    {label: t.thScore,    tip: t.tipScore},
+    'th-fund':     {label: t.thFund,     tip: t.tipFund},
+    'th-sent':     {label: t.thSent,     tip: t.tipSent},
+    'th-analyst':  {label: t.thAnalyst,  tip: t.tipAnalyst},
+    'th-momentum': {label: t.thMomentum, tip: t.tipMomentum},
+    'th-earnings': {label: t.thEarnings, tip: t.tipEarnings},
+    'th-short':    {label: t.thShort,    tip: t.tipShort},
+    'th-price':    {label: t.thPrice,    tip: null},
+    'th-upside':   {label: t.thUpside,   tip: t.tipUpside},
+    'th-ticker':   {label: t.thTicker,   tip: null},
+  };
+  Object.entries(thMap).forEach(([arrowId, cfg]) => {
+    const arrow = document.getElementById(arrowId);
+    if (!arrow) return;
+    const th = arrow.closest('th');
+    if (!th) return;
+    const tt = th.querySelector('.tt');
+    if (tt) {
+      // update text node
+      let textNode = Array.from(tt.childNodes).find(n => n.nodeType === 3);
+      if (textNode) textNode.textContent = cfg.label;
+      else tt.insertBefore(document.createTextNode(cfg.label), tt.firstChild);
+      // update tooltip
+      if (cfg.tip) tt.setAttribute('data-tip', cfg.tip);
+    } else {
+      th.childNodes.forEach(n => { if (n.nodeType === 3) n.textContent = cfg.label + ' '; });
+    }
+  });
+
+  // FLAGS th
+  document.querySelectorAll('thead th').forEach(th => {
+    const tt = th.querySelector('.tt');
+    if (tt && tt.textContent.trim().startsWith('⚠')) {
+      let tn = Array.from(tt.childNodes).find(n => n.nodeType === 3);
+      if (tn) tn.textContent = t.thFlags;
+      else tt.insertBefore(document.createTextNode(t.thFlags), tt.firstChild);
+      tt.setAttribute('data-tip', t.tipFlags);
+    }
+  });
+
+  // Re-render table if data exists (to update signal badges, det titles etc)
+  if (allData && allData.length > 0) renderTable();
+}
+
+// Override SIG_EN map dynamically
+const _origRenderTable = typeof renderTable === 'function' ? renderTable : null;
+
+// Patch recLbl to use current language
+window._recLbl = function(v) {
+  const t = window._st || SCANNER_LANG['en'];
+  if (v===null) return '<span class="cd">—</span>';
+  if (v<=1.5) return `<span class="cg">${t.recStrongBuy}</span>`;
+  if (v<=2.5) return `<span class="cg">${t.recBuy}</span>`;
+  if (v<=3.5) return `<span class="cd">${t.recHold}</span>`;
+  if (v<=4.5) return `<span class="co">${t.recSell}</span>`;
+  return `<span class="cr">${t.recStrongSell}</span>`;
+};
+
+// Patch hstats labels
+window._renderHStats = function() {
+  const t = window._st || SCANNER_LANG['en'];
+  document.getElementById('hstats').innerHTML =
+    `<div style="text-align:right"><div class="hstat-n2" style="color:var(--green)">${allData.length}</div><div class="hstat-l2">${t.hAnalyzed}</div></div>` +
+    `<div style="text-align:right"><div class="hstat-n2" style="color:var(--pink)">${allData.filter(d=>d.volRatio&&d.volRatio>2).length}</div><div class="hstat-l2">${t.hVolSpike}</div></div>` +
+    `<div style="text-align:right"><div class="hstat-n2" style="color:var(--teal)">${allData.filter(d=>d.shortPct&&d.shortPct>15).length}</div><div class="hstat-l2">${t.hShort}</div></div>` +
+    `<div style="text-align:right"><div class="hstat-n2" style="color:var(--gold)">${allData.filter(d=>d.earningsDays!==null&&d.earningsDays<=30).length}</div><div class="hstat-l2">${t.hEarn}</div></div>`;
+};
+
+// Patch signal badge labels
+window._sigLabel = function(signal) {
+  const t = window._st || SCANNER_LANG['en'];
+  const map = {
+    'FUERTE COMPRA': t.sigStrongBuy, 'INTERESANTE': t.sigInteresting,
+    'VIGILAR': t.sigWatch, 'DÉBIL': t.sigWeak
+  };
+  return map[signal] || signal;
+};
+
+// Patch det-title labels
+window._detTitles = function() {
+  const t = window._st || SCANNER_LANG['en'];
+  return { fund: t.detFundamentals, momentum: t.detMomentum, analysts: t.detAnalysts, earnings: t.detEarnings, news: t.detNews };
+};
+
+// Apply on load
+window.addEventListener('load', () => {
+  setTimeout(applyScannerLang, 100);
+});
+</script>
+
+</body>
+</html>

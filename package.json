@@ -1,0 +1,14 @@
+{
+  "name": "stockraptor",
+  "version": "1.0.0",
+  "description": "StockRaptor \u2014 AI-Powered Small Cap Scanner",
+  "dependencies": {
+    "stripe": "^14.0.0",
+    "@supabase/supabase-js": "^2.0.0",
+    "node-fetch": "^3.0.0"
+  },
+  "type": "module",
+  "scripts": {
+    "scan": "node scripts/scan-daily.js"
+  }
+}
