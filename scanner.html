@@ -1145,8 +1145,14 @@ async function loadDailyCache() {
       return;
     }
 
-    // Load results from cache
-    allData = data.results;
+    // Load results from cache — normalize field names
+    allData = data.results.map(r => ({
+      ...r,
+      ticker: r.ticker || r.sym,
+      score:  r.score  ?? r.total,
+      fund:   r.fund   ?? r.fundScore,
+      sent:   r.sent   ?? r.sentScore,
+    }));
 
     // Show cache banner
     const scanDate = new Date(data.scanned_at);
