@@ -1021,6 +1021,9 @@ async function initScannerAuth() {
     showUpgradeSuccess(params.get('plan') || plan);
     window.history.replaceState({}, '', '/scanner.html');
   }
+
+  // Load cached daily scan results
+  await loadDailyCache();
 }
 
 function addBodyPadding() {
