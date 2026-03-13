@@ -222,7 +222,7 @@ const CONFIG = {
   </div>
   <div class="nav-links" id="navLinks">
     <span class="nav-link" onclick="goTo('features')">Features</span>
-    <span class="nav-link" onclick="goTo('pricing')">Pricing</span>
+    <span class="nav-link" onclick="startCheckout('pro')">Pricing</span>
   </div>
   <div id="navAuth">
     <!-- filled by JS depending on auth state -->
@@ -356,7 +356,7 @@ const CONFIG = {
       <div class="dash-section active" id="sectionOverview">
         <div class="dash-actions">
           <button class="dash-btn dash-btn-green" id="btnOpenScanner" onclick="window.location.href='scanner.html'">▶ Open Scanner</button>
-          <button class="dash-btn dash-btn-outline" id="dashUpgradeBtn" onclick="goTo('pricing')">⬆ Upgrade Plan</button>
+          <button class="dash-btn dash-btn-outline" id="dashUpgradeBtn" onclick="startCheckout('pro')">⬆ Upgrade Plan</button>
           <button class="dash-btn dash-btn-outline" id="btnSignOut" onclick="signOut()">Sign Out</button>
         </div>
         <div class="dash-stats" id="dashStats">
@@ -400,7 +400,7 @@ const CONFIG = {
               <div class="settings-label" id="slPlanTitle">Current Plan</div>
               <div class="settings-desc" id="dashPlanSettings">Free</div>
             </div>
-            <button class="dash-btn dash-btn-outline" id="btnUpgradeSettings" onclick="goTo('pricing')" style="white-space:nowrap;padding:8px 16px;font-size:12px;">⬆ Upgrade</button>
+            <button class="dash-btn dash-btn-outline" id="btnUpgradeSettings" onclick="startCheckout('pro')" style="white-space:nowrap;padding:8px 16px;font-size:12px;">⬆ Upgrade</button>
           </div>
           <div class="settings-row">
             <div class="settings-left">
@@ -426,7 +426,7 @@ const CONFIG = {
   <div class="footer-logo">Stock<span>Raptor</span></div>
   <div style="display:flex;gap:22px;">
     <span style="font-size:12px;color:var(--txt);cursor:pointer;" onclick="goTo('features')">Features</span>
-    <span style="font-size:12px;color:var(--txt);cursor:pointer;" onclick="goTo('pricing')">Pricing</span>
+    <span style="font-size:12px;color:var(--txt);cursor:pointer;" onclick="startCheckout('pro')">Pricing</span>
   </div>
   <div class="footer-copy">© 2026 StockRaptor · Not financial advice · Educational use only</div>
 </footer>
