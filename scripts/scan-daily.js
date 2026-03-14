@@ -55,21 +55,30 @@ async function getUniverse() {
   console.log('📡 Phase 1: Fetching small cap universe...');
   const allTickers = new Map();
 
+  // Use smaller cap ranges to get more granular results from screener
+  const ranges = [
+    { min: 80000000,   max: 250000000  },
+    { min: 250000000,  max: 500000000  },
+    { min: 500000000,  max: 1000000000 },
+    { min: 1000000000, max: 3000000000 },
+  ];
+
   for (const exchange of ['NASDAQ', 'NYSE', 'AMEX']) {
-    let prevSize = 0;
-    for (let page = 0; page < 50; page++) {
-      const data = await fmp(`/company-screener?marketCapMoreThan=80000000&marketCapLowerThan=3000000000&exchange=${exchange}&limit=500&page=${page}`);
-      if (!Array.isArray(data) || data.length === 0) break;
-      for (const s of data) {
-        if (!isRealStock(s)) continue;
-        if (!allTickers.has(s.symbol)) {
-          allTickers.set(s.symbol, { sym: s.symbol, sector: s.sector || 'default', cap: s.marketCap || 0 });
+    for (const range of ranges) {
+      for (let page = 0; page < 20; page++) {
+        const data = await fmp(
+          `/company-screener?marketCapMoreThan=${range.min}&marketCapLowerThan=${range.max}&exchange=${exchange}&limit=500&page=${page}`
+        );
+        if (!Array.isArray(data) || data.length === 0) break;
+        for (const s of data) {
+          if (!isRealStock(s)) continue;
+          if (!allTickers.has(s.symbol)) {
+            allTickers.set(s.symbol, { sym: s.symbol, sector: s.sector || 'default', cap: s.marketCap || 0 });
+          }
         }
+        if (data.length < 500) break;
+        await sleep(100);
       }
-      // Stop if no new tickers added or less than limit returned
-      if (allTickers.size === prevSize || data.length < 500) break;
-      prevSize = allTickers.size;
-      await sleep(120);
     }
     console.log(`  ${exchange}: ${allTickers.size} tickers total`);
   }
@@ -82,7 +91,7 @@ async function getUniverse() {
 async function analyzeTicker(sym, baseData) {
   try {
     // 7 parallel API calls — using correct FMP stable endpoints
-    const [profile, quote, ratios, keyMetrics, cashflow, income, earnings, priceTarget, insider, news] = await Promise.all([
+    const [profile, quote, ratios, keyMetrics, cashflow, income, earnings, priceTarget, news] = await Promise.all([
       fmp(`/profile?symbol=${sym}`),
       fmp(`/quote?symbol=${sym}`),
       fmp(`/ratios-ttm?symbol=${sym}`),
@@ -91,9 +100,9 @@ async function analyzeTicker(sym, baseData) {
       fmp(`/income-statement?symbol=${sym}&limit=4`),
       fmp(`/earnings?symbol=${sym}&limit=5`),
       fmp(`/price-target-consensus?symbol=${sym}`),
-      fmp(`/insider-trading?symbol=${sym}&limit=15`),
       fmp(`/news/stock?symbols=${sym}&limit=8`),
     ]);
+    const insider = null; // skipped for speed - add back with premium plan
 
     const p   = profile?.[0];
     const q   = quote?.[0];
@@ -367,8 +376,8 @@ async function main() {
 
   console.log(`\n🔬 Phase 2: Analyzing ${tickers.length} tickers (5 concurrent)...`);
 
-  const CONCURRENCY = 5;
-  const DELAY = 1000; // 5 tickers × 10 calls = 50 calls/sec → ~300/min safe
+  const CONCURRENCY = 8;
+  const DELAY = 600; // 5 tickers × 10 calls = 50 calls/sec → ~300/min safe
   const results = [];
   let errors = 0;
 
