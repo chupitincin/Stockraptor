@@ -198,14 +198,28 @@ async function analyzeTicker(sym, baseData) {
     let sent = 0, newsSent = null, newsItems = [];
     if (Array.isArray(news) && news.length > 0) {
       const recent = news.slice(0, 8);
-      newsItems = recent.slice(0, 6).map(n => ({
-        headline: (n.title || '').substring(0, 90),
-        source: n.site || '', time: (n.publishedDate || '').substring(0, 10),
-        sentiment: n.sentiment || null
-      }));
-      const pos = recent.filter(n => n.sentiment === 'positive').length;
-      const neg = recent.filter(n => n.sentiment === 'negative').length;
-      newsSent = recent.length > 0 ? (pos - neg) / recent.length : 0;
+      
+      // Keyword-based sentiment since FMP Starter doesn't include sentiment field
+      const POS_WORDS = ['beat','beats','surge','surges','jumps','rises','gains','record','upgrade','upgraded','strong','growth','profit','revenue','bullish','buy','outperform','raises','raised','exceeds','positive','wins','award','partnership','deal','launch','launches'];
+      const NEG_WORDS = ['miss','misses','falls','drops','decline','declines','loss','losses','downgrade','downgraded','weak','cut','cuts','lawsuit','investigation','recall','warning','disappoints','below','concern','risk','sell','underperform','layoffs','bankruptcy'];
+      
+      let posCount = 0, negCount = 0;
+      newsItems = recent.slice(0, 6).map(n => {
+        const title = (n.title || '').toLowerCase();
+        const isPos = POS_WORDS.some(w => title.includes(w));
+        const isNeg = NEG_WORDS.some(w => title.includes(w));
+        const sentiment = isPos && !isNeg ? 'positive' : isNeg && !isPos ? 'negative' : 'neutral';
+        if (sentiment === 'positive') posCount++;
+        if (sentiment === 'negative') negCount++;
+        return {
+          headline: (n.title || '').substring(0, 90),
+          source: n.site || '', time: (n.publishedDate || '').substring(0, 10),
+          sentiment
+        };
+      });
+      
+      const total = recent.length;
+      newsSent = total > 0 ? (posCount - negCount) / total : 0;
       sent = Math.min(12, Math.round(((newsSent + 1) / 2) * 12));
     }
 
