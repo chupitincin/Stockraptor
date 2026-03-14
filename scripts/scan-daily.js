@@ -42,116 +42,6 @@ async function fmp(endpoint, retries = 2) {
   }
 }
 
-// ── SEC EDGAR INSIDER DATA (free, official) ───────────────────
-let secTickerMap = null; // cached CIK lookup
-
-async function loadSecTickerMap() {
-  if (secTickerMap) return secTickerMap;
-  try {
-    const res = await fetch('https://www.sec.gov/files/company_tickers.json', {
-      headers: { 'User-Agent': 'StockRaptor research@stockraptor.com' }
-    });
-    const data = await res.json();
-    secTickerMap = {};
-    for (const entry of Object.values(data)) {
-      secTickerMap[entry.ticker.toUpperCase()] = String(entry.cik_str).padStart(10, '0');
-    }
-    console.log(`\n  📋 SEC ticker map loaded: ${Object.keys(secTickerMap).length} tickers`);
-  } catch(e) {
-    console.warn('  ⚠ SEC ticker map failed:', e.message);
-    secTickerMap = {};
-  }
-  return secTickerMap;
-}
-
-async function getSecInsider(sym) {
-  try {
-    const map = await loadSecTickerMap();
-    const cik = map[sym.toUpperCase()];
-    if (!cik) return null;
-
-    const res = await fetch(`https://data.sec.gov/submissions/CIK${cik}.json`, {
-      headers: { 'User-Agent': 'StockRaptor research@stockraptor.com' }
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-
-    // Get recent Form 4 filings
-    const filings = data.filings?.recent;
-    if (!filings) return null;
-
-    const form4Indices = [];
-    for (let i = 0; i < filings.form.length; i++) {
-      if (filings.form[i] === '4' || filings.form[i] === '4/A') {
-        form4Indices.push(i);
-      }
-    }
-
-    // Last 90 days
-    const cutoff = new Date(Date.now() - 90 * 86400000);
-    const recent = form4Indices
-      .filter(i => new Date(filings.filingDate[i]) > cutoff)
-      .slice(0, 20);
-
-    if (recent.length === 0) return { transactions: [], buys: 0, sells: 0, netChange: 0, insiders: [] };
-
-    // Fetch actual Form 4 XML for each recent filing to get transaction details
-    const transactions = [];
-    for (const idx of recent.slice(0, 10)) { // limit to 10 most recent
-      try {
-        const accession = filings.accessionNumber[idx].replace(/-/g, '');
-        const xmlUrl = `https://www.sec.gov/Archives/edgar/data/${parseInt(cik)}/` +
-                       `${accession}/${filings.primaryDocument[idx]}`;
-        const xmlRes = await fetch(xmlUrl, {
-          headers: { 'User-Agent': 'StockRaptor research@stockraptor.com' }
-        });
-        if (!xmlRes.ok) continue;
-        const xml = await xmlRes.text();
-
-        // Parse key fields from XML
-        const name = (xml.match(/<rptOwnerName>(.*?)<\/rptOwnerName>/) || [])[1] || '';
-        const title = (xml.match(/<officerTitle>(.*?)<\/officerTitle>/) || [])[1] || '';
-        const isDirector = xml.includes('<isDirector>1</isDirector>');
-        const isOfficer = xml.includes('<isOfficer>1</isOfficer>');
-        const txCode = (xml.match(/<transactionCode>(.*?)<\/transactionCode>/) || [])[1] || '';
-        const shares = parseFloat((xml.match(/<transactionShares>\s*<value>(.*?)<\/value>/) || [])[1] || '0');
-        const priceStr = (xml.match(/<transactionPricePerShare>\s*<value>(.*?)<\/value>/) || [])[1];
-        const price = priceStr ? parseFloat(priceStr) : null;
-        const date = filings.filingDate[idx];
-
-        if (txCode && shares > 0) {
-          transactions.push({
-            name: name.trim(),
-            title: title.trim() || (isDirector ? 'Director' : isOfficer ? 'Officer' : 'Insider'),
-            type: txCode === 'P' ? 'Purchase' : txCode === 'S' ? 'Sale' : txCode === 'A' ? 'Award' : txCode,
-            txCode,
-            shares: Math.round(shares),
-            price,
-            value: price ? Math.round(shares * price) : null,
-            date,
-          });
-        }
-        await sleep(110); // SEC rate limit: max 10 req/sec
-      } catch(e) { /* skip failed filings */ }
-    }
-
-    const purchases = transactions.filter(t => t.txCode === 'P');
-    const sales = transactions.filter(t => t.txCode === 'S');
-
-    return {
-      transactions: transactions.slice(0, 8),
-      buys: purchases.length,
-      sells: sales.length,
-      netChange: purchases.length - sales.length,
-      totalBuyValue: purchases.reduce((a, t) => a + (t.value || 0), 0),
-      totalSellValue: sales.reduce((a, t) => a + (t.value || 0), 0),
-      insiders: [...new Set(transactions.map(t => t.name))].slice(0, 5),
-    };
-  } catch(e) {
-    return null;
-  }
-}
-
 
 function isRealStock(s) {
   if (!s?.symbol) return false;
@@ -203,7 +93,7 @@ async function getUniverse() {
 }
 
 // ── ANALYZE SINGLE TICKER ─────────────────────────────────────
-async function analyzeTicker(sym, baseData) {
+async function analyzeTicker(sym, baseData, insiderCache = {}) {
   try {
     // 7 parallel API calls — using correct FMP stable endpoints
     // Sequential calls - avoid parallel rate limiting
@@ -216,7 +106,17 @@ async function analyzeTicker(sym, baseData) {
     const earnings    = await fmp(`/earnings?symbol=${sym}&limit=5`);
     const priceTarget = await fmp(`/price-target-consensus?symbol=${sym}`);
     const news        = await fmp(`/news/stock?symbols=${sym}&limit=8`);
-    const insider     = await getSecInsider(sym);
+    // Read insider data from cache (populated weekly by insider-scan.js)
+    const insiderRow = insiderCache[sym];
+    const insider = insiderRow ? {
+      buys:           insiderRow.buys || 0,
+      sells:          insiderRow.sells || 0,
+      netChange:      insiderRow.net_change || 0,
+      totalBuyValue:  insiderRow.total_buy_value || 0,
+      totalSellValue: insiderRow.total_sell_value || 0,
+      transactions:   insiderRow.transactions || [],
+      insiders:       insiderRow.insiders || [],
+    } : null;
 
     const p   = profile?.[0];
     const q   = quote?.[0];
@@ -509,7 +409,20 @@ async function main() {
   const universe = await getUniverse();
   const tickers = [...universe.keys()];
 
-  console.log(`\n🔬 Phase 2: Analyzing ${tickers.length} tickers (5 concurrent)...`);
+  // Load insider cache from Supabase (populated weekly by insider-scan.js)
+  console.log('📋 Loading insider cache...');
+  let insiderCache = {};
+  try {
+    const { data: icData } = await sb.from('insider_cache').select('*');
+    if (icData) {
+      icData.forEach(r => { insiderCache[r.symbol] = r; });
+      console.log(`   ${icData.length} symbols with insider data`);
+    }
+  } catch(e) {
+    console.warn('  ⚠ Could not load insider cache:', e.message);
+  }
+
+  console.log(`\n🔬 Phase 2: Analyzing ${tickers.length} tickers...`);
 
   const DELAY = 0; // sequential calls per ticker already take ~900ms naturally
   const results = [];
@@ -521,7 +434,7 @@ async function main() {
     const pct = Math.round((i / tickers.length) * 100);
     if (i % 10 === 0) process.stdout.write(`\r[${i+1}/${tickers.length}] ${pct}% | ${elapsed}s | ${results.length} scored`);
     
-    const r = await analyzeTicker(sym, universe.get(sym));
+    const r = await analyzeTicker(sym, universe.get(sym), insiderCache);
     if (r) results.push(r); else errors++;
   }
 
