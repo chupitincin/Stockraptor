@@ -659,7 +659,13 @@ async function signOut() {
 // ══════════════════════════════════════════
 // STRIPE CHECKOUT
 // ══════════════════════════════════════════
-async function startCheckout(plan) { return handleUpgrade(plan); }
+function startCheckout(plan) { showUpgradeModal(plan); }
+function showUpgradeModal(preselect) {
+  document.getElementById('upgradeModal').style.display = 'flex';
+}
+function closeUpgradeModal() {
+  document.getElementById('upgradeModal').style.display = 'none';
+}
 async function handleUpgrade(plan) {
   if (!currentUser) {
     openAuth('register');
@@ -833,5 +839,46 @@ window.addEventListener('load', () => {
   }
 });
 </script>
+<!-- Upgrade Plan Modal -->
+<div id="upgradeModal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:24px;">
+  <div style="background:#09091a;border:1px solid #181828;border-radius:12px;max-width:600px;width:100%;padding:40px 32px;position:relative;">
+    <button onclick="closeUpgradeModal()" style="position:absolute;top:16px;right:16px;background:#1a1a2e;border:1px solid #2a2a4a;color:#b0b0d0;font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;">×</button>
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:32px;margin-bottom:8px;">🔓</div>
+      <div style="font-family:'Archivo Black',sans-serif;font-size:22px;color:#e8e8f8;margin-bottom:8px;">Unlock Full Access</div>
+      <div style="color:#7070a0;font-size:14px;">Choose your plan and start your 7-day free trial today.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div style="border:1px solid #00ff9444;border-radius:10px;padding:24px 20px;background:#00ff9408;">
+        <div style="font-size:11px;letter-spacing:2px;color:#00ff94;margin-bottom:8px;">PRO</div>
+        <div style="font-size:28px;font-weight:700;color:#e8e8f8;margin-bottom:4px;">$19<span style="font-size:13px;color:#7070a0;font-weight:400">/mo</span></div>
+        <div style="font-size:12px;color:#7070a0;margin-bottom:16px;">7-day free trial</div>
+        <div style="font-size:12px;color:#b0b0d0;line-height:2;margin-bottom:20px;">
+          ✓ All 200 companies<br>
+          ✓ Daily auto-scan<br>
+          ✓ 14-factor scoring<br>
+          ✓ Insider & analyst data<br>
+          ✓ Short squeeze alerts
+        </div>
+        <button onclick="handleUpgrade('pro')" style="width:100%;padding:12px;background:linear-gradient(135deg,#00ff94,#00cc78);color:#000;border:none;border-radius:5px;font-weight:700;font-size:12px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;">Start Free Trial →</button>
+      </div>
+      <div style="border:1px solid #bf5fff44;border-radius:10px;padding:24px 20px;background:#bf5fff08;">
+        <div style="font-size:11px;letter-spacing:2px;color:#bf5fff;margin-bottom:8px;">ELITE</div>
+        <div style="font-size:28px;font-weight:700;color:#e8e8f8;margin-bottom:4px;">$49<span style="font-size:13px;color:#7070a0;font-weight:400">/mo</span></div>
+        <div style="font-size:12px;color:#7070a0;margin-bottom:16px;">7-day free trial</div>
+        <div style="font-size:12px;color:#b0b0d0;line-height:2;margin-bottom:20px;">
+          ✓ Everything in Pro<br>
+          ✓ 400+ companies<br>
+          ✓ Priority updates<br>
+          ✓ Advanced filters<br>
+          ✓ Early access features
+        </div>
+        <button onclick="handleUpgrade('elite')" style="width:100%;padding:12px;background:linear-gradient(135deg,#bf5fff,#9933ff);color:#fff;border:none;border-radius:5px;font-weight:700;font-size:12px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;">Start Free Trial →</button>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#5050a0;">🔒 Secure payment via Stripe · Cancel anytime · No hidden fees</div>
+  </div>
+</div>
+
 </body>
 </html>
