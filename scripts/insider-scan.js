@@ -1,98 +1,83 @@
 // ══════════════════════════════════════════════════════════════
-// StockRaptor · Weekly Insider Scan — SEC EDGAR Bulk Edition
-// Uses SEC daily index files to get ALL Form 4s at once
-// Much faster: ~5-10 min instead of hours
+// StockRaptor · Weekly Insider Scan — SEC EDGAR Master Index
+// Uses quarterly full-index to get ALL Form 4s efficiently
 // ══════════════════════════════════════════════════════════════
 import { createClient } from '@supabase/supabase-js';
 
 const SB_URL = process.env.SUPABASE_URL;
 const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
-
-if (!SB_URL || !SB_KEY) {
-  console.error('❌ Missing: SUPABASE_URL, SUPABASE_SERVICE_KEY');
-  process.exit(1);
-}
+if (!SB_URL || !SB_KEY) { console.error('❌ Missing env vars'); process.exit(1); }
 
 const sb = createClient(SB_URL, SB_KEY);
 const SEC = 'https://www.sec.gov';
 const HEADERS = { 'User-Agent': 'StockRaptor research@stockraptor.com' };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-// ── GET QUARTER FROM DATE ─────────────────────────────────────
-function getQuarter(date) {
+function getQuarterInfo(date) {
+  const y = date.getFullYear();
   const m = date.getMonth() + 1;
-  return m <= 3 ? 'QTR1' : m <= 6 ? 'QTR2' : m <= 9 ? 'QTR3' : 'QTR4';
+  const q = m <= 3 ? 1 : m <= 6 ? 2 : m <= 9 ? 3 : 4;
+  return { year: y, quarter: q, qtr: `QTR${q}` };
 }
 
-// ── LOAD CIK→TICKER MAP ───────────────────────────────────────
+// ── LOAD CIK MAP ─────────────────────────────────────────────
 async function loadTickerMap() {
   console.log('📋 Loading SEC ticker map...');
   const res = await fetch(`${SEC}/files/company_tickers.json`, { headers: HEADERS });
   const data = await res.json();
-  // Build both directions: CIK→ticker and ticker→CIK
-  const cikToTicker = {};
-  const tickerToCik = {};
-  for (const entry of Object.values(data)) {
-    const cik = String(entry.cik_str).padStart(10, '0');
-    const ticker = entry.ticker.toUpperCase();
-    cikToTicker[cik] = ticker;
-    tickerToCik[ticker] = cik;
+  const cikToTicker = {}, tickerToCik = {};
+  for (const e of Object.values(data)) {
+    const cik = String(e.cik_str).padStart(10, '0');
+    cikToTicker[cik] = e.ticker.toUpperCase();
+    tickerToCik[e.ticker.toUpperCase()] = cik;
   }
-  console.log(`   ${Object.keys(cikToTicker).length} companies mapped`);
+  console.log(`   ${Object.keys(cikToTicker).length} tickers`);
   return { cikToTicker, tickerToCik };
 }
 
-// ── LOAD ACTIVE SYMBOLS FROM SUPABASE ────────────────────────
+// ── LOAD ACTIVE SYMBOLS ───────────────────────────────────────
 async function loadActiveSymbols() {
-  console.log('📊 Loading active symbols from scan_cache...');
-  const { data } = await sb.from('scan_cache').select('results').eq('id', 'daily').single();
-  const symbols = new Set(data?.results?.map(r => r.sym).filter(Boolean) || []);
-  console.log(`   ${symbols.size} active symbols`);
-  return symbols;
+  const { data } = await sb.from('scan_cache').select('results').eq('id','daily').single();
+  const syms = new Set(data?.results?.map(r => r.sym).filter(Boolean) || []);
+  console.log(`📊 ${syms.size} active symbols`);
+  return syms;
 }
 
-// ── DOWNLOAD SEC DAILY INDEX FOR A DATE ──────────────────────
-async function getDailyIndex(date) {
-  const year = date.getFullYear();
-  const qtr  = getQuarter(date);
-  const mm   = String(date.getMonth() + 1).padStart(2, '0');
-  const dd   = String(date.getDate()).padStart(2, '0');
-  
-  // Try the form4.idx file for this quarter
-  const url = `${SEC}/Archives/edgar/daily-index/${year}/${qtr}/form4.${year}${mm}${dd}.idx`;
-  
+// ── GET FORM 4 FILINGS FROM QUARTERLY INDEX ───────────────────
+async function getQuarterlyForm4s(year, qtr) {
+  // SEC full-index format: CIK|Company|FormType|DateFiled|Filename
+  const url = `${SEC}/Archives/edgar/full-index/${year}/${qtr}/form.idx`;
+  console.log(`  Fetching ${year}/${qtr}...`);
   try {
     const res = await fetch(url, { headers: HEADERS });
-    if (!res.ok) return [];
+    if (!res.ok) { console.log(`  Not found: ${url}`); return []; }
     const text = await res.text();
-    
-    // Parse the idx file format:
-    // Company Name|Form Type|CIK|Date Filed|Filename
-    const lines = text.split('\n').slice(9); // skip header
-    return lines
-      .filter(l => l.includes('|4|') || l.includes('|4/A|'))
-      .map(l => {
-        const parts = l.split('|');
-        if (parts.length < 5) return null;
-        return {
-          company: parts[0].trim(),
-          formType: parts[1].trim(),
-          cik: String(parts[2].trim()).padStart(10, '0'),
-          dateFiled: parts[3].trim(),
-          filename: parts[4].trim(),
-        };
-      })
-      .filter(Boolean);
+    const lines = text.split('\n');
+    const filings = [];
+    for (const line of lines) {
+      if (!line.includes('4 ') && !line.includes('4/A')) continue;
+      // Fixed-width format
+      const formType = line.substring(20, 40).trim();
+      if (formType !== '4' && formType !== '4/A') continue;
+      const cik      = line.substring(74, 86).trim().padStart(10, '0');
+      const dateFiled = line.substring(86, 98).trim();
+      const filename  = line.substring(98).trim();
+      if (cik && dateFiled && filename) {
+        filings.push({ cik, formType, dateFiled, filename });
+      }
+    }
+    console.log(`  ${filings.length} Form 4 filings found`);
+    return filings;
   } catch(e) {
+    console.warn(`  Error: ${e.message}`);
     return [];
   }
 }
 
 // ── PARSE FORM 4 XML ──────────────────────────────────────────
-async function parseForm4(filing) {
+async function parseForm4(filename) {
   try {
-    const url = `${SEC}/Archives/edgar/${filing.filename}`;
-    const res = await fetch(url, { headers: HEADERS });
+    const res = await fetch(`${SEC}/Archives/edgar/${filename}`, { headers: HEADERS });
     if (!res.ok) return null;
     const xml = await res.text();
 
@@ -102,126 +87,122 @@ async function parseForm4(filing) {
     const isOff = xml.includes('<isOfficer>1</isOfficer>');
     const role  = title || (isDir ? 'Director' : isOff ? 'Officer' : 'Insider');
 
-    const codeMatches   = [...xml.matchAll(/<transactionCode>(.*?)<\/transactionCode>/g)];
-    const sharesMatches = [...xml.matchAll(/<transactionShares>\s*<value>(.*?)<\/value>/g)];
-    const priceMatches  = [...xml.matchAll(/<transactionPricePerShare>\s*<value>(.*?)<\/value>/g)];
+    const codes  = [...xml.matchAll(/<transactionCode>(.*?)<\/transactionCode>/g)];
+    const shares = [...xml.matchAll(/<transactionShares>\s*<value>(.*?)<\/value>/g)];
+    const prices = [...xml.matchAll(/<transactionPricePerShare>\s*<value>(.*?)<\/value>/g)];
 
-    const transactions = [];
-    for (let j = 0; j < codeMatches.length; j++) {
-      const txCode = codeMatches[j]?.[1]?.trim();
-      const shares = parseFloat(sharesMatches[j]?.[1] || '0');
-      const price  = parseFloat(priceMatches[j]?.[1] || '0') || null;
-      if (!txCode || shares <= 0) continue;
-      if (!['P', 'S', 'A', 'M'].includes(txCode)) continue;
-      transactions.push({
+    const txs = [];
+    for (let i = 0; i < codes.length; i++) {
+      const txCode = codes[i]?.[1]?.trim();
+      const sh     = parseFloat(shares[i]?.[1] || '0');
+      const pr     = parseFloat(prices[i]?.[1] || '0') || null;
+      if (!txCode || sh <= 0 || !['P','S','A','M'].includes(txCode)) continue;
+      txs.push({
         name, title: role, txCode,
-        type:   txCode === 'P' ? 'Purchase' : txCode === 'S' ? 'Sale' : txCode === 'A' ? 'Award' : 'Option',
-        shares: Math.round(shares),
-        price:  price ? Math.round(price * 100) / 100 : null,
-        value:  price ? Math.round(shares * price) : null,
-        date:   filing.dateFiled,
+        type:   txCode==='P'?'Purchase':txCode==='S'?'Sale':txCode==='A'?'Award':'Option',
+        shares: Math.round(sh),
+        price:  pr ? Math.round(pr*100)/100 : null,
+        value:  pr ? Math.round(sh*pr) : null,
       });
     }
-    return transactions;
-  } catch(e) {
-    return null;
-  }
+    return txs.length > 0 ? { name, role, txs } : null;
+  } catch(e) { return null; }
 }
 
 // ── MAIN ──────────────────────────────────────────────────────
 async function main() {
   const t0 = Date.now();
-  console.log('🦅 StockRaptor Insider Scan (Bulk Edition) starting...');
+  console.log('🦅 StockRaptor Insider Scan v3 starting...\n');
 
-  // Load maps in parallel
-  const [{ cikToTicker, tickerToCik }, activeSymbols] = await Promise.all([
+  const [{ cikToTicker }, activeSymbols] = await Promise.all([
     loadTickerMap(),
     loadActiveSymbols(),
   ]);
 
-  // Get Form 4 index for last 90 days
-  console.log('\n📥 Downloading SEC Form 4 daily indexes (last 90 days)...');
-  const allFilings = new Map(); // CIK → [filings]
-  let indexDays = 0;
+  // Get relevant quarters (last 90 days = current + maybe previous quarter)
+  const now    = new Date();
+  const q1     = getQuarterInfo(now);
+  const q2     = getQuarterInfo(new Date(Date.now() - 90*86400000));
+  const quarters = [q1];
+  if (q2.year !== q1.year || q2.quarter !== q1.quarter) quarters.push(q2);
 
-  const endDate   = new Date();
-  const startDate = new Date(Date.now() - 90 * 86400000);
+  console.log(`\n📥 Loading Form 4 indexes for ${quarters.map(q=>`${q.year}/${q.qtr}`).join(', ')}...`);
 
-  for (let d = new Date(endDate); d >= startDate; d.setDate(d.getDate() - 1)) {
-    const day = d.getDay();
-    if (day === 0 || day === 6) continue; // skip weekends
-
-    const filings = await getDailyIndex(new Date(d));
-    indexDays++;
-
-    for (const f of filings) {
-      if (!allFilings.has(f.cik)) allFilings.set(f.cik, []);
-      allFilings.get(f.cik).push(f);
-    }
-
-    if (indexDays % 10 === 0) {
-      process.stdout.write(`\r  ${indexDays} days indexed, ${allFilings.size} companies with filings`);
-    }
-    await sleep(110); // SEC rate limit
+  // Get all Form 4 filings from relevant quarters
+  let allFilings = [];
+  for (const { year, qtr } of quarters) {
+    const filings = await getQuarterlyForm4s(year, qtr);
+    allFilings = allFilings.concat(filings);
+    await sleep(200);
   }
 
-  console.log(`\n   Total: ${indexDays} trading days, ${allFilings.size} companies with Form 4 filings`);
-
-  // Filter to only our active universe
-  const relevantCiks = [...allFilings.keys()].filter(cik => {
-    const ticker = cikToTicker[cik];
+  // Filter to last 90 days and our universe
+  const cutoff = new Date(Date.now() - 90*86400000).toISOString().substring(0,10);
+  const relevant = allFilings.filter(f => {
+    if (f.dateFiled < cutoff) return false;
+    const ticker = cikToTicker[f.cik];
     return ticker && activeSymbols.has(ticker);
   });
 
-  console.log(`\n🔍 Parsing Form 4s for ${relevantCiks.length} companies in our universe...`);
+  // Group by CIK
+  const byCik = {};
+  for (const f of relevant) {
+    if (!byCik[f.cik]) byCik[f.cik] = [];
+    byCik[f.cik].push(f);
+  }
 
-  // Parse Form 4 XMLs for relevant companies
+  const uniqueCompanies = Object.keys(byCik).length;
+  console.log(`\n🔍 ${relevant.length} Form 4s for ${uniqueCompanies} companies in our universe (last 90d)`);
+  console.log('   Parsing XML filings...\n');
+
+  // Parse each filing
   const results = {};
-  let parsed = 0;
+  let parsed = 0, withActivity = 0;
 
-  for (const cik of relevantCiks) {
+  for (const [cik, filings] of Object.entries(byCik)) {
     const ticker = cikToTicker[cik];
-    const filings = allFilings.get(cik) || [];
     const allTx = [];
+    const insiderNames = new Set();
 
-    for (const filing of filings.slice(0, 10)) { // max 10 filings per company
-      const txs = await parseForm4(filing);
-      if (txs) allTx.push(...txs);
+    for (const f of filings.slice(0, 8)) {
+      const parsed = await parseForm4(f.filename);
+      if (parsed) {
+        allTx.push(...parsed.txs.map(t => ({ ...t, date: f.dateFiled })));
+        insiderNames.add(parsed.name);
+      }
       await sleep(110);
     }
 
     if (allTx.length > 0) {
-      const purchases = allTx.filter(t => t.txCode === 'P');
-      const sales     = allTx.filter(t => t.txCode === 'S');
+      const buys  = allTx.filter(t => t.txCode === 'P');
+      const sells = allTx.filter(t => t.txCode === 'S');
       results[ticker] = {
-        buys:           purchases.length,
-        sells:          sales.length,
-        netChange:      purchases.length - sales.length,
-        totalBuyValue:  purchases.reduce((a, t) => a + (t.value || 0), 0),
-        totalSellValue: sales.reduce((a, t) => a + (t.value || 0), 0),
+        buys:           buys.length,
+        sells:          sells.length,
+        netChange:      buys.length - sells.length,
+        totalBuyValue:  buys.reduce((a,t) => a+(t.value||0), 0),
+        totalSellValue: sells.reduce((a,t) => a+(t.value||0), 0),
         transactions:   allTx.slice(0, 10),
-        insiders:       [...new Set(allTx.map(t => t.name))].slice(0, 5),
+        insiders:       [...insiderNames].slice(0, 5),
       };
+      withActivity++;
     }
 
     parsed++;
-    if (parsed % 20 === 0) {
-      const elapsed = Math.round((Date.now() - t0) / 1000);
-      process.stdout.write(`\r  [${parsed}/${relevantCiks.length}] ${elapsed}s | ${Object.keys(results).length} with activity`);
+    if (parsed % 25 === 0) {
+      const elapsed = Math.round((Date.now()-t0)/1000);
+      process.stdout.write(`\r  [${parsed}/${uniqueCompanies}] ${elapsed}s | ${withActivity} with activity`);
     }
   }
 
-  const elapsed = Math.round((Date.now() - t0) / 1000);
-  console.log(`\n\n✅ Done in ${elapsed}s`);
-  console.log(`   ${Object.keys(results).length} companies with insider activity`);
+  const elapsed = Math.round((Date.now()-t0)/1000);
+  console.log(`\n\n✅ Done in ${elapsed}s | ${withActivity} companies with insider activity`);
 
-  // Save to Supabase in batches
+  // Save to Supabase
   console.log('💾 Saving to insider_cache...');
   const entries = Object.entries(results);
-  const BATCH = 100;
-
-  for (let i = 0; i < entries.length; i += BATCH) {
-    const batch = entries.slice(i, i + BATCH).map(([symbol, d]) => ({
+  for (let i = 0; i < entries.length; i += 100) {
+    const batch = entries.slice(i, i+100).map(([symbol, d]) => ({
       symbol,
       updated_at:       new Date().toISOString(),
       buys:             d.buys,
@@ -233,21 +214,20 @@ async function main() {
       insiders:         d.insiders,
     }));
     const { error } = await sb.from('insider_cache').upsert(batch);
-    if (error) console.error(`  Batch error:`, error.message);
+    if (error) console.error('Batch error:', error.message);
   }
 
-  // Print top buyers
-  console.log('\n🏆 Top 10 insider buyers (by value):');
+  console.log('\n🏆 Top 10 insider buyers:');
   Object.entries(results)
-    .filter(([, d]) => d.buys > 0)
-    .sort(([, a], [, b]) => b.totalBuyValue - a.totalBuyValue)
-    .slice(0, 10)
-    .forEach(([sym, d], i) => {
+    .filter(([,d]) => d.buys > 0)
+    .sort(([,a],[,b]) => b.totalBuyValue - a.totalBuyValue)
+    .slice(0,10)
+    .forEach(([sym,d],i) => {
       const val = d.totalBuyValue > 0 ? ` $${(d.totalBuyValue/1000).toFixed(0)}K` : '';
       console.log(`   ${i+1}. ${sym.padEnd(6)} ${d.buys} buys${val}`);
     });
 
-  console.log(`\n✨ Insider cache updated successfully`);
+  console.log(`\n✨ Done — ${withActivity} companies with insider activity saved`);
 }
 
 main().catch(e => { console.error('Fatal:', e); process.exit(1); });
