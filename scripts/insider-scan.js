@@ -45,7 +45,6 @@ async function loadActiveSymbols() {
 
 // ── GET FORM 4 FILINGS FROM QUARTERLY INDEX ───────────────────
 async function getQuarterlyForm4s(year, qtr) {
-  // SEC full-index format: CIK|Company|FormType|DateFiled|Filename
   const url = `${SEC}/Archives/edgar/full-index/${year}/${qtr}/form.idx`;
   console.log(`  Fetching ${year}/${qtr}...`);
   try {
@@ -53,18 +52,43 @@ async function getQuarterlyForm4s(year, qtr) {
     if (!res.ok) { console.log(`  Not found: ${url}`); return []; }
     const text = await res.text();
     const lines = text.split('\n');
-    const filings = [];
-    for (const line of lines) {
-      if (!line.includes('4 ') && !line.includes('4/A')) continue;
-      // Fixed-width format
-      const formType = line.substring(20, 40).trim();
-      if (formType !== '4' && formType !== '4/A') continue;
-      const cik      = line.substring(74, 86).trim().padStart(10, '0');
-      const dateFiled = line.substring(86, 98).trim();
-      const filename  = line.substring(98).trim();
-      if (cik && dateFiled && filename) {
-        filings.push({ cik, formType, dateFiled, filename });
+
+    // Line 7 (index 6) is the header row — use it to find column positions
+    // Format: "Form Type           Company Name            CIK         Date Filed  Filename"
+    const headerLine = lines[7] || lines[6] || '';
+    const typeLoc  = headerLine.indexOf('Form Type');
+    const nameLoc  = headerLine.indexOf('Company Name');
+    const cikLoc   = headerLine.indexOf('CIK');
+    const dateLoc  = headerLine.indexOf('Date Filed');
+    const urlLoc   = headerLine.indexOf('Filename');
+
+    if (typeLoc === -1 || urlLoc === -1) {
+      // Fallback: use known fixed positions from SEC docs
+      // Form Type(0-12), Company(12-74), CIK(74-86), Date(86-98), Filename(98+)
+      const filings = [];
+      for (const line of lines.slice(9)) {
+        if (line.length < 100) continue;
+        const formType = line.substring(0, 12).trim();
+        if (formType !== '4' && formType !== '4/A') continue;
+        const cik       = line.substring(74, 86).trim().padStart(10, '0');
+        const dateFiled = line.substring(86, 98).trim();
+        const filename  = line.substring(98).trim();
+        if (cik && dateFiled && filename) filings.push({ cik, formType, dateFiled, filename });
       }
+      console.log(`  ${filings.length} Form 4 filings (fallback parser)`);
+      return filings;
+    }
+
+    // Use dynamic positions from header
+    const filings = [];
+    for (const line of lines.slice(9)) {
+      if (line.length < urlLoc) continue;
+      const formType  = line.substring(typeLoc, nameLoc).trim();
+      if (formType !== '4' && formType !== '4/A') continue;
+      const cik       = line.substring(cikLoc, dateLoc).trim().padStart(10, '0');
+      const dateFiled = line.substring(dateLoc, urlLoc).trim();
+      const filename  = line.substring(urlLoc).trim();
+      if (cik && dateFiled && filename) filings.push({ cik, formType, dateFiled, filename });
     }
     console.log(`  ${filings.length} Form 4 filings found`);
     return filings;
