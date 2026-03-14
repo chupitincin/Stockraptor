@@ -105,5 +105,20 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers, body: JSON.stringify({ received: true }) };
   }
 
+  // ── CANCEL SUBSCRIPTION ──────────────────────────────────
+  if (event.httpMethod === 'POST' && path === '/cancel-subscription') {
+    try {
+      const { userId } = JSON.parse(event.body);
+      const { createClient } = require('@supabase/supabase-js');
+      const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+      const { data: profile } = await supabase.from('profiles').select('stripe_subscription_id').eq('id', userId).single();
+      if (!profile?.stripe_subscription_id) throw new Error('No active subscription found');
+      await stripe.subscriptions.update(profile.stripe_subscription_id, { cancel_at_period_end: true });
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+    } catch(err) {
+      return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
+    }
+  }
+
   return { statusCode: 404, headers, body: JSON.stringify({ error: 'Not found' }) };
 };
