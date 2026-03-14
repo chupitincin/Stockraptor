@@ -198,6 +198,10 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .sc-l{font-size:10px;color:#8080b0;letter-spacing:2px;}
 .flag-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;}
 .flag{font-size:9px;padding:2px 6px;border-radius:2px;border:1px solid;letter-spacing:.5px;font-weight:600;}
+.flag.tt{cursor:help;}
+.flag.tt::after{width:200px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;white-space:normal;}
+.flag.tt{cursor:help;border-bottom:none;}
+.flag.tt::after{width:200px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;bottom:calc(100% + 8px);white-space:normal;}
 .tbl-outer{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;display:none;}
 thead tr{border-bottom:1px solid var(--bord2);}
@@ -630,6 +634,10 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
       <div class="vd"></div>
       <button class="bf"    onclick="setF('VOL_SPIKE',this)" id="fVolSpike">⚡ VOL SPIKE</button>
       <button class="bf"    onclick="setF('SHORT_SQ',this)" id="fShortSq">🎯 SHORT SQUEEZE</button>
+      <button class="bf"    onclick="setF('INSIDER_BUY',this)" id="fInsider">👤 INSIDER BUY</button>
+      <button class="bf"    onclick="setF('EPS_STREAK',this)" id="fEps">📈 EPS STREAK</button>
+      <button class="bf"    onclick="setF('FCF_POS',this)" id="fFcf">💰 FCF+</button>
+      <button class="bf"    onclick="setF('HIGH_UPSIDE',this)" id="fUpside">🎯 HIGH UPSIDE</button>
       <div class="vd ml"></div>
       <button class="bs on" onclick="setS('score',this)" id="ssScore">SCORE</button>
       <button class="bs"    onclick="setS('fund',this)" id="ssFund">FUND.</button>
@@ -874,7 +882,13 @@ function renderSum(){
 function renderTable(){
   const plan = scanProfile?.plan || 'free';
   const freeLimit = 20;
-  let rows=[...allData].filter(d=>{if(curF==='ALL')return true;if(curF==='VOL_SPIKE')return d.volRatio&&d.volRatio>2;if(curF==='SHORT_SQ')return d.shortPct&&d.shortPct>15;return d.signal===curF;});
+  let rows=[...allData].filter(d=>{if(curF==='ALL')return true;if(curF==='VOL_SPIKE')return d.volRatio&&d.volRatio>2;
+    if(curF==='SHORT_SQ')return d.shortPct&&d.shortPct>15;
+    if(curF==='INSIDER_BUY')return d.flags?.some(f=>f.label.includes('INSIDER'));
+    if(curF==='EPS_STREAK')return d.flags?.some(f=>f.label.includes('EPS STREAK'));
+    if(curF==='FCF_POS')return d.flags?.some(f=>f.label.includes('FCF'));
+    if(curF==='HIGH_UPSIDE')return d.flags?.some(f=>f.label.includes('UPSIDE'));
+    return d.signal===curF;});
   rows.sort((a,b)=>{
     let v=0;
     if(curS==='score')v=b.total-a.total;
@@ -917,7 +931,19 @@ function renderTable(){
     }
     const c=SIG[d.signal],vals=[d.fund,d.sent,d.analyst,d.momentum,d.earPts,d.volShort];
     const bkd=`<div class="bkd">${vals.map((v,j)=>`<div class="bseg" style="width:${Math.max(2,Math.min(28,v/maxes[j]*28))}px;background:${cols[j]}"></div>`).join('')}</div>`;
-    const flagsHtml=d.flags.map(f=>`<span class="flag" style="color:${f.color};border-color:${f.color}44">${f.label}</span>`).join('');
+    const FLAG_TIPS = {
+  '⚡ VOL SPIKE':   'Volume is 3x or more above the 10-day average. Something is happening — news, earnings, or unusual interest.',
+  '🎯 SQUEEZE':     'High short interest + rising price. Short sellers may be forced to buy, accelerating the move up.',
+  '👤 INSIDER BUY': 'A company executive or director bought shares with their own money in the last 90 days. Strong bullish signal.',
+  '💼 BIG INSIDER': 'An insider bought over $1M of shares with their own money. Very strong conviction signal.',
+  '📈 EPS STREAK':  'Beat analyst earnings estimates 3 or 4 quarters in a row. Company consistently outperforms expectations.',
+  '💰 FCF+':        'Positive Free Cash Flow two years in a row. Company generates real cash, not just accounting profits.',
+  '💎 EBITDA+':     'EBITDA margin above 25%. Very profitable core business before debt and taxes.',
+  '🚀 EPS GROWTH':  'Earnings per share grew more than 25% vs last year. Strong profit acceleration.',
+  '🎯 HIGH UPSIDE': 'Wall Street analysts have an average price target 35%+ above current price.',
+  '📊 ABOVE MA50':  'Price is 10%+ above the 50-day moving average. Strong upward momentum confirmed.',
+};
+const flagsHtml=d.flags.map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('');
     const ef=fmtD(d.earningsDate);
     const edHtml=d.earningsDays!==null?`<span style="color:${d.earningsDays<=20?'var(--gold)':d.earningsDays<=45?'var(--orange)':'var(--txt)'}">📅 ${ef} <span style="opacity:.4;font-size:7px">${d.earningsDays}d</span></span>`:'<span class="cd">—</span>';
     const vsHtml=`${d.volRatio?`<span class="${d.volRatio>2?'vol-spike':'cd'}">${d.volRatio>2?'⚡':''}${d.volRatio}x</span>`:''} ${d.shortPct?`<span class="${d.shortPct>15?'ct':'cd'}" style="margin-left:3px">${d.shortPct>15?'🎯':''}${d.shortPct}%</span>`:''}${!d.volRatio&&!d.shortPct?'<span class="cd">—</span>':''}`;
@@ -1343,7 +1369,7 @@ const SCANNER_LANG = {
   en: {
     // toolbar
     btnScan:'▶ ANALYZE NOW', fAll:'ALL', fStrongBuy:'🟢 STRONG BUY', fInteresting:'🟡 INTERESTING',
-    fWatch:'🟠 WATCH', fWeak:'🔴 WEAK', fVolSpike:'⚡ VOL SPIKE', fShortSq:'🎯 SHORT SQUEEZE',
+    fWatch:'🟠 WATCH', fWeak:'🔴 WEAK', fVolSpike:'⚡ VOL SPIKE', fShortSq:'🎯 SHORT SQUEEZE', fInsider:'👤 INSIDER BUY', fEps:'📈 EPS STREAK', fFcf:'💰 FCF+', fUpside:'🎯 HIGH UPSIDE',
     ssScore:'SCORE', ssFund:'FUND.', ssSent:'SENTIMENT', ssMomentum:'MOMENTUM', ssEarnings:'EARNINGS',
     // table headers
     thTicker:'TICKER / SECTOR', thSignal:'SIGNAL', thScore:'TOTAL SCORE', thFund:'FUND.',
@@ -1412,7 +1438,7 @@ const SCANNER_LANG = {
   es: {
     // toolbar
     btnScan:'▶ ANALIZAR AHORA', fAll:'TODO', fStrongBuy:'🟢 COMPRA FUERTE', fInteresting:'🟡 INTERESANTE',
-    fWatch:'🟠 VIGILAR', fWeak:'🔴 DÉBIL', fVolSpike:'⚡ PICO VOLUMEN', fShortSq:'🎯 SHORT SQUEEZE',
+    fWatch:'🟠 VIGILAR', fWeak:'🔴 DÉBIL', fVolSpike:'⚡ PICO VOLUMEN', fShortSq:'🎯 SHORT SQUEEZE', fInsider:'👤 INSIDER COMPRA', fEps:'📈 RACHA EPS', fFcf:'💰 FCF+', fUpside:'🎯 ALTO POTENCIAL',
     ssScore:'SCORE', ssFund:'FUND.', ssSent:'SENTIMIENTO', ssMomentum:'MOMENTUM', ssEarnings:'RESULTADOS',
     // table headers
     thTicker:'TICKER / SECTOR', thSignal:'SEÑAL', thScore:'SCORE TOTAL', thFund:'FUND.',
@@ -1488,7 +1514,7 @@ function applyScannerLang() {
   window._st = t;
 
   // Toolbar buttons
-  ['btnScan','fAll','fStrongBuy','fInteresting','fWatch','fWeak','fVolSpike','fShortSq',
+  ['btnScan','fAll','fStrongBuy','fInteresting','fWatch','fWeak','fVolSpike','fShortSq','fInsider','fEps','fFcf','fUpside',
    'ssScore','ssFund','ssSent','ssMomentum','ssEarnings'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = t[id];
