@@ -791,7 +791,7 @@ function computeScores(d){
   const total=Math.max(0,Math.min(100,fund+revQ+dilPenalty+debtPenalty+sent+insider+analyst+upsideScore+momentum+trend+betaB+earPts+epsStreak+volScore+shortSq));
   return{total,fund:Math.max(0,fund+revQ+dilPenalty+debtPenalty),sent:Math.max(0,sent+insider),analyst:Math.max(0,analyst+upsideScore),momentum:Math.max(0,momentum+trend+betaB),earPts:Math.max(0,earPts+epsStreak),volShort:Math.max(0,volScore+shortSq),dilPenalty,debtPenalty,epsStreak,streak};
 }
-function toSig(s){return s>=72?'STRONG BUY':s>=48?'INTERESTING':s>=25?'WATCH':'WEAK';}
+function toSig(s){return s>=62?'STRONG BUY':s>=46?'INTERESTING':s>=28?'WATCH':'WEAK';}
 
 async function apiFetch(url,tries=3){
   for(let i=0;i<tries;i++){
@@ -884,7 +884,7 @@ function renderTable(){
   const freeLimit = 20;
   let rows=[...allData].filter(d=>{if(curF==='ALL')return true;if(curF==='VOL_SPIKE')return d.volRatio&&d.volRatio>2;
     if(curF==='SHORT_SQ')return d.shortPct&&d.shortPct>15;
-    if(curF==='INSIDER_BUY')return d.flags?.some(f=>f.label.includes('INSIDER'));
+    if(curF==='INSIDER_BUY')return d.insiderData?.buys > 0 || d.flags?.some(f=>f.label?.includes('INSIDER'));
     if(curF==='EPS_STREAK')return d.flags?.some(f=>f.label.includes('EPS STREAK'));
     if(curF==='FCF_POS')return d.flags?.some(f=>f.label.includes('FCF'));
     if(curF==='HIGH_UPSIDE')return d.flags?.some(f=>f.label.includes('UPSIDE'));
@@ -1301,23 +1301,48 @@ async function loadDailyCache() {
   if (emptyState)   emptyState.style.display   = 'none';
 
   try {
-    const { data, error } = await sb2
-      .from('scan_cache')
-      .select('results, scan_date, scanned_at, total_count')
-      .eq('id', 'daily')
-      .single();
+    // Load both caches in parallel
+    const [scanRes, insiderRes] = await Promise.all([
+      sb2.from('scan_cache').select('results, scan_date, scanned_at, total_count').eq('id', 'daily').single(),
+      sb2.from('insider_cache').select('symbol, buys, sells, net_change, total_buy_value, total_sell_value, transactions, insiders, updated_at'),
+    ]);
+
+    const { data, error } = scanRes;
 
     if (error || !data?.results?.length) {
-      // No cache yet — show normal empty state
       if (cacheLoading) cacheLoading.style.display = 'none';
       if (emptyState)   emptyState.style.display   = 'block';
       return;
     }
 
-    // Load results from cache — normalize field names
+    // Build insider lookup map
+    const insiderMap = {};
+    if (insiderRes?.data) {
+      insiderRes.data.forEach(r => {
+        insiderMap[r.symbol] = {
+          buys:           r.buys || 0,
+          sells:          r.sells || 0,
+          netChange:      r.net_change || 0,
+          totalBuyValue:  r.total_buy_value || 0,
+          totalSellValue: r.total_sell_value || 0,
+          transactions:   r.transactions || [],
+          insiders:       r.insiders || [],
+        };
+      });
+    }
+
+    // Load results from cache — normalize field names + merge insider data
     allData = data.results.map(r => ({
       ...r,
       ticker: r.ticker || r.sym,
+      // Merge insider data from insider_cache (more recent and detailed)
+      insiderData: insiderMap[r.sym] || r.insiderData || null,
+      insiderChange: insiderMap[r.sym]?.netChange ?? r.insiderChange,
+      mspr: insiderMap[r.sym] ? (
+        (insiderMap[r.sym].buys + insiderMap[r.sym].sells) > 0
+          ? Math.round(((insiderMap[r.sym].netChange) / (insiderMap[r.sym].buys + insiderMap[r.sym].sells)) * 100) / 100
+          : null
+      ) : r.mspr,
       score:  r.score  ?? r.total,
       fund:   r.fund   ?? r.fundScore,
       sent:   r.sent   ?? r.sentScore,
@@ -1401,7 +1426,7 @@ const SCANNER_LANG = {
     lQtrSuffix:(window._st&&window._st.lQtrSuffix)||'quarters', lNoHistory:(window._st&&window._st.lNoHistory)||'No history', lNoNews:(window._st&&window._st.lNoNews)||'No recent news',
     lSqHigh:(window._st&&window._st.lSqHigh)||'🔥 HIGH', lSqMod:(window._st&&window._st.lSqMod)||'📈 MOD', lSqWatch:(window._st&&window._st.lSqWatch)||'👁 WATCH',
     // column tooltips
-    tipSignal:'Overall verdict based on the total score. STRONG BUY ≥72 · INTERESTING ≥48 · WATCH ≥25 · WEAK <25',
+    tipSignal:'Overall verdict based on the total score. STRONG BUY ≥62 · INTERESTING ≥46 · WATCH ≥28 · WEAK <28',
     tipScore:'Composite score from 0–100 combining 14 factors: fundamentals, sentiment, analyst consensus, momentum, earnings, volume and short squeeze potential.',
     tipFund:'Fundamental score (0–25 pts). Evaluates P/E ratio vs sector average, P/B ratio, debt/equity, revenue growth, gross margin and ROE. Penalizes share dilution >8%/yr.',
     tipSent:'News sentiment score (0–12 pts). Analyzes the tone of news headlines from the last 14 days. Positive news coverage pushes this score up.',
@@ -1470,7 +1495,7 @@ const SCANNER_LANG = {
     lQtrSuffix:'trimestres', lNoHistory:'Sin historial', lNoNews:'Sin noticias recientes',
     lSqHigh:'🔥 ALTO', lSqMod:'📈 MODERADO', lSqWatch:'👁 VIGILAR',
     // column tooltips
-    tipSignal:'Veredicto general basado en el score total. COMPRA FUERTE ≥72 · INTERESANTE ≥48 · VIGILAR ≥25 · DÉBIL <25',
+    tipSignal:'Veredicto general basado en el score total. COMPRA FUERTE ≥62 · INTERESANTE ≥46 · VIGILAR ≥28 · DÉBIL <28',
     tipScore:'Score compuesto de 0 a 100 que combina 14 factores: fundamentales, sentimiento, consenso de analistas, momentum, resultados, volumen y potencial de short squeeze.',
     tipFund:'Score fundamental (0–25 pts). Evalúa el P/E vs la media sectorial, P/B, deuda/capital, crecimiento de ingresos, margen bruto y ROE. Penaliza la dilución >8%/año.',
     tipSent:'Score de sentimiento de noticias (0–12 pts). Analiza el tono de los titulares de los últimos 14 días. Una cobertura positiva sube este score.',
