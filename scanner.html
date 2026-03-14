@@ -316,6 +316,20 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
   </div>
 </div>
 
+<!-- Cache banner: last scan timestamp -->
+<div id="cacheBanner" style="display:none;position:fixed;top:52px;left:0;right:0;z-index:90;background:#06060f;border-bottom:1px solid #0f0f20;padding:6px 24px;align-items:center;justify-content:space-between;gap:12px;">
+  <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#5050a0;font-family:'JetBrains Mono',monospace;">
+    <span id="livdot" class="livdot done"></span>
+    <span id="cacheStamp">Loading scan data...</span>
+  </div>
+  <button id="btnRescan" onclick="runScan()" style="background:transparent;border:1px solid #181828;color:#7070a0;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;padding:4px 10px;border-radius:3px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#00ff94';this.style.color='#00ff94'" onmouseout="this.style.borderColor='#181828';this.style.color='#7070a0'">&#x21BB; RE-SCAN NOW</button>
+</div>
+
+<!-- Loading indicator -->
+<div id="cacheLoading" style="display:none;position:fixed;top:52px;left:0;right:0;z-index:90;background:#06060f;border-bottom:1px solid #0f0f20;padding:6px 24px;">
+  <span style="font-size:11px;color:#5050a0;font-family:'JetBrains Mono',monospace;">&#x27F3; Loading latest scan data...</span>
+</div>
+
 <!-- Auth Gate (shown if not logged in) -->
 <div id="authGate" style="display:none">
   <div class="gate-card">
@@ -1101,7 +1115,7 @@ async function initScannerAuth() {
 }
 
 function addBodyPadding() {
-  document.body.style.paddingTop = '52px';
+  document.body.style.paddingTop = '90px';
 }
 
 function showUpgradeModal() {
