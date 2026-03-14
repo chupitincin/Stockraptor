@@ -1111,7 +1111,7 @@ function showUpgradeModal() {
 async function startCheckoutFromScanner(plan) {
   if (!scanUser) return;
   document.getElementById('upgradeGate').classList.remove('open');
-  const priceId = plan === 'pro' ? 'price_1TAq0APBvHji1Pcv17SPtUv1' : 'price_1TAq0QPBvHji1PcvJtdwRT3e';
+  const priceId = plan === 'pro' ? 'price_1TAq0APBvHji1Pcv17SPtUv1' : 'price_1TAqvkPBvHji1PcvYSNF9r8I';
   try {
     const res = await fetch('/.netlify/functions/stripe/create-checkout', {
       method: 'POST',
