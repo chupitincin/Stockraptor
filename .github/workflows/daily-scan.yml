@@ -25,6 +25,6 @@ jobs:
       - name: Run daily scan
         run: node scripts/scan-daily.js
         env:
-          FINNHUB_KEY: ${{ secrets.FINNHUB_KEY }}
+          FMP_KEY: ${{ secrets.FMP_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
