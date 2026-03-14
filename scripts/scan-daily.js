@@ -42,6 +42,117 @@ async function fmp(endpoint, retries = 2) {
   }
 }
 
+// ── SEC EDGAR INSIDER DATA (free, official) ───────────────────
+let secTickerMap = null; // cached CIK lookup
+
+async function loadSecTickerMap() {
+  if (secTickerMap) return secTickerMap;
+  try {
+    const res = await fetch('https://www.sec.gov/files/company_tickers.json', {
+      headers: { 'User-Agent': 'StockRaptor research@stockraptor.com' }
+    });
+    const data = await res.json();
+    secTickerMap = {};
+    for (const entry of Object.values(data)) {
+      secTickerMap[entry.ticker.toUpperCase()] = String(entry.cik_str).padStart(10, '0');
+    }
+    console.log(`\n  📋 SEC ticker map loaded: ${Object.keys(secTickerMap).length} tickers`);
+  } catch(e) {
+    console.warn('  ⚠ SEC ticker map failed:', e.message);
+    secTickerMap = {};
+  }
+  return secTickerMap;
+}
+
+async function getSecInsider(sym) {
+  try {
+    const map = await loadSecTickerMap();
+    const cik = map[sym.toUpperCase()];
+    if (!cik) return null;
+
+    const res = await fetch(`https://data.sec.gov/submissions/CIK${cik}.json`, {
+      headers: { 'User-Agent': 'StockRaptor research@stockraptor.com' }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    // Get recent Form 4 filings
+    const filings = data.filings?.recent;
+    if (!filings) return null;
+
+    const form4Indices = [];
+    for (let i = 0; i < filings.form.length; i++) {
+      if (filings.form[i] === '4' || filings.form[i] === '4/A') {
+        form4Indices.push(i);
+      }
+    }
+
+    // Last 90 days
+    const cutoff = new Date(Date.now() - 90 * 86400000);
+    const recent = form4Indices
+      .filter(i => new Date(filings.filingDate[i]) > cutoff)
+      .slice(0, 20);
+
+    if (recent.length === 0) return { transactions: [], buys: 0, sells: 0, netChange: 0, insiders: [] };
+
+    // Fetch actual Form 4 XML for each recent filing to get transaction details
+    const transactions = [];
+    for (const idx of recent.slice(0, 10)) { // limit to 10 most recent
+      try {
+        const accession = filings.accessionNumber[idx].replace(/-/g, '');
+        const xmlUrl = `https://www.sec.gov/Archives/edgar/data/${parseInt(cik)}/` +
+                       `${accession}/${filings.primaryDocument[idx]}`;
+        const xmlRes = await fetch(xmlUrl, {
+          headers: { 'User-Agent': 'StockRaptor research@stockraptor.com' }
+        });
+        if (!xmlRes.ok) continue;
+        const xml = await xmlRes.text();
+
+        // Parse key fields from XML
+        const name = (xml.match(/<rptOwnerName>(.*?)<\/rptOwnerName>/) || [])[1] || '';
+        const title = (xml.match(/<officerTitle>(.*?)<\/officerTitle>/) || [])[1] || '';
+        const isDirector = xml.includes('<isDirector>1</isDirector>');
+        const isOfficer = xml.includes('<isOfficer>1</isOfficer>');
+        const txCode = (xml.match(/<transactionCode>(.*?)<\/transactionCode>/) || [])[1] || '';
+        const shares = parseFloat((xml.match(/<transactionShares>\s*<value>(.*?)<\/value>/) || [])[1] || '0');
+        const priceStr = (xml.match(/<transactionPricePerShare>\s*<value>(.*?)<\/value>/) || [])[1];
+        const price = priceStr ? parseFloat(priceStr) : null;
+        const date = filings.filingDate[idx];
+
+        if (txCode && shares > 0) {
+          transactions.push({
+            name: name.trim(),
+            title: title.trim() || (isDirector ? 'Director' : isOfficer ? 'Officer' : 'Insider'),
+            type: txCode === 'P' ? 'Purchase' : txCode === 'S' ? 'Sale' : txCode === 'A' ? 'Award' : txCode,
+            txCode,
+            shares: Math.round(shares),
+            price,
+            value: price ? Math.round(shares * price) : null,
+            date,
+          });
+        }
+        await sleep(110); // SEC rate limit: max 10 req/sec
+      } catch(e) { /* skip failed filings */ }
+    }
+
+    const purchases = transactions.filter(t => t.txCode === 'P');
+    const sales = transactions.filter(t => t.txCode === 'S');
+
+    return {
+      transactions: transactions.slice(0, 8),
+      buys: purchases.length,
+      sells: sales.length,
+      netChange: purchases.length - sales.length,
+      totalBuyValue: purchases.reduce((a, t) => a + (t.value || 0), 0),
+      totalSellValue: sales.reduce((a, t) => a + (t.value || 0), 0),
+      insiders: [...new Set(transactions.map(t => t.name))].slice(0, 5),
+    };
+  } catch(e) {
+    return null;
+  }
+}
+
+
 function isRealStock(s) {
   if (!s?.symbol) return false;
   if (s.isEtf || s.isFund) return false;
@@ -105,7 +216,7 @@ async function analyzeTicker(sym, baseData) {
     const earnings    = await fmp(`/earnings?symbol=${sym}&limit=5`);
     const priceTarget = await fmp(`/price-target-consensus?symbol=${sym}`);
     const news        = await fmp(`/news/stock?symbols=${sym}&limit=8`);
-    const insider     = null;
+    const insider     = await getSecInsider(sym);
 
     const p   = profile?.[0];
     const q   = quote?.[0];
@@ -319,24 +430,20 @@ async function analyzeTicker(sym, baseData) {
 
     // ── 7. INSIDER (0-8 pts) ──────────────────────────────────
     let insiderScore = 0, insiderChange = null, mspr = null;
-    if (Array.isArray(insider) && insider.length > 0) {
-      const recent90 = insider.filter(t => {
-        const d = new Date(t.transactionDate || t.filingDate || 0);
-        return (Date.now() - d) < 90 * 86400000;
-      });
-      const buys  = recent90.filter(t => (t.transactionType || '').includes('Purchase') || t.transactionType === 'P-Purchase').length;
-      const sells = recent90.filter(t => (t.transactionType || '').includes('Sale') && !t.transactionType.includes('SalePlan')).length;
-      if (recent90.length > 0) {
-        insiderChange = buys - sells;
-        mspr = Math.round(((buys - sells) / recent90.length) * 100) / 100;
-        insiderScore = insiderChange > 3 ? 8 : insiderChange > 1 ? 5 : insiderChange >= 0 ? 2 : 0;
-      }
+    if (insider && insider.transactions) {
+      insiderChange = insider.netChange;
+      const total = insider.buys + insider.sells;
+      mspr = total > 0 ? Math.round((insider.netChange / total) * 100) / 100 : null;
+      insiderScore = insider.buys > 3 ? 8 : insider.buys > 1 ? 6 : insider.buys === 1 ? 4 : insider.sells > 2 ? 0 : 2;
+      // Bonus for high buy value
+      if (insider.totalBuyValue > 500000) insiderScore = Math.min(8, insiderScore + 2);
     }
 
     // ── FLAGS ─────────────────────────────────────────────────
     const flags = [];
     if (volRatio && volRatio > 3)                        flags.push({ label: '⚡ VOL SPIKE',   color: '#00b4ff' });
-    if (insiderChange != null && insiderChange > 2)      flags.push({ label: '👤 INSIDER BUY', color: '#00ff94' });
+    if (insider?.buys > 0 && insider?.netChange > 0)        flags.push({ label: '👤 INSIDER BUY', color: '#00ff94' });
+    if (insider?.totalBuyValue > 1000000)                    flags.push({ label: '💼 BIG INSIDER',  color: '#00ff94' });
     if (streak >= 3)                                     flags.push({ label: '📈 EPS STREAK',  color: '#ffcc00' });
     if (fcf != null && fcf > 0 && fcf1 != null && fcf1 > 0) flags.push({ label: '💰 FCF+',    color: '#00e5cc' });
     if (ebitdaMargin != null && ebitdaMargin > 25)       flags.push({ label: '💎 EBITDA+',     color: '#bf5fff' });
@@ -374,6 +481,15 @@ async function analyzeTicker(sym, baseData) {
       sharesDilution, dilPenalty, debtPenalty,
       targetPrice, upside, recMean, recBuy, recHold, recSell,
       shortPct, mspr, insiderChange,
+      insiderData: insider ? {
+        buys: insider.buys,
+        sells: insider.sells,
+        netChange: insider.netChange,
+        totalBuyValue: insider.totalBuyValue,
+        totalSellValue: insider.totalSellValue,
+        transactions: insider.transactions,
+        insiders: insider.insiders,
+      } : null,
       earningsDate, earningsDays, streak, epsHistory,
       newsSent: newsSent != null ? Math.round(newsSent * 100) / 100 : null,
       newsItems, flags,
