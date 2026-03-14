@@ -881,16 +881,15 @@ function renderTable(){
     // Free users: show first 20 normally, rest locked
     const isLocked = plan === 'free' && idx < freeLimit;
     if (isLocked) {
-      return `<tr class="mr locked-row" onclick="showUpgradeModal()" style="cursor:pointer;opacity:0.6;transition:opacity .2s;" onmouseover="this.style.opacity='1';this.style.background='#0d0d2a'" onmouseout="this.style.opacity='0.6';this.style.background=''">
+      return `<tr class="mr locked-row" onclick="showUpgradeModal()" style="cursor:pointer;opacity:0.5;transition:all .2s;" onmouseover="this.style.opacity='1';this.style.background='#0d0d2a'" onmouseout="this.style.opacity='0.5';this.style.background=''">
         <td><span style="color:#00ff94;font-size:14px">🔒</span></td>
         <td><div class="tsym" style="filter:blur(5px);user-select:none">XXXX</div><div class="tsec" style="filter:blur(4px);user-select:none">████████</div></td>
         <td><span class="badge" style="filter:blur(4px);border-color:#ffffff22;color:#ffffff33">██████</span></td>
         <td style="filter:blur(4px);user-select:none"><div class="sw"><span class="sv">██</span></div></td>
-        <td style="filter:blur(4px);user-select:none">████</td><td style="filter:blur(4px);user-select:none">████</td><td style="filter:blur(4px);user-select:none">████</td>
-        <td style="filter:blur(4px);user-select:none">████</td><td style="filter:blur(4px);user-select:none">████</td><td style="filter:blur(4px);user-select:none">████</td>
         <td style="filter:blur(4px);user-select:none">████</td>
-        <td colspan="2" style="text-align:center;">
-          <span style="font-size:11px;color:#00ff94;letter-spacing:1px;font-weight:600;">🔒 UNLOCK PRO →</span>
+        <td style="filter:blur(4px);user-select:none">████</td>
+        <td colspan="7" style="text-align:center;padding:8px 0;">
+          <span style="font-size:12px;color:#00ff94;letter-spacing:1.5px;font-weight:700;background:#00ff9415;padding:6px 20px;border-radius:4px;border:1px solid #00ff9433;">🔒 UNLOCK PRO TO VIEW</span>
         </td>
       </tr>`;
     }
@@ -924,41 +923,41 @@ function renderDet(d){
   const newsHtml=d.newsItems?.length?d.newsItems.slice(0,6).map(n=>`<div class="news-item"><div class="news-h">${n.headline}</div><div class="news-m">${n.source} · ${n.time}${n.sentiment?`<span class="news-s" style="color:${n.sentiment==='positive'?'var(--green)':n.sentiment==='negative'?'var(--red)':'var(--txt)'}">${n.sentiment==='positive'?'▲ Pos':n.sentiment==='negative'?'▼ Neg':'→ Neu'}</span>`:''}</div></div>`).join(''):'<span class="cd" style="font-size:9px">No recent news</span>';
   return`<div class="det-inner">
   <div class="det-card"><div class="det-title">${(window._detTitles&&window._detTitles().fund)||"📊 FUNDAMENTALS"} <span style="font-size:7px;color:#1e1e30;margin-left:4px">sector P/E benchmark: ${SECTOR_PE[d.sector]||22}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipPE)||"Price-to-Earnings. How much you pay per $1 of company profit.">P/E Ratio</span><span class="dv ${d.pe&&d.pe<(SECTOR_PE[d.sector]||22)?'cg':'cd'}">${d.pe??'—'}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipPB)||"Price-to-Book.">P/B Ratio</span><span class="dv ${d.pb&&d.pb<2?'cg':'cd'}">${d.pb??'—'}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipDE)||"Debt/Equity ratio.">Debt/Equity</span><span class="dv ${d.de!==null&&d.de<0.5?'cg':d.de>1.5?'cr':'cd'}">${d.de!==null?Math.round(d.de*100)+'%':'—'}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipRevGrowth)||"Revenue growth YoY.">Revenue Growth</span><span class="dv ${d.revenueGrowth>15?'cg':d.revenueGrowth<0?'cr':'cd'}">${d.revenueGrowth!==null?sgn(d.revenueGrowth)+d.revenueGrowth+'%':'—'}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipGrossMargin)||"Gross margin %.">Gross Margin</span><span class="dv ${d.grossMargin>40?'cg':'cd'}">${d.grossMargin!==null?d.grossMargin+'%':'—'}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipROE)||"Return on Equity.">ROE</span><span class="dv ${d.roe>15?'cg':d.roe<0?'cr':'cd'}">${d.roe!==null?d.roe+'%':'—'}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipROA)||"Return on Assets.">ROA</span><span class="dv ${d.roa>8?'cg':d.roa<0?'cr':'cd'}">${d.roa!==null?d.roa+'%':'—'}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipCurrentRatio)||"Current ratio.">Current Ratio</span><span class="dv ${d.currentRatio>=1.5?'cg':d.currentRatio<1?'cr':'cd'}">${d.currentRatio?Math.round(d.currentRatio*100)/100:'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipPE)||'Price-to-Earnings: how much you pay per $1 of profit. Lower is better vs sector avg.'}">P/E Ratio</span><span class="dv ${d.pe&&d.pe<(SECTOR_PE[d.sector]||22)?'cg':'cd'}">${d.pe??'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipPB)||'Price-to-Book.'}">P/B Ratio</span><span class="dv ${d.pb&&d.pb<2?'cg':'cd'}">${d.pb??'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipDE)||'Debt/Equity ratio.'}">Debt/Equity</span><span class="dv ${d.de!==null&&d.de<0.5?'cg':d.de>1.5?'cr':'cd'}">${d.de!==null?Math.round(d.de*100)+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipRevGrowth)||'Revenue growth YoY.'}">Revenue Growth</span><span class="dv ${d.revenueGrowth>15?'cg':d.revenueGrowth<0?'cr':'cd'}">${d.revenueGrowth!==null?sgn(d.revenueGrowth)+d.revenueGrowth+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipGrossMargin)||'Gross margin %.'}">Gross Margin</span><span class="dv ${d.grossMargin>40?'cg':'cd'}">${d.grossMargin!==null?d.grossMargin+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipROE)||'Return on Equity.'}">ROE</span><span class="dv ${d.roe>15?'cg':d.roe<0?'cr':'cd'}">${d.roe!==null?d.roe+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipROA)||'Return on Assets.'}">ROA</span><span class="dv ${d.roa>8?'cg':d.roa<0?'cr':'cd'}">${d.roa!==null?d.roa+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipCurrentRatio)||'Current ratio.'}">Current Ratio</span><span class="dv ${d.currentRatio>=1.5?'cg':d.currentRatio<1?'cr':'cd'}">${d.currentRatio?Math.round(d.currentRatio*100)/100:'—'}</span></div>
     <div class="hr-mini"></div>
     <div class="det-r"><span class="dk" style="color:${d.dilPenalty<-3?'var(--red)':'var(--txt)'}">⚠ Share dilution/yr</span><span class="dv ${d.sharesDilution>8?'cr':d.sharesDilution>3?'co':'cg'}">${d.sharesDilution!==null?sgn(d.sharesDilution)+d.sharesDilution+'%':'—'} ${d.dilPenalty<0?`(${d.dilPenalty}pts)`:''}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipMarketCap)||"Market cap.">Market Cap</span><span class="dv cd">${fmtCap(d.cap)}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipMarketCap)||'Market cap.'}">Market Cap</span><span class="dv cd">${fmtCap(d.cap)}</span></div>
   </div>
   <div class="det-card"><div class="det-title">${(window._detTitles&&window._detTitles().momentum)||"⚡ PRICE & MOMENTUM"}</div>
     <div class="det-r"><span class="dk">Price</span><span class="dv cd">${d.price?'$'+d.price.toFixed(2):'—'}</span></div>
     <div class="det-r"><span class="dk">1-Day</span><span class="dv ${d.priceChange1D>0?'cg':d.priceChange1D<0?'cr':'cd'}">${d.priceChange1D!==null?sgn(d.priceChange1D)+d.priceChange1D+'%':'—'}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tip4W)||"4-week price change.">4-Week</span><span class="dv ${d.priceChange4W>5?'cg':d.priceChange4W<-5?'cr':'cd'}">${d.priceChange4W!==null?sgn(d.priceChange4W)+d.priceChange4W+'%':'—'}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tip52WLow)||"52-week low.">52W Low</span><span class="dv cd">${d.lo52?'$'+d.lo52.toFixed(2):'—'} ${d.pct52Low!==null?'(+'+d.pct52Low+'%)':''}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tip52WHigh)||"52-week high.">52W High</span><span class="dv cd">${d.hi52?'$'+d.hi52.toFixed(2):'—'} ${d.pct52High!==null?'('+d.pct52High+'%)':''}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipVolAvg)||"Volume vs 10D average.">Volume vs 10D avg</span><span class="dv ${d.volRatio>2.5?'ck':d.volRatio>1.5?'cau':'cd'}">${d.volRatio?d.volRatio+'x':'—'}${d.volRatio>2.5?' ⚡':''}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipShortFloat)||"Short % of float.">Short % float</span><span class="dv ${d.shortPct>20?'ct':d.shortPct>10?'cau':'cd'}">${d.shortPct!==null?d.shortPct+'%':'—'}${d.shortPct>20?' 🎯':''}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipSqueeze)||"Short squeeze potential.">Squeeze Potential</span><span class="dv ${d.shortPct>15&&d.priceChange4W>3?'ct':'cd'}">${d.shortPct>20&&d.priceChange4W>5?(window._st&&window._st.lSqHigh)||'🔥 HIGH':d.shortPct>15&&d.priceChange4W>0?(window._st&&window._st.lSqMod)||'📈 MOD':d.shortPct>10?(window._st&&window._st.lSqWatch)||'👁 WATCH':'—'}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipBeta)||"Beta volatility.">Beta</span><span class="dv cd">${d.beta?Math.round(d.beta*100)/100:'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tip4W)||'4-week price change.'}">4-Week</span><span class="dv ${d.priceChange4W>5?'cg':d.priceChange4W<-5?'cr':'cd'}">${d.priceChange4W!==null?sgn(d.priceChange4W)+d.priceChange4W+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tip52WLow)||'52-week low.'}">52W Low</span><span class="dv cd">${d.lo52?'$'+d.lo52.toFixed(2):'—'} ${d.pct52Low!==null?'(+'+d.pct52Low+'%)':''}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tip52WHigh)||'52-week high.'}">52W High</span><span class="dv cd">${d.hi52?'$'+d.hi52.toFixed(2):'—'} ${d.pct52High!==null?'('+d.pct52High+'%)':''}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipVolAvg)||'Volume vs 10D average.'}">Volume vs 10D avg</span><span class="dv ${d.volRatio>2.5?'ck':d.volRatio>1.5?'cau':'cd'}">${d.volRatio?d.volRatio+'x':'—'}${d.volRatio>2.5?' ⚡':''}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipShortFloat)||'Short % of float.'}">Short % float</span><span class="dv ${d.shortPct>20?'ct':d.shortPct>10?'cau':'cd'}">${d.shortPct!==null?d.shortPct+'%':'—'}${d.shortPct>20?' 🎯':''}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipSqueeze)||'Short squeeze potential.'}">Squeeze Potential</span><span class="dv ${d.shortPct>15&&d.priceChange4W>3?'ct':'cd'}">${d.shortPct>20&&d.priceChange4W>5?(window._st&&window._st.lSqHigh)||'🔥 HIGH':d.shortPct>15&&d.priceChange4W>0?(window._st&&window._st.lSqMod)||'📈 MOD':d.shortPct>10?(window._st&&window._st.lSqWatch)||'👁 WATCH':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipBeta)||'Beta volatility.'}">Beta</span><span class="dv cd">${d.beta?Math.round(d.beta*100)/100:'—'}</span></div>
   </div>
   <div class="det-card"><div class="det-title">${(window._detTitles&&window._detTitles().analysts)||"👥 ANALYSTS & INSIDER"}</div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipConsensus)||"Analyst consensus.">Consensus</span><span class="dv">${recLbl(d.recMean)}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipConsensus)||'Analyst consensus.'}">Consensus</span><span class="dv">${recLbl(d.recMean)}</span></div>
     <div class="det-r"><span class="dk">Buy / Hold / Sell</span><span class="dv cd">${d.recBuy} / ${d.recHold} / ${d.recSell}</span></div>
     <div class="stkbar">${(d.recBuy+d.recHold+d.recSell)>0?`<div style="width:${d.recBuy/(d.recBuy+d.recHold+d.recSell)*100}%;background:var(--green)"></div><div style="width:${d.recHold/(d.recBuy+d.recHold+d.recSell)*100}%;background:#1e1e35"></div><div style="width:${d.recSell/(d.recBuy+d.recHold+d.recSell)*100}%;background:var(--red)"></div>`:''}</div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipPriceTarget)||"Analyst price target.">Price Target</span><span class="dv ${d.upside>20?'cg':'cd'}">${d.targetPrice?'$'+d.targetPrice.toFixed(2):'—'} ${d.upside!==null?'('+sgn(d.upside)+d.upside+'%)':''}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipPriceTarget)||'Analyst price target.'}">Price Target</span><span class="dv ${d.upside>20?'cg':'cd'}">${d.targetPrice?'$'+d.targetPrice.toFixed(2):'—'} ${d.upside!==null?'('+sgn(d.upside)+d.upside+'%)':''}</span></div>
     <div class="hr-mini"></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipInsiderMSPR)||"Insider MSPR.">Insider MSPR (3M)</span><span class="dv">${msprLbl(d.mspr)}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipInsiderFlow)||"Net insider flow.">Net Insider Flow</span><span class="dv ${d.insiderChange>0?'cg':d.insiderChange<0?'cr':'cd'}">${d.insiderChange!==null?(d.insiderChange>0?(window._st&&window._st.lInsiderBuying)||'↑ Net buying':(window._st&&window._st.lInsiderSelling)||'↓ Net selling'):'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipInsiderMSPR)||'Insider MSPR.'}">Insider MSPR (3M)</span><span class="dv">${msprLbl(d.mspr)}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipInsiderFlow)||'Net insider flow.'}">Net Insider Flow</span><span class="dv ${d.insiderChange>0?'cg':d.insiderChange<0?'cr':'cd'}">${d.insiderChange!==null?(d.insiderChange>0?(window._st&&window._st.lInsiderBuying)||'↑ Net buying':(window._st&&window._st.lInsiderSelling)||'↓ Net selling'):'—'}</span></div>
   </div>
   <div class="det-card"><div class="det-title">${(window._detTitles&&window._detTitles().earnings)||"📅 EARNINGS & EPS"}</div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipNextEarnings)||"Next earnings date.">Next earnings</span><span class="dv ${d.earningsDays!==null&&d.earningsDays<=20?'cau':'cd'}">${d.earningsDate?fmtD(d.earningsDate)+' ('+d.earningsDays+'d)':'—'}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip=(window._st&&window._st.tipBeatStreak)||"EPS beat streak.">Beat streak</span><span class="dv ${d.streak>=3?'cg':d.streak>=2?'cau':'cd'}">${d.streak}/4 quarters ${d.streak>=3?'🔥':''}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipNextEarnings)||'Next earnings date.'}">Next earnings</span><span class="dv ${d.earningsDays!==null&&d.earningsDays<=20?'cau':'cd'}">${d.earningsDate?fmtD(d.earningsDate)+' ('+d.earningsDays+'d)':'—'}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipBeatStreak)||'EPS beat streak.'}">Beat streak</span><span class="dv ${d.streak>=3?'cg':d.streak>=2?'cau':'cd'}">${d.streak}/4 quarters ${d.streak>=3?'🔥':''}</span></div>
     <div class="hr-mini"></div>
     <div style="font-size:7px;color:var(--txt);letter-spacing:1.5px;margin-bottom:6px;">EPS SURPRISE VS ESTIMATE</div>
     ${epsHtml}
