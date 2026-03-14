@@ -56,8 +56,9 @@ async function getUniverse() {
   const allTickers = new Map();
 
   for (const exchange of ['NASDAQ', 'NYSE', 'AMEX']) {
-    for (let page = 0; page < 30; page++) {
-      const data = await fmp(`/company-screener?marketCapMoreThan=80000000&marketCapLowerThan=3000000000&exchange=${exchange}&limit=100&page=${page}`);
+    let prevSize = 0;
+    for (let page = 0; page < 50; page++) {
+      const data = await fmp(`/company-screener?marketCapMoreThan=80000000&marketCapLowerThan=3000000000&exchange=${exchange}&limit=500&page=${page}`);
       if (!Array.isArray(data) || data.length === 0) break;
       for (const s of data) {
         if (!isRealStock(s)) continue;
@@ -65,7 +66,9 @@ async function getUniverse() {
           allTickers.set(s.symbol, { sym: s.symbol, sector: s.sector || 'default', cap: s.marketCap || 0 });
         }
       }
-      if (data.length < 100) break;
+      // Stop if no new tickers added or less than limit returned
+      if (allTickers.size === prevSize || data.length < 500) break;
+      prevSize = allTickers.size;
       await sleep(120);
     }
     console.log(`  ${exchange}: ${allTickers.size} tickers total`);
