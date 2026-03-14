@@ -176,7 +176,7 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .btn-scan:hover{background:#00d07a;}
 .btn-scan:disabled{background:#0f0f1f;color:#2a2a3a;cursor:not-allowed;}
 .vd{width:1px;height:18px;background:var(--bord2);margin:0 3px;}
-.bf{padding:6px 10px;background:transparent;border:1px solid var(--bord2);color:#2e2e50;border-radius:3px;cursor:pointer;font-family:var(--font);font-size:10px;letter-spacing:1px;transition:all .2s;}
+.bf{padding:6px 10px;background:transparent;border:1px solid #2a2a45;color:#7070b0;border-radius:3px;cursor:pointer;font-family:var(--font);font-size:10px;letter-spacing:1px;transition:all .2s;}
 .bf:hover,.bf.on{border-color:var(--green);color:var(--green);background:#00ff9406;}
 .bs{padding:5px 9px;background:transparent;border:1px solid var(--bord2);color:#2e2e50;border-radius:3px;cursor:pointer;font-family:var(--font);font-size:10px;letter-spacing:1px;transition:all .2s;}
 .bs.on{border-color:var(--gold);color:var(--gold);}
@@ -361,7 +361,8 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
           ✓ Daily auto-scan<br>
           ✓ 14-factor scoring<br>
           ✓ Insider & analyst data<br>
-          ✓ Short squeeze alerts
+          ✓ Short squeeze alerts<br>
+          ✗ Manual re-scan (Elite only)
         </div>
         <button onclick="startCheckoutFromScanner('pro')" style="width:100%;padding:12px;background:linear-gradient(135deg,#00ff94,#00cc78);color:#000;border:none;border-radius:5px;font-weight:700;font-size:12px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;">Start Free Trial →</button>
       </div>
@@ -373,8 +374,8 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
         <div style="font-size:12px;color:#b0b0d0;line-height:2;margin-bottom:20px;">
           ✓ Everything in Pro<br>
           ✓ 400+ companies<br>
+          ✓ Manual re-scan anytime<br>
           ✓ Priority updates<br>
-          ✓ Advanced filters<br>
           ✓ Early access features
         </div>
         <button onclick="startCheckoutFromScanner('elite')" style="width:100%;padding:12px;background:linear-gradient(135deg,#bf5fff,#9933ff);color:#fff;border:none;border-radius:5px;font-weight:700;font-size:12px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;">Start Free Trial →</button>
@@ -618,7 +619,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
       <div class="hstats" id="hstats"></div>
     </div>
     <div class="cbar">
-      <button class="btn-scan" id="btnScan" onclick="runScan()" id="btnScan">▶ ANALYZE NOW</button>
+      <button class="btn-scan" id="btnScan" onclick="runScan()" style="display:none;">▶ ANALYZE NOW</button>
       <div class="vd"></div>
       <button class="bf on" onclick="setF('ALL',this)" id="fAll">ALL</button>
       <button class="bf"    onclick="setF('FUERTE COMPRA',this)" id="fStrongBuy">🟢 STRONG BUY</button>
@@ -1138,6 +1139,16 @@ async function startCheckoutFromScanner(plan) {
 }
 
 function applyPlanLimits(plan) {
+  // Show/hide ANALYZE NOW button based on plan
+  const btnScan = document.getElementById('btnScan');
+  if (btnScan) {
+    if (plan === 'elite') {
+      btnScan.style.display = 'inline-flex';
+    } else {
+      btnScan.style.display = 'none';
+    }
+  }
+
   // Free plan: limit to first 40 tickers
   if (plan === 'free' && typeof TICKERS !== 'undefined') {
     const original = [...TICKERS];
