@@ -659,6 +659,7 @@ async function signOut() {
 // ══════════════════════════════════════════
 // STRIPE CHECKOUT
 // ══════════════════════════════════════════
+async function startCheckout(plan) { return handleUpgrade(plan); }
 async function handleUpgrade(plan) {
   if (!currentUser) {
     openAuth('register');
