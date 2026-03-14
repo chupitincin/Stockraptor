@@ -622,10 +622,10 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
       <button class="btn-scan" id="btnScan" onclick="runScan()" style="display:none;">▶ ANALYZE NOW</button>
       <div class="vd"></div>
       <button class="bf on" onclick="setF('ALL',this)" id="fAll">ALL</button>
-      <button class="bf"    onclick="setF('FUERTE COMPRA',this)" id="fStrongBuy">🟢 STRONG BUY</button>
-      <button class="bf"    onclick="setF('INTERESANTE',this)" id="fInteresting">🟡 INTERESTING</button>
-      <button class="bf"    onclick="setF('VIGILAR',this)" id="fWatch">🟠 WATCH</button>
-      <button class="bf"    onclick="setF('DÉBIL',this)" id="fWeak">🔴 WEAK</button>
+      <button class="bf"    onclick="setF('STRONG BUY',this)" id="fStrongBuy">🟢 STRONG BUY</button>
+      <button class="bf"    onclick="setF('INTERESTING',this)" id="fInteresting">🟡 INTERESTING</button>
+      <button class="bf"    onclick="setF('WATCH',this)" id="fWatch">🟠 WATCH</button>
+      <button class="bf"    onclick="setF('WEAK',this)" id="fWeak">🔴 WEAK</button>
       <div class="vd"></div>
       <button class="bf"    onclick="setF('VOL_SPIKE',this)" id="fVolSpike">⚡ VOL SPIKE</button>
       <button class="bf"    onclick="setF('SHORT_SQ',this)" id="fShortSq">🎯 SHORT SQUEEZE</button>
@@ -733,8 +733,8 @@ const TICKERS=[
   "PDCO","ALKS","AMPH","ASND","ATIF","BLRX","BPMC","CARA","CBPO","CBRL"
 ];
 const SECTOR_PE={'Technology':28,'Biotechnology':35,'Healthcare':22,'Software':32,'Consumer Cyclical':18,'Financial Services':14,'Industrials':18,'Energy':12,'Real Estate':20,'Communication Services':20,'Consumer Defensive':20,'Utilities':16,'Basic Materials':14,'default':22};
-const SIG={'FUERTE COMPRA':'#00ff94','INTERESANTE':'#ffcc00','VIGILAR':'#ff7040','DÉBIL':'#ff2d55'};
-const SIG_EN={'FUERTE COMPRA':'STRONG BUY','INTERESANTE':'INTERESTING','VIGILAR':'WATCH','DÉBIL':'WEAK'};
+const SIG={'STRONG BUY':'#00ff94','INTERESTING':'#ffcc00','WATCH':'#ff7040','WEAK':'#ff2d55'};
+const SIG_EN={'STRONG BUY':'STRONG BUY','INTERESTING':'INTERESTING','WATCH':'WATCH','WEAK':'WEAK'};
 let KEY='d6pfc69r01qo88aivvbgd6pfc69r01qo88aivvc0',allData=[],curF='ALL',curS='score',sortDir=1,running=false;
 const slp=ms=>new Promise(r=>setTimeout(r,ms));
 const toDay=()=>new Date().toISOString().slice(0,10);
@@ -782,7 +782,7 @@ function computeScores(d){
   const total=Math.max(0,Math.min(100,fund+revQ+dilPenalty+debtPenalty+sent+insider+analyst+upsideScore+momentum+trend+betaB+earPts+epsStreak+volScore+shortSq));
   return{total,fund:Math.max(0,fund+revQ+dilPenalty+debtPenalty),sent:Math.max(0,sent+insider),analyst:Math.max(0,analyst+upsideScore),momentum:Math.max(0,momentum+trend+betaB),earPts:Math.max(0,earPts+epsStreak),volShort:Math.max(0,volScore+shortSq),dilPenalty,debtPenalty,epsStreak,streak};
 }
-function toSig(s){return s>=72?'FUERTE COMPRA':s>=48?'INTERESANTE':s>=25?'VIGILAR':'DÉBIL';}
+function toSig(s){return s>=72?'STRONG BUY':s>=48?'INTERESTING':s>=25?'WATCH':'WEAK';}
 
 async function apiFetch(url,tries=3){
   for(let i=0;i<tries;i++){
@@ -865,7 +865,7 @@ function sentLbl(v){if(v===null)return'<span class="cd">—</span>';if(v>0.35)re
 
 function renderSum(){
   const g=document.getElementById('sumGrid');g.style.display='grid';
-  const lbl={'FUERTE COMPRA':'STRONG BUY','INTERESANTE':'INTERESTING','VIGILAR':'WATCH','DÉBIL':'WEAK'};
+  const lbl={'STRONG BUY':'STRONG BUY','INTERESTING':'INTERESTING','WATCH':'WATCH','WEAK':'WEAK'};
   g.innerHTML=Object.keys(SIG).map(s=>{const c=SIG[s],n=allData.filter(d=>d.signal===s).length;return`<div class="scard" onclick="fClick('${s}')" style="border-color:${c}22"><div class="sc-n" style="color:${c}">${n}</div><div class="sc-l">${lbl[s]}</div></div>`;}).join('');
   if(window._renderHStats){window._renderHStats();}else{document.getElementById('hstats').innerHTML=`<div style="text-align:right"><div class="hstat-n2" style="color:var(--green)">${allData.length}</div><div class="hstat-l2">ANALYZED</div></div><div style="text-align:right"><div class="hstat-n2" style="color:var(--pink)">${allData.filter(d=>d.volRatio&&d.volRatio>2).length}</div><div class="hstat-l2">VOL SPIKE</div></div><div style="text-align:right"><div class="hstat-n2" style="color:var(--teal)">${allData.filter(d=>d.shortPct&&d.shortPct>15).length}</div><div class="hstat-l2">SHORT&gt;15%</div></div><div style="text-align:right"><div class="hstat-n2" style="color:var(--gold)">${allData.filter(d=>d.earningsDays!==null&&d.earningsDays<=30).length}</div><div class="hstat-l2">EARN&lt;30D</div></div>`;}
 }
@@ -886,7 +886,7 @@ function renderTable(){
     else if(curS==='price')v=(b.price||0)-(a.price||0);
     else if(curS==='upside')v=(b.upside||0)-(a.upside||0);
     else if(curS==='ticker')v=a.sym.localeCompare(b.sym);
-    else if(curS==='signal'){const o={'FUERTE COMPRA':0,'INTERESANTE':1,'VIGILAR':2,'DÉBIL':3};v=(o[a.signal]||0)-(o[b.signal]||0);}
+    else if(curS==='signal'){const o={'STRONG BUY':0,'INTERESTING':1,'WATCH':2,'WEAK':3};v=(o[a.signal]||0)-(o[b.signal]||0);}
     return v*sortDir;
   });
   document.getElementById('tbl').style.display=rows.length?'table':'none';
@@ -923,7 +923,7 @@ function renderTable(){
     const ch=d.priceChange1D;
     const prHtml=d.price?`$${d.price.toFixed(2)}<span style="font-size:8px;color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!==null?sgn(ch)+ch+'%':''}</span>`:'—';
     const upHtml=d.upside!==null?`<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>`:'<span class="cd">—</span>';
-    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div><div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return({'FUERTE COMPRA':'STRONG BUY','INTERESANTE':'INTERESTING','VIGILAR':'WATCH','DÉBIL':'WEAK'}[s]||s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td>${sbr(d.fund,25,'var(--blue)','')}</td><td>${sbr(d.sent,20,'var(--purple)','')}</td><td>${sbr(d.analyst,15,'var(--green)','')}</td><td>${sbr(d.momentum,17,'var(--gold)','')}</td><td>${edHtml}</td><td>${vsHtml}</td><td><div class="flag-row">${flagsHtml||'<span class="cd" style="font-size:8px">—</span>'}</div></td><td style="font-size:11px;color:var(--txb)">${prHtml}</td><td>${upHtml}</td></tr><tr class="dr" id="dt-${d.sym}"><td colspan="13">${renderDet(d)}</td></tr>`;
+    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div><div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return(s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td>${sbr(d.fund,25,'var(--blue)','')}</td><td>${sbr(d.sent,20,'var(--purple)','')}</td><td>${sbr(d.analyst,15,'var(--green)','')}</td><td>${sbr(d.momentum,17,'var(--gold)','')}</td><td>${edHtml}</td><td>${vsHtml}</td><td><div class="flag-row">${flagsHtml||'<span class="cd" style="font-size:8px">—</span>'}</div></td><td style="font-size:11px;color:var(--txb)">${prHtml}</td><td>${upHtml}</td></tr><tr class="dr" id="dt-${d.sym}"><td colspan="13">${renderDet(d)}</td></tr>`;
   }).join('');
 
   // Add upgrade banner after free rows if user is free
@@ -1112,6 +1112,7 @@ async function initScannerAuth() {
   }
 
   // Load cached daily scan results
+  showScanner();
   await loadDailyCache();
 }
 
@@ -1181,7 +1182,6 @@ function showUpgradeSuccess(plan) {
 }
 
 window.addEventListener('load', initScannerAuth);
-window.addEventListener('load', function(){ showScanner(); });
 </script>
 
 
@@ -1553,8 +1553,8 @@ window._renderHStats = function() {
 window._sigLabel = function(signal) {
   const t = window._st || SCANNER_LANG['en'];
   const map = {
-    'FUERTE COMPRA': t.sigStrongBuy, 'INTERESANTE': t.sigInteresting,
-    'VIGILAR': t.sigWatch, 'DÉBIL': t.sigWeak
+    'STRONG BUY': t.sigStrongBuy, 'INTERESTING': t.sigInteresting,
+    'WATCH': t.sigWatch, 'WEAK': t.sigWeak
   };
   return map[signal] || signal;
 };
