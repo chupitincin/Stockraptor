@@ -47,6 +47,10 @@ function isRealStock(s) {
   if (s.isEtf || s.isFund) return false;
   if (s.symbol.includes('.') || s.symbol.includes('-')) return false;
   if (s.symbol.length > 5) return false;
+  if (s.isActivelyTrading === false) return false;
+  // Only main US tradeable exchanges - no OTC/Pink Sheets
+  const validExchanges = ['NYSE', 'NASDAQ', 'AMEX', 'NYSEARCA', 'NYSEMKT'];
+  if (s.exchangeShortName && !validExchanges.includes(s.exchangeShortName)) return false;
   return true;
 }
 
@@ -67,7 +71,7 @@ async function getUniverse() {
     for (const range of ranges) {
       for (let page = 0; page < 20; page++) {
         const data = await fmp(
-          `/company-screener?marketCapMoreThan=${range.min}&marketCapLowerThan=${range.max}&exchange=${exchange}&limit=500&page=${page}`
+          `/company-screener?marketCapMoreThan=${range.min}&marketCapLowerThan=${range.max}&exchange=${exchange}&volumeMoreThan=100000&isActivelyTrading=true&limit=500&page=${page}`
         );
         if (!Array.isArray(data) || data.length === 0) break;
         for (const s of data) {
@@ -119,8 +123,9 @@ async function analyzeTicker(sym, baseData) {
     const cap    = q?.marketCap || p?.marketCap || baseData?.cap || 0;
     const sector = p?.sector || baseData?.sector || 'default';
 
-    if (!price || price < 1) return null;
-    if (cap < 80_000_000 || cap > 5_000_000_000) return null;
+    if (!price || price < 0.5) return null;
+    if (cap < 50_000_000 || cap > 6_000_000_000) return null;
+    if (p?.isActivelyTrading === false) return null;
 
     const benchPE = SECTOR_PE[sector] || 20;
 
