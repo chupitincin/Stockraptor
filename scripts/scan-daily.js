@@ -382,8 +382,8 @@ async function main() {
 
   console.log(`\n🔬 Phase 2: Analyzing ${tickers.length} tickers (5 concurrent)...`);
 
-  const CONCURRENCY = 8;
-  const DELAY = 600; // 5 tickers × 10 calls = 50 calls/sec → ~300/min safe
+  const CONCURRENCY = 5;
+  const DELAY = 2000; // 5 tickers × 10 calls = 50 calls/sec → ~300/min safe
   const results = [];
   let errors = 0;
 
