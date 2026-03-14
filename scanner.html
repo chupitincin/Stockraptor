@@ -327,14 +327,54 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
   </div>
 </div>
 
-<!-- Upgrade Gate (shown if free plan tries to use pro features) -->
+<!-- Upgrade Modal (shown when free user clicks locked row) -->
 <div id="upgradeGate">
-  <div class="upgrade-card">
-    <div class="upgrade-icon">⚡</div>
-    <div class="upgrade-title">Pro Feature</div>
-    <div class="upgrade-desc" id="upgradeDesc">This feature requires a Pro or Elite plan.</div>
-    <a href="/#pricing" class="gate-btn gate-btn-green" style="display:block;text-decoration:none;padding:14px;border-radius:5px;background:linear-gradient(135deg,#00ff94,#00cc78);color:#000;font-weight:700;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">⬆ Upgrade Now</a>
-    <button onclick="document.getElementById('upgradeGate').classList.remove('open')" class="gate-btn gate-btn-outline" style="width:100%;background:transparent;border:1px solid #181828;color:#7070a0;border-radius:5px;padding:12px;cursor:pointer;">Continue on Free</button>
+  <div class="upgrade-card" style="max-width:600px;width:100%;padding:40px 32px;">
+    <button onclick="document.getElementById('upgradeGate').classList.remove('open')" style="position:absolute;top:16px;right:20px;background:transparent;border:none;color:#7070a0;font-size:22px;cursor:pointer;line-height:1;">×</button>
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="font-size:32px;margin-bottom:8px;">🔓</div>
+      <div style="font-family:'Archivo Black',sans-serif;font-size:22px;color:#e8e8f8;margin-bottom:8px;">Unlock All 200 Companies</div>
+      <div style="color:#7070a0;font-size:14px;">You're seeing 20 of 198 results. Upgrade to see every opportunity.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+      <!-- Pro Plan -->
+      <div style="border:1px solid #00ff9444;border-radius:10px;padding:24px 20px;background:#00ff9408;position:relative;">
+        <div style="font-size:11px;letter-spacing:2px;color:#00ff94;margin-bottom:8px;">PRO</div>
+        <div style="font-size:28px;font-weight:700;color:#e8e8f8;margin-bottom:4px;">$19<span style="font-size:13px;color:#7070a0;font-weight:400">/mo</span></div>
+        <div style="font-size:12px;color:#7070a0;margin-bottom:16px;">7-day free trial</div>
+        <div style="font-size:12px;color:#b0b0d0;line-height:2;margin-bottom:20px;">
+          ✓ All 200 companies<br>
+          ✓ Daily auto-scan<br>
+          ✓ 14-factor scoring<br>
+          ✓ Insider & analyst data<br>
+          ✓ Short squeeze alerts
+        </div>
+        <button onclick="startCheckoutFromScanner('pro')" style="width:100%;padding:12px;background:linear-gradient(135deg,#00ff94,#00cc78);color:#000;border:none;border-radius:5px;font-weight:700;font-size:12px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;">Start Free Trial →</button>
+      </div>
+      <!-- Elite Plan -->
+      <div style="border:1px solid #bf5fff44;border-radius:10px;padding:24px 20px;background:#bf5fff08;">
+        <div style="font-size:11px;letter-spacing:2px;color:#bf5fff;margin-bottom:8px;">ELITE</div>
+        <div style="font-size:28px;font-weight:700;color:#e8e8f8;margin-bottom:4px;">$49<span style="font-size:13px;color:#7070a0;font-weight:400">/mo</span></div>
+        <div style="font-size:12px;color:#7070a0;margin-bottom:16px;">7-day free trial</div>
+        <div style="font-size:12px;color:#b0b0d0;line-height:2;margin-bottom:20px;">
+          ✓ Everything in Pro<br>
+          ✓ 400+ companies<br>
+          ✓ Priority updates<br>
+          ✓ Advanced filters<br>
+          ✓ Early access features
+        </div>
+        <button onclick="startCheckoutFromScanner('elite')" style="width:100%;padding:12px;background:linear-gradient(135deg,#bf5fff,#9933ff);color:#fff;border:none;border-radius:5px;font-weight:700;font-size:12px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;">Start Free Trial →</button>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#5050a0;">🔒 Secure payment via Stripe · Cancel anytime · No hidden fees</div>
+  </div>
+</div>
+
+<!-- Free lock banner shown below row 20 -->
+<div id="freeLockBanner" style="display:none;position:sticky;bottom:0;left:0;right:0;z-index:50;background:linear-gradient(to top,#020209 60%,transparent);padding:40px 24px 24px;text-align:center;pointer-events:none;">
+  <div style="pointer-events:all;display:inline-flex;flex-direction:column;align-items:center;gap:12px;">
+    <div style="color:#e8e8f8;font-size:14px;font-weight:600;">🔒 The top <span id="lockedCount">20</span> highest-scored companies are locked</div>
+    <button onclick="showUpgradeModal()" style="padding:14px 36px;background:linear-gradient(135deg,#00ff94,#00cc78);color:#000;border:none;border-radius:5px;font-weight:700;font-size:13px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;">⬆ Upgrade to Unlock All →</button>
   </div>
 </div>
 
@@ -816,6 +856,8 @@ function renderSum(){
 }
 
 function renderTable(){
+  const plan = scanProfile?.plan || 'free';
+  const freeLimit = 20;
   let rows=[...allData].filter(d=>{if(curF==='ALL')return true;if(curF==='VOL_SPIKE')return d.volRatio&&d.volRatio>2;if(curF==='SHORT_SQ')return d.shortPct&&d.shortPct>15;return d.signal===curF;});
   rows.sort((a,b)=>{
     let v=0;
@@ -835,7 +877,20 @@ function renderTable(){
   document.getElementById('tbl').style.display=rows.length?'table':'none';
   document.getElementById('empty').style.display=rows.length?'none':'block';
   const maxes=[25,20,15,17,15,13],cols=['var(--blue)','var(--purple)','var(--green)','var(--gold)','var(--orange)','var(--teal)'];
-  document.getElementById('tbody').innerHTML=rows.map(d=>{
+  document.getElementById('tbody').innerHTML=rows.map((d,idx)=>{
+    // Free users: show first 20 normally, rest locked
+    const isLocked = plan === 'free' && idx < freeLimit;
+    if (isLocked) {
+      return `<tr class="mr locked-row" onclick="showUpgradeModal()" style="cursor:pointer;position:relative">
+        <td><span style="filter:blur(4px);user-select:none">▶</span></td>
+        <td><div class="tsym" style="filter:blur(5px);user-select:none">XXXX</div><div class="tsec" style="filter:blur(4px)">████████</div></td>
+        <td><span class="badge" style="filter:blur(4px);border-color:#ffffff22;color:#ffffff44">██████</span></td>
+        <td><div class="sw" style="filter:blur(4px)"><span class="sv">██</span></div></td>
+        <td style="filter:blur(4px)">████</td><td style="filter:blur(4px)">████</td><td style="filter:blur(4px)">████</td>
+        <td style="filter:blur(4px)">████</td><td style="filter:blur(4px)">████</td><td style="filter:blur(4px)">████</td>
+        <td style="filter:blur(4px)">████</td><td style="filter:blur(4px)">████</td><td style="filter:blur(4px)">████</td>
+      </tr>`;
+    }
     const c=SIG[d.signal],vals=[d.fund,d.sent,d.analyst,d.momentum,d.earPts,d.volShort];
     const bkd=`<div class="bkd">${vals.map((v,j)=>`<div class="bseg" style="width:${Math.max(2,Math.min(28,v/maxes[j]*28))}px;background:${cols[j]}"></div>`).join('')}</div>`;
     const flagsHtml=d.flags.map(f=>`<span class="flag" style="color:${f.color};border-color:${f.color}44">${f.label}</span>`).join('');
@@ -847,6 +902,17 @@ function renderTable(){
     const upHtml=d.upside!==null?`<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>`:'<span class="cd">—</span>';
     return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div><div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return({'FUERTE COMPRA':'STRONG BUY','INTERESANTE':'INTERESTING','VIGILAR':'WATCH','DÉBIL':'WEAK'}[s]||s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td>${sbr(d.fund,25,'var(--blue)','')}</td><td>${sbr(d.sent,20,'var(--purple)','')}</td><td>${sbr(d.analyst,15,'var(--green)','')}</td><td>${sbr(d.momentum,17,'var(--gold)','')}</td><td>${edHtml}</td><td>${vsHtml}</td><td><div class="flag-row">${flagsHtml||'<span class="cd" style="font-size:8px">—</span>'}</div></td><td style="font-size:11px;color:var(--txb)">${prHtml}</td><td>${upHtml}</td></tr><tr class="dr" id="dt-${d.sym}"><td colspan="13">${renderDet(d)}</td></tr>`;
   }).join('');
+
+  // Add upgrade banner after free rows if user is free
+  if (plan === 'free' && rows.length > freeLimit) {
+    const banner = document.getElementById('freeLockBanner');
+    const countEl = document.getElementById('lockedCount');
+    if (countEl) countEl.textContent = freeLimit;
+    if (banner) banner.style.display = 'flex';
+  } else {
+    const banner = document.getElementById('freeLockBanner');
+    if (banner) banner.style.display = 'none';
+  }
 }
 
 function renderDet(d){
@@ -1028,6 +1094,25 @@ async function initScannerAuth() {
 
 function addBodyPadding() {
   document.body.style.paddingTop = '52px';
+}
+
+function showUpgradeModal() {
+  document.getElementById('upgradeGate').classList.add('open');
+}
+
+async function startCheckoutFromScanner(plan) {
+  if (!scanUser) return;
+  document.getElementById('upgradeGate').classList.remove('open');
+  const priceId = plan === 'pro' ? 'price_1TAq0APBvHji1Pcv17SPtUv1' : 'price_1TAq0QPBvHji1PcvJtdwRT3e';
+  try {
+    const res = await fetch('/.netlify/functions/stripe/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priceId, userId: scanUser.id, userEmail: scanUser.email, plan })
+    });
+    const { url } = await res.json();
+    if (url) window.location.href = url;
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
 function applyPlanLimits(plan) {
