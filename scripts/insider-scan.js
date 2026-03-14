@@ -99,65 +99,57 @@ async function getQuarterlyForm4s(year, qtr) {
 }
 
 // ── PARSE FORM 4 XML ──────────────────────────────────────────
-async function parseForm4(filename) {
+async function parseForm4(filename, companyCik) {
   try {
-    // filename from form.idx: edgar/data/CIK/0000CIK-YY-NNNNNN.txt
-    // Directory path: edgar/data/CIK/0000CIKYYNNNNNN/ (accession without dashes)
-    // Index JSON: edgar/data/CIK/0000CIKYYNNNNNN/0000CIK-YY-NNNNNN-index.json
+    // filename from form.idx: edgar/data/FILER_CIK/ACCESSION.txt
+    // But XML is always at: data/COMPANY_CIK/ACCESSION_NO_DASHES/ownership.xml
     const accWithDashes = filename.split('/').pop().replace('.txt', '');
     const accNoDashes   = accWithDashes.replace(/-/g, '');
-    const cikDir        = filename.substring(0, filename.lastIndexOf('/'));
-    const accDir        = `${cikDir}/${accNoDashes}`;
-    const indexUrl      = `${SEC}/Archives/${accDir}/${accWithDashes}-index.json`;
+    // Use company CIK (not filer CIK) for the path
+    const xmlUrl = `${SEC}/Archives/edgar/data/${parseInt(companyCik)}/${accNoDashes}/ownership.xml`;
 
-    let xmlUrl = null;
-    try {
-      await sleep(110); // SEC rate limit
-      const idxRes = await fetch(indexUrl, { headers: HEADERS });
-      if (idxRes.ok) {
-        const idx = await idxRes.json();
-        // Find the Form 4 XML document
-        const xmlDoc = idx.documents?.find(d =>
-          d.type === '4' && d.document.endsWith('.xml')
-        ) || idx.documents?.find(d => d.document.endsWith('.xml'))
-          || idx.documents?.[0];
-        if (xmlDoc) xmlUrl = `${SEC}/Archives/${accDir}/${xmlDoc.document}`;
-      }
-    } catch(e) {}
-
-    if (!xmlUrl) return null;
-
-    await sleep(110);
+    await sleep(110); // SEC rate limit
     const res = await fetch(xmlUrl, { headers: HEADERS });
-    if (!res.ok) return null;
-    const xml = await res.text();
-
-    const name  = (xml.match(/<rptOwnerName>(.*?)<\/rptOwnerName>/) || [])[1]?.trim() || '';
-    const title = (xml.match(/<officerTitle>(.*?)<\/officerTitle>/) || [])[1]?.trim() || '';
-    const isDir = xml.includes('<isDirector>1</isDirector>');
-    const isOff = xml.includes('<isOfficer>1</isOfficer>');
-    const role  = title || (isDir ? 'Director' : isOff ? 'Officer' : 'Insider');
-
-    const codes  = [...xml.matchAll(/<transactionCode>(.*?)<\/transactionCode>/g)];
-    const shares = [...xml.matchAll(/<transactionShares>\s*<value>(.*?)<\/value>/g)];
-    const prices = [...xml.matchAll(/<transactionPricePerShare>\s*<value>(.*?)<\/value>/g)];
-
-    const txs = [];
-    for (let i = 0; i < codes.length; i++) {
-      const txCode = codes[i]?.[1]?.trim();
-      const sh     = parseFloat(shares[i]?.[1] || '0');
-      const pr     = parseFloat(prices[i]?.[1] || '0') || null;
-      if (!txCode || sh <= 0 || !['P','S','A','M'].includes(txCode)) continue;
-      txs.push({
-        name, title: role, txCode,
-        type:   txCode==='P'?'Purchase':txCode==='S'?'Sale':txCode==='A'?'Award':'Option',
-        shares: Math.round(sh),
-        price:  pr ? Math.round(pr*100)/100 : null,
-        value:  pr ? Math.round(sh*pr) : null,
-      });
+    if (!res.ok) {
+      // Fallback: try with the filer CIK from filename
+      const filerCik = filename.split('/')[2];
+      const xmlUrl2  = `${SEC}/Archives/edgar/data/${parseInt(filerCik)}/${accNoDashes}/ownership.xml`;
+      const res2 = await fetch(xmlUrl2, { headers: HEADERS });
+      if (!res2.ok) return null;
+      const xml2 = await res2.text();
+      return extractTransactions(xml2, accWithDashes);
     }
-    return txs.length > 0 ? { name, role, txs } : null;
+    const xml = await res.text();
+    return extractTransactions(xml, accWithDashes);
   } catch(e) { return null; }
+}
+
+function extractTransactions(xml, date) {
+  const name  = (xml.match(/<rptOwnerName>(.*?)<\/rptOwnerName>/) || [])[1]?.trim() || '';
+  const title = (xml.match(/<officerTitle>(.*?)<\/officerTitle>/) || [])[1]?.trim() || '';
+  const isDir = xml.includes('<isDirector>1</isDirector>');
+  const isOff = xml.includes('<isOfficer>1</isOfficer>');
+  const role  = title || (isDir ? 'Director' : isOff ? 'Officer' : 'Insider');
+
+  const codes  = [...xml.matchAll(/<transactionCode>(.*?)<\/transactionCode>/g)];
+  const shares = [...xml.matchAll(/<transactionShares>\s*<value>(.*?)<\/value>/g)];
+  const prices = [...xml.matchAll(/<transactionPricePerShare>\s*<value>(.*?)<\/value>/g)];
+
+  const txs = [];
+  for (let i = 0; i < codes.length; i++) {
+    const txCode = codes[i]?.[1]?.trim();
+    const sh     = parseFloat(shares[i]?.[1] || '0');
+    const pr     = parseFloat(prices[i]?.[1] || '0') || null;
+    if (!txCode || sh <= 0 || !['P','S','A','M'].includes(txCode)) continue;
+    txs.push({
+      name, title: role, txCode,
+      type:   txCode==='P'?'Purchase':txCode==='S'?'Sale':txCode==='A'?'Award':'Option',
+      shares: Math.round(sh),
+      price:  pr ? Math.round(pr*100)/100 : null,
+      value:  pr ? Math.round(sh*pr) : null,
+    });
+  }
+  return txs.length > 0 ? { name, role, txs } : null;
 }
 
 // ── MAIN ──────────────────────────────────────────────────────
@@ -216,7 +208,7 @@ async function main() {
     const insiderNames = new Set();
 
     for (const f of filings.slice(0, 8)) {
-      const parsed = await parseForm4(f.filename);
+      const parsed = await parseForm4(f.filename, cik);
       if (parsed) {
         allTx.push(...parsed.txs.map(t => ({ ...t, date: f.dateFiled })));
         insiderNames.add(parsed.name);
