@@ -402,6 +402,13 @@ const CONFIG = {
             </div>
             <button class="dash-btn dash-btn-outline" id="btnUpgradeSettings" onclick="startCheckout('pro')" style="white-space:nowrap;padding:8px 16px;font-size:12px;">⬆ Upgrade</button>
           </div>
+          <div class="settings-row" id="rowCancelPlan" style="display:none;">
+            <div class="settings-left">
+              <div class="settings-label" id="slCancelTitle">Cancel Subscription</div>
+              <div class="settings-desc" id="slCancelDesc">Your plan will remain active until the end of the billing period.</div>
+            </div>
+            <button onclick="confirmCancelPlan()" style="padding:8px 16px;font-size:12px;background:transparent;border:1px solid var(--red);color:var(--red);border-radius:4px;cursor:pointer;font-family:var(--sans);font-weight:600;white-space:nowrap;" id="btnCancelPlan">Cancel Plan</button>
+          </div>
           <div class="settings-row">
             <div class="settings-left">
               <div class="settings-label" id="slSignOutTitle">Sign Out</div>
@@ -557,6 +564,10 @@ function showUserState() {
 
   if (plan !== 'free') {
     document.getElementById('dashUpgradeBtn').style.display = plan === 'elite' ? 'none' : '';
+    document.getElementById('rowCancelPlan').style.display = '';
+    document.getElementById('btnUpgradeSettings').style.display = plan === 'elite' ? 'none' : '';
+  } else {
+    document.getElementById('rowCancelPlan').style.display = 'none';
   }
 
   updatePricingButtons(plan);
@@ -647,6 +658,38 @@ async function doForgotPassword() {
   ok.textContent = '✓ Reset link sent! Check your inbox.';
   ok.style.display = 'block';
   err.style.display = 'none';
+}
+
+async function confirmCancelPlan() {
+  const lang = localStorage.getItem('sr_lang') || 'en';
+  const msg = lang === 'es'
+    ? '¿Seguro que quieres cancelar tu suscripción? Tu plan seguirá activo hasta el final del período de facturación.'
+    : 'Are you sure you want to cancel your subscription? Your plan will remain active until the end of the billing period.';
+  if (!confirm(msg)) return;
+
+  const btn = document.getElementById('btnCancelPlan');
+  btn.textContent = '...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/.netlify/functions/stripe/cancel-subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUser.id })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('dashPlanSettings').textContent = lang === 'es' ? 'Cancelación programada' : 'Cancellation scheduled';
+      document.getElementById('rowCancelPlan').style.display = 'none';
+      alert(lang === 'es' ? 'Suscripción cancelada. Tu acceso continúa hasta el final del período.' : 'Subscription cancelled. Your access continues until the end of the billing period.');
+    } else {
+      throw new Error(data.error || 'Unknown error');
+    }
+  } catch(e) {
+    alert('Error: ' + e.message);
+    btn.textContent = lang === 'es' ? 'Cancelar Plan' : 'Cancel Plan';
+    btn.disabled = false;
+  }
 }
 
 async function signOut() {
