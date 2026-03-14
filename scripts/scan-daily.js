@@ -1,14 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// StockRaptor · Daily Scan Worker — FMP Full Universe Edition
-// ══════════════════════════════════════════════════════════════
-// STRATEGY: 2-phase scan
-//   Phase 1: Screener → get ALL US small caps ($100M-$2B)
-//            + quick price/volume/momentum data
-//            → score all ~1,200 real stocks in ~10 min
-//   Phase 2: Deep analysis of ALL stocks with full fundamentals
-//            FCF, EBITDA, insider, earnings, ratios
-//            → ~15 min for full universe
-//   Total: ~25 min, covers every small cap, misses nothing
+// StockRaptor · Daily Scan Worker — FMP v2 (correct field names)
 // ══════════════════════════════════════════════════════════════
 import { createClient } from '@supabase/supabase-js';
 
@@ -24,7 +15,6 @@ if (!FMP_KEY || !SB_URL || !SB_KEY) {
 const sb   = createClient(SB_URL, SB_KEY);
 const BASE = 'https://financialmodelingprep.com/stable';
 
-// ── SECTOR P/E BENCHMARKS ─────────────────────────────────────
 const SECTOR_PE = {
   'Technology': 22, 'Software': 28, 'Biotechnology': 35,
   'Healthcare': 22, 'Industrials': 18, 'Energy': 14,
@@ -34,151 +24,129 @@ const SECTOR_PE = {
   'Utilities': 16, 'default': 20
 };
 
-// ── UTILS ─────────────────────────────────────────────────────
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function fmp(endpoint, retries = 2) {
   for (let i = 0; i <= retries; i++) {
     try {
-      const url = `${BASE}${endpoint}${endpoint.includes('?') ? '&' : '?'}apikey=${FMP_KEY}`;
-      const res = await fetch(url);
+      const sep = endpoint.includes('?') ? '&' : '?';
+      const res = await fetch(`${BASE}${endpoint}${sep}apikey=${FMP_KEY}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data?.['Error Message']) throw new Error(data['Error Message']);
       return data;
     } catch (e) {
-      if (i === retries) { console.warn(`  ⚠ FMP error [${endpoint.substring(0,40)}]: ${e.message}`); return null; }
-      await sleep(300 * (i + 1));
+      if (i === retries) return null;
+      await sleep(400 * (i + 1));
     }
   }
 }
 
-function isRealStock(sym) {
-  // Filter out ETFs, funds, warrants, preferred shares
-  if (!sym) return false;
-  if (sym.includes('.') || sym.includes('-')) return false;
-  if (sym.length > 5) return false;
-  // Common fund/ETF suffixes
-  if (/[XZ]$/.test(sym) && sym.length === 5) return false;
+function isRealStock(s) {
+  if (!s?.symbol) return false;
+  if (s.isEtf || s.isFund) return false;
+  if (s.symbol.includes('.') || s.symbol.includes('-')) return false;
+  if (s.symbol.length > 5) return false;
   return true;
 }
 
-// ── PHASE 1: GET FULL UNIVERSE ────────────────────────────────
+// ── PHASE 1: GET UNIVERSE ─────────────────────────────────────
 async function getUniverse() {
-  console.log('📡 Phase 1: Fetching small cap universe from screener...');
-  
-  const allTickers = new Set();
-  const screenerData = {};
+  console.log('📡 Phase 1: Fetching small cap universe...');
+  const allTickers = new Map();
 
-  // Fetch all pages for each exchange
-  const exchanges = ['NASDAQ', 'NYSE', 'AMEX'];
-  
-  for (const exchange of exchanges) {
-    for (let page = 0; page < 25; page++) {
-      const data = await fmp(
-        `/company-screener?marketCapMoreThan=80000000&marketCapLowerThan=3000000000&exchange=${exchange}&limit=100&page=${page}`
-      );
+  for (const exchange of ['NASDAQ', 'NYSE', 'AMEX']) {
+    for (let page = 0; page < 30; page++) {
+      const data = await fmp(`/company-screener?marketCapMoreThan=80000000&marketCapLowerThan=3000000000&exchange=${exchange}&limit=100&page=${page}`);
       if (!Array.isArray(data) || data.length === 0) break;
-      
       for (const s of data) {
-        if (!isRealStock(s.symbol)) continue;
+        if (!isRealStock(s)) continue;
         if (!allTickers.has(s.symbol)) {
-          allTickers.add(s.symbol);
-          screenerData[s.symbol] = {
-            sym: s.symbol,
-            sector: s.sector || 'Unknown',
-            cap: s.marketCap || 0,
-            exchange,
-            companyName: s.companyName || s.symbol,
-            price: s.price || 0,
-          };
+          allTickers.set(s.symbol, { sym: s.symbol, sector: s.sector || 'default', cap: s.marketCap || 0 });
         }
       }
-      
       if (data.length < 100) break;
-      await sleep(150);
+      await sleep(120);
     }
-    console.log(`  ${exchange}: ${allTickers.size} tickers so far`);
+    console.log(`  ${exchange}: ${allTickers.size} tickers total`);
   }
 
-  console.log(`✅ Universe: ${allTickers.size} unique small cap stocks`);
-  return { tickers: [...allTickers], screenerData };
+  console.log(`✅ Universe: ${allTickers.size} stocks`);
+  return allTickers;
 }
 
-// ── PHASE 2: DEEP ANALYSIS ────────────────────────────────────
+// ── ANALYZE SINGLE TICKER ─────────────────────────────────────
 async function analyzeTicker(sym, baseData) {
   try {
-    // All 7 API calls in parallel for this ticker
-    const [profile, ratios, cashflow, income, priceTarget, insider, earnings, news] = await Promise.all([
+    // 7 parallel API calls — using correct FMP stable endpoints
+    const [profile, quote, ratios, keyMetrics, cashflow, income, earnings, priceTarget, insider, news] = await Promise.all([
       fmp(`/profile?symbol=${sym}`),
+      fmp(`/quote?symbol=${sym}`),
       fmp(`/ratios-ttm?symbol=${sym}`),
+      fmp(`/key-metrics-ttm?symbol=${sym}`),
       fmp(`/cash-flow-statement?symbol=${sym}&limit=2`),
       fmp(`/income-statement?symbol=${sym}&limit=4`),
+      fmp(`/earnings?symbol=${sym}&limit=5`),
       fmp(`/price-target-consensus?symbol=${sym}`),
       fmp(`/insider-trading?symbol=${sym}&limit=15`),
-      fmp(`/earnings-surprises?symbol=${sym}&limit=4`),
       fmp(`/news/stock?symbols=${sym}&limit=8`),
     ]);
 
     const p   = profile?.[0];
+    const q   = quote?.[0];
     const r   = ratios?.[0];
+    const km  = keyMetrics?.[0];
     const cf  = cashflow?.[0];
     const cf1 = cashflow?.[1];
     const inc = income?.[0];
     const inc1 = income?.[1];
     const pt  = priceTarget?.[0];
 
-    // Use screener data as fallback for price/cap
-    const price = p?.price || baseData?.price || 0;
-    const cap   = p?.mktCap || baseData?.cap || 0;
+    // Use quote for real-time price data (more fields than profile)
+    const price  = q?.price || p?.price || 0;
+    const cap    = q?.marketCap || p?.marketCap || baseData?.cap || 0;
     const sector = p?.sector || baseData?.sector || 'default';
 
-    if (!price || price < 0.5) return null; // Skip penny stocks
-    if (cap < 80_000_000) return null;
+    if (!price || price < 1) return null;
+    if (cap < 80_000_000 || cap > 5_000_000_000) return null;
 
-    const benchPE = SECTOR_PE[sector] || SECTOR_PE['default'];
+    const benchPE = SECTOR_PE[sector] || 20;
 
     // ── 1. FUNDAMENTAL SCORE (0-32 pts) ──────────────────────
     let fund = 0;
 
-    // P/E vs sector (0-6 pts)
-    const eps = inc?.eps || (inc?.netIncome && inc?.weightedAverageShsOut ? inc.netIncome / inc.weightedAverageShsOut : null);
-    const pe  = r?.peRatioTTM || (eps && eps > 0 ? price / eps : null);
-    if (pe && pe > 0 && pe < 200) {
+    const pe = r?.peRatioTTM;
+    if (pe && pe > 0 && pe < 300) {
       fund += pe < benchPE * 0.6 ? 6 : pe < benchPE * 0.85 ? 4 : pe < benchPE ? 2 : pe < benchPE * 1.3 ? 1 : 0;
     }
 
-    // P/B ratio (0-4 pts)
     const pb = r?.priceToBookRatioTTM;
     if (pb && pb > 0) fund += pb < 1 ? 4 : pb < 2 ? 3 : pb < 3 ? 2 : pb < 5 ? 1 : 0;
 
-    // Gross margin (0-4 pts)
     const grossMargin = r?.grossProfitMarginTTM != null ? r.grossProfitMarginTTM * 100 : null;
     if (grossMargin != null) fund += grossMargin > 60 ? 4 : grossMargin > 40 ? 3 : grossMargin > 25 ? 2 : grossMargin > 10 ? 1 : 0;
 
-    // EBITDA margin (0-4 pts)
     const ebitdaMargin = r?.ebitdaMarginTTM != null ? r.ebitdaMarginTTM * 100 : null;
     if (ebitdaMargin != null) fund += ebitdaMargin > 25 ? 4 : ebitdaMargin > 15 ? 3 : ebitdaMargin > 8 ? 2 : ebitdaMargin > 0 ? 1 : 0;
 
-    // Free Cash Flow (0-6 pts) — key quality signal
     const fcf  = cf?.freeCashFlow;
     const fcf1 = cf1?.freeCashFlow;
     if (fcf != null) {
       if (fcf > 0) fund += 3;
-      if (fcf > 0 && fcf1 != null && fcf1 > 0) fund += 2; // consecutive positive FCF
-      const fcfGrowth = fcf1 && fcf1 > 0 ? (fcf - fcf1) / Math.abs(fcf1) : null;
-      if (fcfGrowth != null && fcfGrowth > 0.2) fund += 1; // FCF growing
+      if (fcf > 0 && fcf1 != null && fcf1 > 0) fund += 2;
+      if (fcf1 && fcf1 > 0 && (fcf - fcf1) / fcf1 > 0.2) fund += 1;
     }
 
-    // Current ratio (0-3 pts)
     const cr = r?.currentRatioTTM;
     if (cr) fund += cr >= 2 ? 3 : cr >= 1.5 ? 2 : cr >= 1 ? 1 : 0;
 
-    // ROE (0-4 pts)
     const roe = r?.returnOnEquityTTM != null ? r.returnOnEquityTTM * 100 : null;
     if (roe != null) fund += roe > 20 ? 4 : roe > 12 ? 3 : roe > 8 ? 2 : roe > 0 ? 1 : 0;
 
-    // Revenue growth YoY (0-4 pts)
+    // Net Debt / EBITDA (key metric from keyMetrics)
+    const netDebtEbitda = km?.netDebtToEBITDATTM;
+    if (netDebtEbitda != null) fund += netDebtEbitda < 1 ? 3 : netDebtEbitda < 2 ? 2 : netDebtEbitda < 3 ? 1 : netDebtEbitda > 5 ? -3 : 0;
+
     const rev0 = inc?.revenue, rev1 = inc1?.revenue;
     let revGrowth = null;
     if (rev0 && rev1 && rev1 > 0) {
@@ -186,21 +154,17 @@ async function analyzeTicker(sym, baseData) {
       fund += revGrowth > 25 ? 4 : revGrowth > 15 ? 3 : revGrowth > 5 ? 2 : revGrowth > 0 ? 1 : 0;
     }
 
-    // EPS growth YoY (0-3 pts) — NEW
-    const eps1 = income?.[1]?.eps;
+    const eps0 = inc?.eps, eps1 = inc1?.eps;
     let epsGrowth = null;
-    if (eps && eps1 && eps1 > 0) {
-      epsGrowth = Math.round(((eps - eps1) / Math.abs(eps1)) * 100);
+    if (eps0 && eps1 && Math.abs(eps1) > 0.01) {
+      epsGrowth = Math.round(((eps0 - eps1) / Math.abs(eps1)) * 100);
       fund += epsGrowth > 20 ? 3 : epsGrowth > 10 ? 2 : epsGrowth > 0 ? 1 : 0;
     }
 
-    // Penalties
     const de = r?.debtToEquityTTM;
     let debtPenalty = 0;
-    if (de != null) {
-      if (de > 2.5 && (revGrowth == null || revGrowth < 5)) debtPenalty = -5;
-      else if (de > 4) debtPenalty = -3;
-    }
+    if (de != null && de > 2.5 && (revGrowth == null || revGrowth < 5)) debtPenalty = -5;
+    else if (de != null && de > 4) debtPenalty = -3;
     fund += debtPenalty;
 
     const shares0 = inc?.weightedAverageShsOut, shares1 = inc1?.weightedAverageShsOut;
@@ -214,7 +178,7 @@ async function analyzeTicker(sym, baseData) {
     fund += dilPenalty;
     fund = Math.max(0, Math.min(32, fund));
 
-    // ── 2. SENTIMENT / NEWS (0-12 pts) ───────────────────────
+    // ── 2. SENTIMENT (0-12 pts) ───────────────────────────────
     let sent = 0, newsSent = null, newsItems = [];
     if (Array.isArray(news) && news.length > 0) {
       const recent = news.slice(0, 8);
@@ -229,39 +193,40 @@ async function analyzeTicker(sym, baseData) {
       sent = Math.min(12, Math.round(((newsSent + 1) / 2) * 12));
     }
 
-    // ── 3. ANALYST SCORE (0-15 pts) ──────────────────────────
+    // ── 3. ANALYST (0-15 pts) ─────────────────────────────────
     let analyst = 0, targetPrice = null, upside = null;
     let recMean = null, recBuy = 0, recHold = 0, recSell = 0;
     if (pt) {
       targetPrice = pt.targetConsensus ? Math.round(pt.targetConsensus * 100) / 100 : null;
-      recBuy   = pt.numberOfAnalystOpinions || 0;
+      recBuy = pt.numberOfAnalystOpinions || 0;
       if (targetPrice && price) {
         upside = Math.round(((targetPrice - price) / price) * 100);
         analyst += upside > 40 ? 8 : upside > 25 ? 6 : upside > 15 ? 4 : upside > 5 ? 2 : 0;
       }
-      if (pt.targetHigh && pt.targetLow && price) {
-        const range = pt.targetHigh - pt.targetLow;
-        const pos   = pt.targetHigh - price;
-        if (range > 0) {
-          const pct = pos / range;
-          analyst += pct > 0.7 ? 7 : pct > 0.5 ? 5 : pct > 0.3 ? 3 : 1;
-        }
+      if (pt.targetHigh && pt.targetLow && price && (pt.targetHigh - pt.targetLow) > 0) {
+        const pct = (pt.targetHigh - price) / (pt.targetHigh - pt.targetLow);
+        analyst += pct > 0.7 ? 7 : pct > 0.5 ? 5 : pct > 0.3 ? 3 : 1;
       }
     }
     analyst = Math.min(15, analyst);
 
-    // ── 4. MOMENTUM (0-17 pts) ────────────────────────────────
+    // ── 4. MOMENTUM (0-17 pts) — using QUOTE fields ───────────
     let momentum = 0;
-    const prev = p?.previousClose;
-    const priceChange1D = prev && prev > 0 ? Math.round(((price - prev) / prev) * 100 * 10) / 10 : null;
-    const lo52 = p?.['52WeekLow'] || p?.yearLow;
-    const hi52 = p?.['52WeekHigh'] || p?.yearHigh;
-    let pct52Low = null, pct52High = null;
+    // quote has: price, previousClose, yearHigh, yearLow, volume, priceAvg50, priceAvg200
+    const prev     = q?.previousClose;
+    const yearHigh = q?.yearHigh;
+    const yearLow  = q?.yearLow;
+    const volume   = q?.volume || p?.volume;
+    const avgVol   = p?.averageVolume; // from profile
 
-    if (lo52 && hi52 && price && hi52 > lo52) {
-      pct52Low  = Math.round(((price - lo52) / lo52) * 100);
-      pct52High = Math.round(((price - hi52) / hi52) * 100);
-      const pos = (price - lo52) / (hi52 - lo52);
+    const priceChange1D = prev && prev > 0
+      ? Math.round(((price - prev) / prev) * 100 * 10) / 10 : null;
+
+    let pct52Low = null, pct52High = null;
+    if (yearLow && yearHigh && price && yearHigh > yearLow) {
+      pct52Low  = Math.round(((price - yearLow)  / yearLow)  * 100);
+      pct52High = Math.round(((price - yearHigh) / yearHigh) * 100);
+      const pos = (price - yearLow) / (yearHigh - yearLow);
       momentum += pos > 0.85 ? 8 : pos > 0.65 ? 6 : pos > 0.45 ? 4 : pos > 0.25 ? 2 : 0;
     }
 
@@ -272,8 +237,13 @@ async function analyzeTicker(sym, baseData) {
     const beta = p?.beta;
     if (beta) momentum += beta > 1.8 ? 3 : beta > 1.3 ? 2 : beta > 0.9 ? 1 : 0;
 
-    const volRatio = p?.volume && p?.avgVolume && p.avgVolume > 0
-      ? Math.round((p.volume / p.avgVolume) * 10) / 10 : null;
+    // Price vs 50-day MA — trend signal
+    const ma50 = q?.priceAvg50;
+    if (ma50 && price > ma50 * 1.05) momentum += 2;
+    else if (ma50 && price > ma50) momentum += 1;
+
+    const volRatio = volume && avgVol && avgVol > 0
+      ? Math.round((volume / avgVol) * 10) / 10 : null;
     if (volRatio) momentum += volRatio > 3 ? 2 : volRatio > 2 ? 1 : 0;
 
     momentum = Math.min(17, momentum);
@@ -283,57 +253,68 @@ async function analyzeTicker(sym, baseData) {
     let earningsDate = null, earningsDays = null;
 
     if (Array.isArray(earnings) && earnings.length > 0) {
-      epsHistory = earnings.slice(0, 4).map(e => ({
-        q: e.period || (e.date || '').substring(0, 7),
-        actual: e.actualEarningResult ?? null,
-        est: e.estimatedEarning ?? null,
-        surprise: e.actualEarningResult != null && e.estimatedEarning != null
-          ? Math.round(((e.actualEarningResult - e.estimatedEarning) / (Math.abs(e.estimatedEarning) || 1)) * 100) : 0
+      // FMP /earnings has: date, epsActual, epsEstimated, revenueActual, revenueEstimated
+      const past = earnings.filter(e => e.epsActual != null).slice(0, 4);
+      const future = earnings.find(e => e.epsActual == null);
+
+      epsHistory = past.map(e => ({
+        q: (e.date || '').substring(0, 7),
+        actual: e.epsActual ?? null,
+        est: e.epsEstimated ?? null,
+        surprise: e.epsActual != null && e.epsEstimated != null && Math.abs(e.epsEstimated) > 0.01
+          ? Math.round(((e.epsActual - e.epsEstimated) / Math.abs(e.epsEstimated)) * 100) : 0
       }));
+
       streak = epsHistory.filter(e => (e.surprise || 0) > 0).length;
       earPts += streak >= 4 ? 8 : streak >= 3 ? 6 : streak >= 2 ? 4 : streak >= 1 ? 2 : 0;
-      const avgSurprise = epsHistory.reduce((a, e) => a + (e.surprise || 0), 0) / epsHistory.length;
-      earPts += avgSurprise > 15 ? 4 : avgSurprise > 8 ? 3 : avgSurprise > 2 ? 2 : 0;
-    }
 
-    if (p?.nextEarningsDate) {
-      earningsDate = p.nextEarningsDate;
-      const diff = Math.round((new Date(earningsDate) - new Date()) / 86400000);
-      earningsDays = diff >= 0 ? diff : null;
-      if (earningsDays != null) earPts += earningsDays <= 7 ? 3 : earningsDays <= 20 ? 2 : earningsDays <= 45 ? 1 : 0;
+      const avgSurprise = epsHistory.reduce((a, e) => a + (e.surprise || 0), 0) / Math.max(epsHistory.length, 1);
+      earPts += avgSurprise > 15 ? 4 : avgSurprise > 8 ? 3 : avgSurprise > 2 ? 2 : 0;
+
+      if (future?.date) {
+        earningsDate = future.date;
+        const diff = Math.round((new Date(earningsDate) - new Date()) / 86400000);
+        earningsDays = diff >= 0 ? diff : null;
+        if (earningsDays != null) earPts += earningsDays <= 7 ? 3 : earningsDays <= 20 ? 2 : earningsDays <= 45 ? 1 : 0;
+      }
     }
     earPts = Math.min(15, earPts);
 
     // ── 6. VOL/SHORT (0-11 pts) ───────────────────────────────
     let volShort = 0;
-    const shortPct = p?.shortRatio ? Math.round(p.shortRatio * 10) / 10 : null;
     if (volRatio) volShort += volRatio > 5 ? 5 : volRatio > 3 ? 4 : volRatio > 2 ? 3 : 0;
-    if (shortPct) volShort += shortPct > 25 ? 3 : shortPct > 15 ? 2 : shortPct > 10 ? 1 : 0;
+    // shortRatio not available in FMP stable — skip short pts for now
+    const shortPct = null;
     volShort = Math.min(11, volShort);
 
     // ── 7. INSIDER (0-8 pts) ──────────────────────────────────
     let insiderScore = 0, insiderChange = null, mspr = null;
     if (Array.isArray(insider) && insider.length > 0) {
-      const recent90 = insider.filter(t => (Date.now() - new Date(t.transactionDate || t.filingDate)) < 90 * 86400000);
-      const buys  = recent90.filter(t => t.transactionType === 'P-Purchase').length;
-      const sells = recent90.filter(t => t.transactionType === 'S-Sale').length;
-      insiderChange = buys - sells;
-      mspr = recent90.length > 0 ? Math.round(((buys - sells) / recent90.length) * 100) / 100 : null;
-      insiderScore = insiderChange > 3 ? 8 : insiderChange > 1 ? 5 : insiderChange >= 0 ? 2 : 0;
+      const recent90 = insider.filter(t => {
+        const d = new Date(t.transactionDate || t.filingDate || 0);
+        return (Date.now() - d) < 90 * 86400000;
+      });
+      const buys  = recent90.filter(t => (t.transactionType || '').includes('Purchase') || t.transactionType === 'P-Purchase').length;
+      const sells = recent90.filter(t => (t.transactionType || '').includes('Sale') && !t.transactionType.includes('SalePlan')).length;
+      if (recent90.length > 0) {
+        insiderChange = buys - sells;
+        mspr = Math.round(((buys - sells) / recent90.length) * 100) / 100;
+        insiderScore = insiderChange > 3 ? 8 : insiderChange > 1 ? 5 : insiderChange >= 0 ? 2 : 0;
+      }
     }
 
     // ── FLAGS ─────────────────────────────────────────────────
     const flags = [];
-    if (volRatio && volRatio > 3)                       flags.push({ label: '⚡ VOL SPIKE',    color: '#00b4ff' });
-    if (shortPct && shortPct > 20 && priceChange1D > 0) flags.push({ label: '🎯 SQUEEZE',      color: '#ff2d55' });
-    if (insiderChange != null && insiderChange > 2)     flags.push({ label: '👤 INSIDER BUY',  color: '#00ff94' });
-    if (streak >= 3)                                    flags.push({ label: '📈 EPS STREAK',   color: '#ffcc00' });
+    if (volRatio && volRatio > 3)                        flags.push({ label: '⚡ VOL SPIKE',   color: '#00b4ff' });
+    if (insiderChange != null && insiderChange > 2)      flags.push({ label: '👤 INSIDER BUY', color: '#00ff94' });
+    if (streak >= 3)                                     flags.push({ label: '📈 EPS STREAK',  color: '#ffcc00' });
     if (fcf != null && fcf > 0 && fcf1 != null && fcf1 > 0) flags.push({ label: '💰 FCF+',    color: '#00e5cc' });
-    if (ebitdaMargin != null && ebitdaMargin > 25)      flags.push({ label: '💎 EBITDA+',      color: '#bf5fff' });
-    if (epsGrowth != null && epsGrowth > 25)            flags.push({ label: '🚀 EPS GROWTH',   color: '#ff7040' });
-    if (upside != null && upside > 35)                  flags.push({ label: '🎯 HIGH UPSIDE',  color: '#ffcc00' });
+    if (ebitdaMargin != null && ebitdaMargin > 25)       flags.push({ label: '💎 EBITDA+',     color: '#bf5fff' });
+    if (epsGrowth != null && epsGrowth > 25)             flags.push({ label: '🚀 EPS GROWTH',  color: '#ff7040' });
+    if (upside != null && upside > 35)                   flags.push({ label: '🎯 HIGH UPSIDE', color: '#ffcc00' });
+    if (ma50 && price > ma50 * 1.1)                      flags.push({ label: '📊 ABOVE MA50',  color: '#00b4ff' });
 
-    // ── TOTAL SCORE & SIGNAL ──────────────────────────────────
+    // ── TOTAL & SIGNAL ────────────────────────────────────────
     const total = fund + sent + analyst + momentum + earPts + volShort + insiderScore;
     const signal = total >= 72 ? 'STRONG BUY'
                  : total >= 48 ? 'INTERESTING'
@@ -344,7 +325,9 @@ async function analyzeTicker(sym, baseData) {
       fund, sent, analyst, momentum, earPts, volShort,
       price: Math.round(price * 100) / 100,
       prevClose: prev ? Math.round(prev * 100) / 100 : null,
-      priceChange1D, lo52, hi52, pct52Low, pct52High,
+      priceChange1D,
+      lo52: yearLow || null, hi52: yearHigh || null,
+      pct52Low, pct52High,
       cap, beta: beta ? Math.round(beta * 1000) / 1000 : null,
       volRatio,
       pe: pe ? Math.round(pe * 10) / 10 : null,
@@ -355,8 +338,9 @@ async function analyzeTicker(sym, baseData) {
       grossMargin: grossMargin != null ? Math.round(grossMargin * 10) / 10 : null,
       ebitdaMargin: ebitdaMargin != null ? Math.round(ebitdaMargin * 10) / 10 : null,
       currentRatio: cr ? Math.round(cr * 100) / 100 : null,
-      fcf: fcf || null,
-      revGrowth, epsGrowth, sharesDilution, dilPenalty, debtPenalty,
+      netDebtEbitda: netDebtEbitda != null ? Math.round(netDebtEbitda * 10) / 10 : null,
+      fcf: fcf || null, revGrowth, epsGrowth,
+      sharesDilution, dilPenalty, debtPenalty,
       targetPrice, upside, recMean, recBuy, recHold, recSell,
       shortPct, mspr, insiderChange,
       earningsDate, earningsDays, streak, epsHistory,
@@ -365,72 +349,57 @@ async function analyzeTicker(sym, baseData) {
     };
 
   } catch (e) {
-    console.warn(`  ⚠ Error ${sym}: ${e.message}`);
+    console.warn(`  ⚠ ${sym}: ${e.message}`);
     return null;
   }
 }
 
 // ── MAIN ──────────────────────────────────────────────────────
 async function main() {
-  const startTime = Date.now();
-  console.log('🦅 StockRaptor Full Universe Scan starting...');
+  const t0 = Date.now();
+  console.log('🦅 StockRaptor Full Universe Scan v2 starting...');
 
-  // PHASE 1: Get all small caps from screener
-  const { tickers, screenerData } = await getUniverse();
+  const universe = await getUniverse();
+  const tickers = [...universe.keys()];
 
-  // PHASE 2: Deep analysis with parallelism (5 concurrent tickers)
-  console.log(`\n🔬 Phase 2: Deep analysis of ${tickers.length} tickers...`);
-  const CONCURRENCY = 5;  // 5 parallel × 8 calls = 40 calls/batch, well under 300/min
-  const BATCH_DELAY = 1200; // 1.2s between batches = ~33 batches/min = safe
+  console.log(`\n🔬 Phase 2: Analyzing ${tickers.length} tickers (5 concurrent)...`);
+
+  const CONCURRENCY = 5;
+  const DELAY = 1000; // 5 tickers × 10 calls = 50 calls/sec → ~300/min safe
   const results = [];
   let errors = 0;
 
   for (let i = 0; i < tickers.length; i += CONCURRENCY) {
     const batch = tickers.slice(i, i + CONCURRENCY);
-    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    const elapsed = Math.round((Date.now() - t0) / 1000);
     const pct = Math.round((i / tickers.length) * 100);
-    process.stdout.write(`\r[${i}/${tickers.length}] ${pct}% | ${elapsed}s elapsed | ${results.length} scored`);
+    process.stdout.write(`\r[${i+1}/${tickers.length}] ${pct}% | ${elapsed}s | ${results.length} scored`);
 
-    const batchResults = await Promise.all(
-      batch.map(sym => analyzeTicker(sym, screenerData[sym]))
-    );
-
-    for (const r of batchResults) {
-      if (r) results.push(r);
-      else errors++;
-    }
-
-    await sleep(BATCH_DELAY);
+    const batchResults = await Promise.all(batch.map(sym => analyzeTicker(sym, universe.get(sym))));
+    for (const r of batchResults) { if (r) results.push(r); else errors++; }
+    await sleep(DELAY);
   }
 
-  const elapsed = Math.round((Date.now() - startTime) / 1000);
-  console.log(`\n\n✅ Scan complete in ${elapsed}s`);
-  console.log(`   Results: ${results.length} | Errors/skipped: ${errors}`);
-
-  // Sort by total score
+  const elapsed = Math.round((Date.now() - t0) / 1000);
   results.sort((a, b) => b.total - a.total);
 
-  // Save to Supabase
-  console.log('💾 Saving to Supabase...');
+  const signals = results.reduce((acc, r) => { acc[r.signal] = (acc[r.signal]||0)+1; return acc; }, {});
+  console.log(`\n\n✅ Done in ${elapsed}s | ${results.length} results | ${errors} errors`);
+  console.log(`   Signals:`, signals);
+
   const { error } = await sb.from('scan_cache').upsert({
     id: 'daily',
     scan_date: new Date().toISOString().substring(0, 10),
     scanned_at: new Date().toISOString(),
-    results,
-    total_count: results.length,
-    errors,
+    results, total_count: results.length, errors,
   });
 
-  if (error) {
-    console.error('❌ Supabase error:', error.message);
-    process.exit(1);
-  }
+  if (error) { console.error('❌ Supabase:', error.message); process.exit(1); }
 
-  console.log(`🏆 Top 10:`);
-  results.slice(0, 10).forEach((r, i) => {
-    console.log(`   ${i+1}. ${r.sym.padEnd(6)} ${r.signal.padEnd(12)} score:${r.total} sector:${r.sector}`);
-  });
-  console.log(`\n✨ Done — ${results.length} small caps analyzed and saved.`);
+  console.log(`\n🏆 Top 10:`);
+  results.slice(0, 10).forEach((r, i) =>
+    console.log(`   ${i+1}. ${r.sym.padEnd(6)} ${r.signal.padEnd(12)} score:${r.total}`)
+  );
 }
 
 main().catch(e => { console.error('Fatal:', e); process.exit(1); });
