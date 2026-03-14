@@ -95,18 +95,17 @@ async function getUniverse() {
 async function analyzeTicker(sym, baseData) {
   try {
     // 7 parallel API calls — using correct FMP stable endpoints
-    const [profile, quote, ratios, keyMetrics, cashflow, income, earnings, priceTarget, news] = await Promise.all([
-      fmp(`/profile?symbol=${sym}`),
-      fmp(`/quote?symbol=${sym}`),
-      fmp(`/ratios-ttm?symbol=${sym}`),
-      fmp(`/key-metrics-ttm?symbol=${sym}`),
-      fmp(`/cash-flow-statement?symbol=${sym}&limit=2`),
-      fmp(`/income-statement?symbol=${sym}&limit=4`),
-      fmp(`/earnings?symbol=${sym}&limit=5`),
-      fmp(`/price-target-consensus?symbol=${sym}`),
-      fmp(`/news/stock?symbols=${sym}&limit=8`),
-    ]);
-    const insider = null; // skipped for speed - add back with premium plan
+    // Sequential calls - avoid parallel rate limiting
+    const profile     = await fmp(`/profile?symbol=${sym}`);
+    const quote       = await fmp(`/quote?symbol=${sym}`);
+    const ratios      = await fmp(`/ratios-ttm?symbol=${sym}`);
+    const keyMetrics  = await fmp(`/key-metrics-ttm?symbol=${sym}`);
+    const cashflow    = await fmp(`/cash-flow-statement?symbol=${sym}&limit=2`);
+    const income      = await fmp(`/income-statement?symbol=${sym}&limit=4`);
+    const earnings    = await fmp(`/earnings?symbol=${sym}&limit=5`);
+    const priceTarget = await fmp(`/price-target-consensus?symbol=${sym}`);
+    const news        = await fmp(`/news/stock?symbols=${sym}&limit=8`);
+    const insider     = null;
 
     const p   = profile?.[0];
     const q   = quote?.[0];
@@ -382,20 +381,18 @@ async function main() {
 
   console.log(`\n🔬 Phase 2: Analyzing ${tickers.length} tickers (5 concurrent)...`);
 
-  const CONCURRENCY = 5;
-  const DELAY = 2000; // 5 tickers × 10 calls = 50 calls/sec → ~300/min safe
+  const DELAY = 0; // sequential calls per ticker already take ~900ms naturally
   const results = [];
   let errors = 0;
 
-  for (let i = 0; i < tickers.length; i += CONCURRENCY) {
-    const batch = tickers.slice(i, i + CONCURRENCY);
+  for (let i = 0; i < tickers.length; i++) {
+    const sym = tickers[i];
     const elapsed = Math.round((Date.now() - t0) / 1000);
     const pct = Math.round((i / tickers.length) * 100);
-    process.stdout.write(`\r[${i+1}/${tickers.length}] ${pct}% | ${elapsed}s | ${results.length} scored`);
-
-    const batchResults = await Promise.all(batch.map(sym => analyzeTicker(sym, universe.get(sym))));
-    for (const r of batchResults) { if (r) results.push(r); else errors++; }
-    await sleep(DELAY);
+    if (i % 10 === 0) process.stdout.write(`\r[${i+1}/${tickers.length}] ${pct}% | ${elapsed}s | ${results.length} scored`);
+    
+    const r = await analyzeTicker(sym, universe.get(sym));
+    if (r) results.push(r); else errors++;
   }
 
   const elapsed = Math.round((Date.now() - t0) / 1000);
