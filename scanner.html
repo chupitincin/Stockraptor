@@ -881,23 +881,22 @@ function renderTable(){
     // Free users: show first 20 normally, rest locked
     const isLocked = plan === 'free' && idx < freeLimit;
     if (isLocked) {
-      return `<tr class="mr locked-row" onclick="showUpgradeModal()" style="cursor:pointer;position:relative;transition:background .2s;" onmouseover="this.style.background='#0d0d2a'" onmouseout="this.style.background=''">
+      return `<tr class="mr locked-row" onclick="showUpgradeModal()" style="cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#0d0d2a'" onmouseout="this.style.background=''">
         <td style="filter:blur(3px);user-select:none;pointer-events:none"><span style="color:#3a3a60">▶</span></td>
         <td style="filter:blur(5px);user-select:none;pointer-events:none"><div class="tsym" style="color:#3a3a60">XXXX</div><div class="tsec" style="color:#2a2a50">██████</div></td>
         <td style="filter:blur(4px);user-select:none;pointer-events:none"><span class="badge" style="color:#2a2a60;border-color:#2a2a6044">██████</span></td>
         <td style="filter:blur(4px);user-select:none;pointer-events:none"><div class="sw"><span class="sv" style="color:#2a2a60">██</span></div></td>
         <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
         <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
-        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
-        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
-        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
-        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
-        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
-        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">██</td>
-        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">██</td>
-        <td style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
-          <span style="font-size:11px;color:#00ff94;letter-spacing:1.5px;font-weight:700;background:#020209ee;padding:5px 16px;border-radius:4px;border:1px solid #00ff9433;">🔒 UNLOCK PRO</span>
+        <td style="text-align:center;vertical-align:middle;">
+          <span style="font-size:11px;color:#00ff94;letter-spacing:1.5px;font-weight:700;background:#00ff9415;padding:5px 16px;border-radius:4px;border:1px solid #00ff9433;white-space:nowrap;">🔒 UNLOCK PRO</span>
         </td>
+        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
+        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
+        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
+        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
+        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">██</td>
+        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">██</td>
       </tr>`;
     }
     const c=SIG[d.signal],vals=[d.fund,d.sent,d.analyst,d.momentum,d.earPts,d.volShort];
