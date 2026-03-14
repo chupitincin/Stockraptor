@@ -1,0 +1,29 @@
+name: StockRaptor Insider Scan
+
+on:
+  schedule:
+    - cron: '0 7 * * 1'  # Every Monday at 07:00 UTC
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  insider-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # 2 hours max (SEC rate limited)
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run insider scan
+        run: node scripts/insider-scan.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
