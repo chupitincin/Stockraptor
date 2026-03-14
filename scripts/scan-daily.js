@@ -73,7 +73,7 @@ async function getUniverse() {
         for (const s of data) {
           if (!isRealStock(s)) continue;
           if (!allTickers.has(s.symbol)) {
-            allTickers.set(s.symbol, { sym: s.symbol, sector: s.sector || 'default', cap: s.marketCap || 0 });
+            allTickers.set(s.symbol, { sym: s.symbol, sector: s.sector || 'default', cap: s.marketCap || 0, companyName: s.companyName || s.symbol });
           }
         }
         if (data.length < 500) break;
@@ -334,6 +334,7 @@ async function analyzeTicker(sym, baseData) {
 
     return {
       sym, sector, signal, total,
+      companyName: p?.companyName || baseData?.companyName || sym,
       fund, sent, analyst, momentum, earPts, volShort,
       price: Math.round(price * 100) / 100,
       prevClose: prev ? Math.round(prev * 100) / 100 : null,
