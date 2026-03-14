@@ -453,9 +453,9 @@ async function analyzeTicker(sym, baseData) {
 
     // ── TOTAL & SIGNAL ────────────────────────────────────────
     const total = fund + sent + analyst + momentum + earPts + volShort + insiderScore;
-    const signal = total >= 72 ? 'STRONG BUY'
-                 : total >= 48 ? 'INTERESTING'
-                 : total >= 25 ? 'WATCH' : 'WEAK';
+    const signal = total >= 62 ? 'STRONG BUY'
+                 : total >= 46 ? 'INTERESTING'
+                 : total >= 28 ? 'WATCH' : 'WEAK';
 
     return {
       sym, sector, signal, total,
