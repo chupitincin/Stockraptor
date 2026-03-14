@@ -1,3 +1,4 @@
+
 // ══════════════════════════════════════════════════════════════
 // StockRaptor · Weekly Insider Scan — SEC EDGAR Master Index
 // Uses quarterly full-index to get ALL Form 4s efficiently
@@ -101,7 +102,31 @@ async function getQuarterlyForm4s(year, qtr) {
 // ── PARSE FORM 4 XML ──────────────────────────────────────────
 async function parseForm4(filename) {
   try {
-    const res = await fetch(`${SEC}/Archives/edgar/${filename}`, { headers: HEADERS });
+    // The filename from form.idx points to the full submission .txt file
+    // We need to find the actual Form 4 XML within it
+    // Example filename: edgar/data/1841408/0001841408-26-000001.txt
+    // The XML file is in the same directory, find it via index
+    const baseUrl = `${SEC}/Archives/edgar/${filename}`;
+    
+    // Get the index file to find the actual XML
+    const accNum = filename.split('/').pop().replace('.txt', '');
+    const dir = filename.substring(0, filename.lastIndexOf('/'));
+    const indexUrl = `${SEC}/Archives/edgar/${dir}/${accNum}-index.json`;
+    
+    let xmlUrl = baseUrl; // fallback to txt
+    try {
+      const idxRes = await fetch(indexUrl, { headers: HEADERS });
+      if (idxRes.ok) {
+        const idx = await idxRes.json();
+        // Find the primary Form 4 XML document
+        const xmlDoc = idx.documents?.find(d => 
+          d.type === '4' && (d.document.endsWith('.xml') || d.document.includes('form4'))
+        ) || idx.documents?.[0];
+        if (xmlDoc) xmlUrl = `${SEC}/Archives/edgar/${dir}/${xmlDoc.document}`;
+      }
+    } catch(e) {}
+
+    const res = await fetch(xmlUrl, { headers: HEADERS });
     if (!res.ok) return null;
     const xml = await res.text();
 
