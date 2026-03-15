@@ -8,11 +8,12 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Archivo+Black&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#020209;--s1:#06060f;--s2:#09091a;--bord:#0f0f20;--bord2:#181828;
+  --bg:#0a0a0a;--s1:#141414;--s2:#1a1a1a;--bord:rgba(255,255,255,.07);--bord2:rgba(255,255,255,.10);
   --green:#00ff94;--gold:#ffcc00;--red:#ff2d55;--blue:#00b4ff;
-  --purple:#bf5fff;--orange:#ff7040;--teal:#00e5cc;--pink:#ff4fa0;
-  --txt:#7070a0;--txb:#b0b0d0;--white:#e8e8f8;
+  --purple:#6e60ee;--orange:#ff7040;--teal:#00e5cc;--pink:#ff4fa0;
+  --txt:#606070;--txb:#a0a0b8;--white:#f0f0f8;
   --font:'JetBrains Mono',monospace;--sans:'Barlow',sans-serif;
+  --card:#181818;--card-bord:rgba(255,255,255,.08);--radius:8px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
@@ -176,10 +177,10 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .btn-scan:hover{background:#00d07a;}
 .btn-scan:disabled{background:#0f0f1f;color:#2a2a3a;cursor:not-allowed;}
 .vd{width:1px;height:18px;background:var(--bord2);margin:0 3px;}
-.bf{padding:6px 10px;background:transparent;border:1px solid #2a2a45;color:#7070b0;border-radius:3px;cursor:pointer;font-family:var(--font);font-size:10px;letter-spacing:1px;transition:all .2s;}
-.bf:hover,.bf.on{border-color:var(--green);color:var(--green);background:#00ff9406;}
-.bs{padding:5px 9px;background:transparent;border:1px solid var(--bord2);color:#2e2e50;border-radius:3px;cursor:pointer;font-family:var(--font);font-size:10px;letter-spacing:1px;transition:all .2s;}
-.bs.on{border-color:var(--gold);color:var(--gold);}
+.bf{padding:6px 11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#8080a0;border-radius:6px;cursor:pointer;font-family:var(--font);font-size:10px;letter-spacing:.5px;transition:all .15s;}
+.bf:hover,.bf.on{border-color:var(--green);color:var(--green);background:rgba(0,255,148,.08);}
+.bs{padding:5px 10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#505060;border-radius:6px;cursor:pointer;font-family:var(--font);font-size:10px;letter-spacing:.5px;transition:all .15s;}
+.bs.on{border-color:var(--gold);color:var(--gold);background:rgba(255,204,0,.08);}
 .ml{margin-left:auto;}
 .legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
 .leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#8080b0;}
@@ -192,8 +193,8 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .prog-pct{font-size:9px;color:var(--gold);font-weight:700;}
 .rl-warn{display:none;margin-bottom:12px;padding:9px 13px;background:#180800;border:1px solid var(--orange);border-radius:4px;font-size:11px;color:var(--orange);letter-spacing:.5px;line-height:1.8;}
 .sum-grid{display:none;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:9px;margin-bottom:18px;}
-.scard{background:var(--s1);border:1px solid var(--bord);border-radius:6px;padding:12px 11px;cursor:pointer;transition:all .2s;}
-.scard:hover{transform:translateY(-2px);}
+.scard{background:#161616;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px 13px;cursor:pointer;transition:all .15s;}
+.scard:hover{background:#1e1e1e;}
 .sc-n{font-family:'Archivo Black',sans-serif;font-size:28px;line-height:1;margin-bottom:3px;}
 .sc-l{font-size:10px;color:#8080b0;letter-spacing:2px;}
 .flag-row{display:flex;gap:3px;flex-wrap:nowrap;align-items:center;}
@@ -206,20 +207,23 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8){text-align:center;color:var(--txt);}
 thead th:nth-child(11),#tbody td:nth-child(11){width:140px;min-width:140px;max-width:140px;} .dr td{padding:0 !important;} .dr > td{max-width:100%;}
 table{width:100%;border-collapse:collapse;display:none;}
-thead tr{border-bottom:1px solid var(--bord2);}
-th{padding:8px 6px;text-align:left;font-size:9px;color:#9090c0;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;overflow:hidden;text-overflow:ellipsis;}
+thead tr{border-bottom:1px solid rgba(255,255,255,.07);}
+th{padding:8px 6px;text-align:left;font-size:9px;color:#505060;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;overflow:hidden;text-overflow:ellipsis;}
 th:hover{color:var(--white);}
 .th-arrow{font-size:9px;margin-left:3px;color:var(--green);}
-tbody tr.mr{border-bottom:1px solid #0d0d1e;cursor:pointer;height:120px;transition:background .15s;animation:rowIn .25s ease;}
-tbody tr.mr:hover{background:#0a0a1a;}
-tbody tr.dr{display:none;background:#07071a;border-bottom:1px solid var(--bord2);}
+tbody tr.mr{cursor:pointer;height:120px;transition:all .15s;animation:rowIn .25s ease;}
+tbody tr.mr td{background:#161616;border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07);}
+tbody tr.mr td:first-child{border-left:1px solid rgba(255,255,255,.07);border-radius:8px 0 0 8px;padding-left:10px;}
+tbody tr.mr td:last-child{border-right:1px solid rgba(255,255,255,.07);border-radius:0 8px 8px 0;padding-right:10px;}
+tbody tr.mr:hover td{background:#1e1e1e !important;}
+tbody tr.dr{display:none;background:#0f0f0f;border-bottom:1px solid rgba(255,255,255,.07);}
 tbody tr.dr.open{display:table-row;}
 @keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 td{padding:8px 6px;white-space:nowrap;vertical-align:middle;}
 .tsym{font-family:'Archivo Black',sans-serif;font-size:14px;color:var(--white);letter-spacing:.5px;}
 .tsec{font-size:10px;color:#6868a8;margin-top:2px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tname{font-size:10px;color:#9090c0;margin-top:1px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.badge{font-size:10px;letter-spacing:.8px;padding:4px 8px;border-radius:2px;border:1px solid;white-space:nowrap;font-weight:600;}
+.badge{font-size:10px;letter-spacing:.8px;padding:4px 10px;border-radius:6px;border:1px solid;white-space:nowrap;font-weight:600;}
 .sw{display:flex;align-items:center;gap:6px;}
 .sv{font-family:'Archivo Black',sans-serif;font-size:17px;}
 .bkd{display:flex;gap:2px;margin-top:3px;}
@@ -237,18 +241,18 @@ td .subbar-row{margin-bottom:0;}
 td .subbar-bg{max-width:32px;}
 .cg{color:var(--green);}.cau{color:var(--gold);}.cr{color:var(--red);}.cb{color:var(--blue);}.cp{color:var(--purple);}.co{color:var(--orange);}.ct{color:var(--teal);}.ck{color:var(--pink);}.cd{color:#8080b0;}
 .det-inner{padding:16px 14px 20px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;overflow:hidden;box-sizing:border-box;width:100%;}
-.det-card{background:#08081a;border:1px solid #1e1e38;border-radius:6px;padding:12px 13px;overflow:hidden;min-width:0;word-break:break-word;}
+.det-card{background:#161616;border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:14px 15px;overflow:hidden;min-width:0;word-break:break-word;}
 .det-title{font-size:10px;letter-spacing:2px;color:var(--txb);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--bord2);display:flex;align-items:center;gap:6px;}
 .det-r{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:4px;min-width:0;overflow:hidden;}
 .dk{font-size:11px;color:var(--txt);flex-shrink:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%;}
 .dv{font-size:11px;color:var(--txb);text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dk{font-size:11px;color:#6060a0;}
 .dv{font-size:11px;font-weight:600;color:var(--txb);}
-.hr-mini{height:1px;background:var(--bord);margin:8px 0;}
+.hr-mini{height:1px;background:rgba(255,255,255,.06);margin:8px 0;}
 .stkbar{height:6px;background:var(--bord2);border-radius:3px;overflow:hidden;display:flex;margin:6px 0;}
 .stkbar div{height:100%;transition:width .9s ease;}
 .eps-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:7px;}
-.eps-cell{background:var(--bg);border:1px solid var(--bord);border-radius:3px;padding:5px;text-align:center;}
+.eps-cell{background:#111111;border:1px solid rgba(255,255,255,.07);border-radius:6px;padding:5px;text-align:center;}
 .eps-q{font-size:10px;color:#8080b0;margin-bottom:3px;letter-spacing:.5px;}
 .eps-v{font-size:10px;font-weight:700;}
 .news-item{padding:12px 0;border-bottom:1px solid var(--bord2);display:flex;flex-direction:column;gap:5px;}
@@ -283,16 +287,16 @@ td .subbar-bg{max-width:32px;}
 .upgrade-title{font-family:'Archivo Black',sans-serif;font-size:22px;color:#e8e8f8;margin-bottom:8px;}
 .upgrade-desc{font-size:13px;color:#7070a0;line-height:1.7;margin-bottom:28px;}
 /* plan badge in nav */
-#scannerNav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;background:rgba(2,2,9,.9);backdrop-filter:blur(12px);border-bottom:1px solid #181828;}
+#scannerNav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;background:rgba(10,10,10,.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.07);}
 .sn-logo{font-family:'Archivo Black',sans-serif;font-size:16px;color:#e8e8f8;display:flex;align-items:center;gap:8px;cursor:pointer;}
 .sn-logo span{color:#00ff94;}
 .sn-right{display:flex;align-items:center;gap:12px;}
 .sn-plan{font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;padding:4px 10px;border-radius:10px;}
-.sn-plan.free{background:#ffffff11;color:#7070a0;}
-.sn-plan.pro{background:#00ff9422;color:#00ff94;}
-.sn-plan.elite{background:#ffcc0022;color:#ffcc00;}
+.sn-plan.free{background:rgba(255,255,255,.08);color:#808090;border-radius:20px;}
+.sn-plan.pro{background:rgba(0,255,148,.12);color:#00ff94;border-radius:20px;}
+.sn-plan.elite{background:rgba(255,204,0,.12);color:#ffcc00;border-radius:20px;}
 .sn-user{font-size:12px;color:#b0b0d0;}
-.sn-back{padding:6px 14px;background:transparent;border:1px solid #181828;color:#7070a0;border-radius:3px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;transition:all .2s;}
+.sn-back{padding:6px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#8080a0;border-radius:6px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;transition:all .2s;}
 .sn-back:hover{border-color:#b0b0d0;color:#e8e8f8;}
 
 
@@ -300,7 +304,7 @@ td .subbar-bg{max-width:32px;}
 .tt{cursor:help;border-bottom:1px dashed #3a3a60;}
 #sr-tooltip{
   position:fixed;z-index:9999;pointer-events:none;
-  background:#0e0e1e;border:1px solid #1e1e38;color:#b0b0d0;
+  background:#1a1a1a;border:1px solid rgba(255,255,255,.10);color:#b0b0d0;
   font-size:12px;font-family:'Barlow',sans-serif;font-weight:400;letter-spacing:0;
   line-height:1.65;padding:10px 14px;border-radius:7px;
   width:230px;text-align:left;box-shadow:0 6px 28px #00000090;
@@ -332,7 +336,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
 </div>
 
 <!-- Cache banner: last scan timestamp -->
-<div id="cacheBanner" style="display:none;position:fixed;top:52px;left:0;right:0;z-index:90;background:#06060f;border-bottom:1px solid #0f0f20;padding:6px 24px;align-items:center;justify-content:space-between;gap:12px;">
+<div id="cacheBanner" style="display:none;position:fixed;top:52px;left:0;right:0;z-index:90;background:#0f0f0f;border-bottom:1px solid rgba(255,255,255,.06);padding:6px 24px;align-items:center;justify-content:space-between;gap:12px;">
   <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#5050a0;font-family:'JetBrains Mono',monospace;">
     <span id="livdot" class="livdot done"></span>
     <span id="cacheStamp">Loading scan data...</span>
@@ -341,7 +345,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
 </div>
 
 <!-- Loading indicator -->
-<div id="cacheLoading" style="display:none;position:fixed;top:52px;left:0;right:0;z-index:90;background:#06060f;border-bottom:1px solid #0f0f20;padding:6px 24px;">
+<div id="cacheLoading" style="display:none;position:fixed;top:52px;left:0;right:0;z-index:90;background:#0f0f0f;border-bottom:1px solid rgba(255,255,255,.06);padding:6px 24px;">
   <span style="font-size:11px;color:#5050a0;font-family:'JetBrains Mono',monospace;">&#x27F3; Loading latest scan data...</span>
 </div>
 
@@ -754,6 +758,19 @@ const TICKERS=[
 ];
 const SECTOR_PE={'Technology':28,'Biotechnology':35,'Healthcare':22,'Software':32,'Consumer Cyclical':18,'Financial Services':14,'Industrials':18,'Energy':12,'Real Estate':20,'Communication Services':20,'Consumer Defensive':20,'Utilities':16,'Basic Materials':14,'default':22};
 const SIG={'STRONG BUY':'#00ff94','INTERESTING':'#ffcc00','WATCH':'#ff7040','WEAK':'#ff2d55'};
+
+const FLAG_TIPS = {
+  '⚡ VOL SPIKE':   'Volume is 3x or more above the 10-day average. Something is happening — news, earnings, or unusual interest.',
+  '🎯 SQUEEZE':     'High short interest + rising price. Short sellers may be forced to buy, accelerating the move up.',
+  '👤 INSIDER BUY': 'A company executive or director bought shares with their own money in the last 90 days. Strong bullish signal.',
+  '💼 BIG INSIDER': 'An insider bought over $1M of shares with their own money. Very strong conviction signal.',
+  '📈 EPS STREAK':  'Beat analyst earnings estimates 3 or 4 quarters in a row. Company consistently outperforms expectations.',
+  '💰 FCF+':        'Positive Free Cash Flow two years in a row. Company generates real cash, not just accounting profits.',
+  '💎 EBITDA+':     'EBITDA margin above 25%. Very profitable core business before debt and taxes.',
+  '🚀 EPS GROWTH':  'Earnings per share grew more than 25% vs last year. Strong profit acceleration.',
+  '🎯 HIGH UPSIDE': 'Wall Street analysts have an average price target 35%+ above current price.',
+  '📊 ABOVE MA50':  'Price is 10%+ above the 50-day moving average. Strong upward momentum confirmed.',
+};
 const SIG_EN={'STRONG BUY':'STRONG BUY','INTERESTING':'INTERESTING','WATCH':'WATCH','WEAK':'WEAK'};
 let KEY='d6pfc69r01qo88aivvbgd6pfc69r01qo88aivvc0',allData=[],curF='ALL',curS='score',sortDir=1,running=false;
 const slp=ms=>new Promise(r=>setTimeout(r,ms));
@@ -941,19 +958,6 @@ function renderTable(){
       </tr>`;
     }
     const c=SIG[d.signal],vals=[d.fund,d.sent,d.analyst,d.momentum,d.earPts,d.volShort];
-    const bkd=`<div class="bkd">${vals.map((v,j)=>`<div class="bseg" style="width:${Math.max(2,Math.min(28,v/maxes[j]*28))}px;background:${cols[j]}"></div>`).join('')}</div>`;
-    const FLAG_TIPS = {
-  '⚡ VOL SPIKE':   'Volume is 3x or more above the 10-day average. Something is happening — news, earnings, or unusual interest.',
-  '🎯 SQUEEZE':     'High short interest + rising price. Short sellers may be forced to buy, accelerating the move up.',
-  '👤 INSIDER BUY': 'A company executive or director bought shares with their own money in the last 90 days. Strong bullish signal.',
-  '💼 BIG INSIDER': 'An insider bought over $1M of shares with their own money. Very strong conviction signal.',
-  '📈 EPS STREAK':  'Beat analyst earnings estimates 3 or 4 quarters in a row. Company consistently outperforms expectations.',
-  '💰 FCF+':        'Positive Free Cash Flow two years in a row. Company generates real cash, not just accounting profits.',
-  '💎 EBITDA+':     'EBITDA margin above 25%. Very profitable core business before debt and taxes.',
-  '🚀 EPS GROWTH':  'Earnings per share grew more than 25% vs last year. Strong profit acceleration.',
-  '🎯 HIGH UPSIDE': 'Wall Street analysts have an average price target 35%+ above current price.',
-  '📊 ABOVE MA50':  'Price is 10%+ above the 50-day moving average. Strong upward momentum confirmed.',
-};
 const flagsHtml=d.flags.map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('');
     const ef=fmtD(d.earningsDate);
     const edHtml=d.earningsDays!==null?`<span style="font-size:10px;color:${d.earningsDays<=20?'var(--gold)':d.earningsDays<=45?'var(--orange)':'var(--txt)'}">${ef} <span style="opacity:.5;font-size:8px">${d.earningsDays}d</span></span>`:'<span class="cd">—</span>';
@@ -1047,7 +1051,7 @@ function renderDet(d){
     <div class="hr-mini"></div>
     <div style="font-size:7px;letter-spacing:2px;color:var(--txt);margin-bottom:6px;margin-top:4px;">🚩 ALL ALERTS</div>
     <div style="display:flex;flex-wrap:wrap;gap:4px;">
-      ${d.flags.map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44;font-size:9px;padding:3px 7px;" data-tip="${(window.FLAG_TIPS&&window.FLAG_TIPS[f.label])||f.label}">${f.label}</span>`).join('')}
+      ${d.flags.map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44;font-size:9px;padding:3px 7px;" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('')}
     </div>` : ''}
   </div>
   <div class="det-card"><div class="det-title">${(window._detTitles&&window._detTitles().earnings)||"📅 EARNINGS & EPS"}</div>
