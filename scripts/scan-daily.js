@@ -42,14 +42,12 @@ async function fmp(endpoint, retries = 2) {
   }
 }
 
-
 function isRealStock(s) {
   if (!s?.symbol) return false;
   if (s.isEtf || s.isFund) return false;
   if (s.symbol.includes('.') || s.symbol.includes('-')) return false;
   if (s.symbol.length > 5) return false;
   if (s.isActivelyTrading === false) return false;
-  // Only main US tradeable exchanges - no OTC/Pink Sheets
   const validExchanges = ['NYSE', 'NASDAQ', 'AMEX', 'NYSEARCA', 'NYSEMKT'];
   if (s.exchangeShortName && !validExchanges.includes(s.exchangeShortName)) return false;
   return true;
@@ -60,7 +58,6 @@ async function getUniverse() {
   console.log('📡 Phase 1: Fetching small cap universe...');
   const allTickers = new Map();
 
-  // Use smaller cap ranges to get more granular results from screener
   const ranges = [
     { min: 80000000,   max: 250000000  },
     { min: 250000000,  max: 500000000  },
@@ -95,8 +92,6 @@ async function getUniverse() {
 // ── ANALYZE SINGLE TICKER ─────────────────────────────────────
 async function analyzeTicker(sym, baseData, insiderCache = {}) {
   try {
-    // 7 parallel API calls — using correct FMP stable endpoints
-    // Sequential calls - avoid parallel rate limiting
     const profile     = await fmp(`/profile?symbol=${sym}`);
     const quote       = await fmp(`/quote?symbol=${sym}`);
     const ratios      = await fmp(`/ratios-ttm?symbol=${sym}`);
@@ -106,7 +101,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     const earnings    = await fmp(`/earnings?symbol=${sym}&limit=5`);
     const priceTarget = await fmp(`/price-target-consensus?symbol=${sym}`);
     const news        = await fmp(`/news/stock?symbols=${sym}&limit=8`);
-    // Read insider data from cache (populated weekly by insider-scan.js)
+
     const insiderRow = insiderCache[sym];
     const insider = insiderRow ? {
       buys:           insiderRow.buys || 0,
@@ -128,7 +123,6 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     const inc1 = income?.[1];
     const pt  = priceTarget?.[0];
 
-    // Use quote for real-time price data (more fields than profile)
     const price  = q?.price || p?.price || 0;
     const cap    = q?.marketCap || p?.marketCap || baseData?.cap || 0;
     const sector = p?.sector || baseData?.sector || 'default';
@@ -170,7 +164,6 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     const roe = r?.returnOnEquityTTM != null ? r.returnOnEquityTTM * 100 : null;
     if (roe != null) fund += roe > 20 ? 4 : roe > 12 ? 3 : roe > 8 ? 2 : roe > 0 ? 1 : 0;
 
-    // Net Debt / EBITDA (key metric from keyMetrics)
     const netDebtEbitda = km?.netDebtToEBITDATTM;
     if (netDebtEbitda != null) fund += netDebtEbitda < 1 ? 3 : netDebtEbitda < 2 ? 2 : netDebtEbitda < 3 ? 1 : netDebtEbitda > 5 ? -3 : 0;
 
@@ -209,11 +202,8 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     let sent = 0, newsSent = null, newsItems = [];
     if (Array.isArray(news) && news.length > 0) {
       const recent = news.slice(0, 8);
-      
-      // Keyword-based sentiment since FMP Starter doesn't include sentiment field
       const POS_WORDS = ['beat','beats','surge','surges','jumps','rises','gains','record','upgrade','upgraded','strong','growth','profit','revenue','bullish','buy','outperform','raises','raised','exceeds','positive','wins','award','partnership','deal','launch','launches'];
       const NEG_WORDS = ['miss','misses','falls','drops','decline','declines','loss','losses','downgrade','downgraded','weak','cut','cuts','lawsuit','investigation','recall','warning','disappoints','below','concern','risk','sell','underperform','layoffs','bankruptcy'];
-      
       let posCount = 0, negCount = 0;
       newsItems = recent.slice(0, 6).map(n => {
         const title = (n.title || '').toLowerCase();
@@ -222,13 +212,8 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
         const sentiment = isPos && !isNeg ? 'positive' : isNeg && !isPos ? 'negative' : 'neutral';
         if (sentiment === 'positive') posCount++;
         if (sentiment === 'negative') negCount++;
-        return {
-          headline: (n.title || '').substring(0, 90),
-          source: n.site || '', time: (n.publishedDate || '').substring(0, 10),
-          sentiment
-        };
+        return { headline: (n.title || '').substring(0, 90), source: n.site || '', time: (n.publishedDate || '').substring(0, 10), sentiment };
       });
-      
       const total = recent.length;
       newsSent = total > 0 ? (posCount - negCount) / total : 0;
       sent = Math.min(12, Math.round(((newsSent + 1) / 2) * 12));
@@ -251,18 +236,14 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     }
     analyst = Math.min(15, analyst);
 
-    // ── 4. MOMENTUM (0-17 pts) — using QUOTE fields ───────────
+    // ── 4. MOMENTUM (0-17 pts) ────────────────────────────────
     let momentum = 0;
-    // quote has: price, previousClose, yearHigh, yearLow, volume, priceAvg50, priceAvg200
     const prev     = q?.previousClose;
     const yearHigh = q?.yearHigh;
     const yearLow  = q?.yearLow;
     const volume   = q?.volume || p?.volume;
-    const avgVol   = p?.averageVolume; // from profile
-
-    const priceChange1D = prev && prev > 0
-      ? Math.round(((price - prev) / prev) * 100 * 10) / 10 : null;
-
+    const avgVol   = p?.averageVolume;
+    const priceChange1D = prev && prev > 0 ? Math.round(((price - prev) / prev) * 100 * 10) / 10 : null;
     let pct52Low = null, pct52High = null;
     if (yearLow && yearHigh && price && yearHigh > yearLow) {
       pct52Low  = Math.round(((price - yearLow)  / yearLow)  * 100);
@@ -270,34 +251,24 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       const pos = (price - yearLow) / (yearHigh - yearLow);
       momentum += pos > 0.85 ? 8 : pos > 0.65 ? 6 : pos > 0.45 ? 4 : pos > 0.25 ? 2 : 0;
     }
-
     if (priceChange1D != null) {
       momentum += priceChange1D > 4 ? 4 : priceChange1D > 2 ? 3 : priceChange1D > 0.5 ? 2 : priceChange1D > -0.5 ? 1 : 0;
     }
-
     const beta = p?.beta;
     if (beta) momentum += beta > 1.8 ? 3 : beta > 1.3 ? 2 : beta > 0.9 ? 1 : 0;
-
-    // Price vs 50-day MA — trend signal
     const ma50 = q?.priceAvg50;
     if (ma50 && price > ma50 * 1.05) momentum += 2;
     else if (ma50 && price > ma50) momentum += 1;
-
-    const volRatio = volume && avgVol && avgVol > 0
-      ? Math.round((volume / avgVol) * 10) / 10 : null;
+    const volRatio = volume && avgVol && avgVol > 0 ? Math.round((volume / avgVol) * 10) / 10 : null;
     if (volRatio) momentum += volRatio > 3 ? 2 : volRatio > 2 ? 1 : 0;
-
     momentum = Math.min(17, momentum);
 
     // ── 5. EARNINGS (0-15 pts) ────────────────────────────────
     let earPts = 0, epsHistory = [], streak = 0;
     let earningsDate = null, earningsDays = null;
-
     if (Array.isArray(earnings) && earnings.length > 0) {
-      // FMP /earnings has: date, epsActual, epsEstimated, revenueActual, revenueEstimated
       const past = earnings.filter(e => e.epsActual != null).slice(0, 4);
       const future = earnings.find(e => e.epsActual == null);
-
       epsHistory = past.map(e => ({
         q: (e.date || '').substring(0, 7),
         actual: e.epsActual ?? null,
@@ -305,13 +276,10 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
         surprise: e.epsActual != null && e.epsEstimated != null && Math.abs(e.epsEstimated) > 0.01
           ? Math.round(((e.epsActual - e.epsEstimated) / Math.abs(e.epsEstimated)) * 100) : 0
       }));
-
       streak = epsHistory.filter(e => (e.surprise || 0) > 0).length;
       earPts += streak >= 4 ? 8 : streak >= 3 ? 6 : streak >= 2 ? 4 : streak >= 1 ? 2 : 0;
-
       const avgSurprise = epsHistory.reduce((a, e) => a + (e.surprise || 0), 0) / Math.max(epsHistory.length, 1);
       earPts += avgSurprise > 15 ? 4 : avgSurprise > 8 ? 3 : avgSurprise > 2 ? 2 : 0;
-
       if (future?.date) {
         earningsDate = future.date;
         const diff = Math.round((new Date(earningsDate) - new Date()) / 86400000);
@@ -324,7 +292,6 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     // ── 6. VOL/SHORT (0-11 pts) ───────────────────────────────
     let volShort = 0;
     if (volRatio) volShort += volRatio > 5 ? 5 : volRatio > 3 ? 4 : volRatio > 2 ? 3 : 0;
-    // shortRatio not available in FMP stable — skip short pts for now
     const shortPct = null;
     volShort = Math.min(11, volShort);
 
@@ -335,27 +302,26 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       const total = insider.buys + insider.sells;
       mspr = total > 0 ? Math.round((insider.netChange / total) * 100) / 100 : null;
       insiderScore = insider.buys > 3 ? 8 : insider.buys > 1 ? 6 : insider.buys === 1 ? 4 : insider.sells > 2 ? 0 : 2;
-      // Bonus for high buy value
       if (insider.totalBuyValue > 500000) insiderScore = Math.min(8, insiderScore + 2);
     }
 
     // ── FLAGS ─────────────────────────────────────────────────
     const flags = [];
-    if (volRatio && volRatio > 3)                        flags.push({ label: '⚡ VOL SPIKE',   color: '#00b4ff' });
-    if (insider?.buys > 0 && insider?.netChange > 0)        flags.push({ label: '👤 INSIDER BUY', color: '#00ff94' });
-    if (insider?.totalBuyValue > 1000000)                    flags.push({ label: '💼 BIG INSIDER',  color: '#00ff94' });
-    if (streak >= 3)                                     flags.push({ label: '📈 EPS STREAK',  color: '#ffcc00' });
-    if (fcf != null && fcf > 0 && fcf1 != null && fcf1 > 0) flags.push({ label: '💰 FCF+',    color: '#00e5cc' });
-    if (ebitdaMargin != null && ebitdaMargin > 25)       flags.push({ label: '💎 EBITDA+',     color: '#bf5fff' });
-    if (epsGrowth != null && epsGrowth > 25)             flags.push({ label: '🚀 EPS GROWTH',  color: '#ff7040' });
-    if (upside != null && upside > 35)                   flags.push({ label: '🎯 HIGH UPSIDE', color: '#ffcc00' });
-    if (ma50 && price > ma50 * 1.1)                      flags.push({ label: '📊 ABOVE MA50',  color: '#00b4ff' });
+    if (volRatio && volRatio > 3)                             flags.push({ label: '⚡ VOL SPIKE',   color: '#00b4ff' });
+    if (insider?.buys > 0 && insider?.netChange > 0)          flags.push({ label: '👤 INSIDER BUY', color: '#00ff94' });
+    if (insider?.totalBuyValue > 1000000)                     flags.push({ label: '💼 BIG INSIDER',  color: '#00ff94' });
+    if (streak >= 3)                                          flags.push({ label: '📈 EPS STREAK',  color: '#ffcc00' });
+    if (fcf != null && fcf > 0 && fcf1 != null && fcf1 > 0)  flags.push({ label: '💰 FCF+',        color: '#00e5cc' });
+    if (ebitdaMargin != null && ebitdaMargin > 25)            flags.push({ label: '💎 EBITDA+',     color: '#bf5fff' });
+    if (epsGrowth != null && epsGrowth > 25)                  flags.push({ label: '🚀 EPS GROWTH',  color: '#ff7040' });
+    if (upside != null && upside > 35)                        flags.push({ label: '🎯 HIGH UPSIDE', color: '#ffcc00' });
+    if (ma50 && price > ma50 * 1.1)                           flags.push({ label: '📊 ABOVE MA50',  color: '#00b4ff' });
 
     // ── TOTAL & SIGNAL ────────────────────────────────────────
     const total = fund + sent + analyst + momentum + earPts + volShort + insiderScore;
-    const signal = total >= 62 ? 'STRONG BUY'
-                 : total >= 46 ? 'INTERESTING'
-                 : total >= 28 ? 'WATCH' : 'WEAK';
+    const signal = total >= 70 ? 'STRONG BUY'
+                 : total >= 55 ? 'INTERESTING'
+                 : total >= 35 ? 'WATCH' : 'WEAK';
 
     return {
       sym, sector, signal, total,
@@ -363,10 +329,9 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       fund, sent, analyst, momentum, earPts, volShort,
       price: Math.round(price * 100) / 100,
       prevClose: prev ? Math.round(prev * 100) / 100 : null,
-      priceChange1D,
-      lo52: yearLow || null, hi52: yearHigh || null,
-      pct52Low, pct52High,
-      cap, beta: beta ? Math.round(beta * 1000) / 1000 : null,
+      priceChange1D, lo52: yearLow || null, hi52: yearHigh || null,
+      pct52Low, pct52High, cap,
+      beta: beta ? Math.round(beta * 1000) / 1000 : null,
       volRatio,
       pe: pe ? Math.round(pe * 10) / 10 : null,
       pb: pb ? Math.round(pb * 10) / 10 : null,
@@ -382,13 +347,9 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       targetPrice, upside, recMean, recBuy, recHold, recSell,
       shortPct, mspr, insiderChange,
       insiderData: insider ? {
-        buys: insider.buys,
-        sells: insider.sells,
-        netChange: insider.netChange,
-        totalBuyValue: insider.totalBuyValue,
-        totalSellValue: insider.totalSellValue,
-        transactions: insider.transactions,
-        insiders: insider.insiders,
+        buys: insider.buys, sells: insider.sells, netChange: insider.netChange,
+        totalBuyValue: insider.totalBuyValue, totalSellValue: insider.totalSellValue,
+        transactions: insider.transactions, insiders: insider.insiders,
       } : null,
       earningsDate, earningsDays, streak, epsHistory,
       newsSent: newsSent != null ? Math.round(newsSent * 100) / 100 : null,
@@ -404,12 +365,12 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
 // ── MAIN ──────────────────────────────────────────────────────
 async function main() {
   const t0 = Date.now();
-  console.log('🦅 StockRaptor Full Universe Scan v2 starting...');
+  console.log('🦅 StockRaptor Daily Scan starting...');
 
   const universe = await getUniverse();
   const tickers = [...universe.keys()];
 
-  // Load insider cache from Supabase (populated weekly by insider-scan.js)
+  // Load insider cache
   console.log('📋 Loading insider cache...');
   let insiderCache = {};
   try {
@@ -424,16 +385,12 @@ async function main() {
 
   console.log(`\n🔬 Phase 2: Analyzing ${tickers.length} tickers...`);
 
-  const DELAY = 0; // sequential calls per ticker already take ~900ms naturally
   const results = [];
   let errors = 0;
 
   for (let i = 0; i < tickers.length; i++) {
     const sym = tickers[i];
-    const elapsed = Math.round((Date.now() - t0) / 1000);
-    const pct = Math.round((i / tickers.length) * 100);
-    if (i % 10 === 0) process.stdout.write(`\r[${i+1}/${tickers.length}] ${pct}% | ${elapsed}s | ${results.length} scored`);
-    
+    if (i % 10 === 0) process.stdout.write(`\r[${i+1}/${tickers.length}] ${Math.round((i/tickers.length)*100)}% | ${Math.round((Date.now()-t0)/1000)}s | ${results.length} scored`);
     const r = await analyzeTicker(sym, universe.get(sym), insiderCache);
     if (r) results.push(r); else errors++;
   }
