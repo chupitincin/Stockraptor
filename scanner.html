@@ -196,8 +196,8 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .scard:hover{transform:translateY(-2px);}
 .sc-n{font-family:'Archivo Black',sans-serif;font-size:28px;line-height:1;margin-bottom:3px;}
 .sc-l{font-size:10px;color:#8080b0;letter-spacing:2px;}
-.flag-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;}
-.flag{font-size:9px;padding:2px 6px;border-radius:2px;border:1px solid;letter-spacing:.5px;font-weight:600;}
+.flag-row{display:flex;gap:3px;flex-wrap:wrap;max-width:130px;}
+.flag{font-size:8px;padding:2px 5px;border-radius:2px;border:1px solid;letter-spacing:.3px;font-weight:600;white-space:nowrap;}
 .flag.tt{cursor:help;}
 .flag.tt::after{width:200px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;white-space:normal;}
 .flag.tt{cursor:help;border-bottom:none;}
@@ -213,7 +213,7 @@ tbody tr.mr:hover{background:#0a0a1a;}
 tbody tr.dr{display:none;background:#07071a;border-bottom:1px solid var(--bord2);}
 tbody tr.dr.open{display:table-row;}
 @keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-td{padding:9px 6px;white-space:nowrap;vertical-align:middle;}
+td{padding:8px 6px;white-space:nowrap;vertical-align:middle;}
 .tsym{font-family:'Archivo Black',sans-serif;font-size:14px;color:var(--white);letter-spacing:.5px;}
 .tsec{font-size:10px;color:#6868a8;margin-top:2px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tname{font-size:10px;color:#9090c0;margin-top:1px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -227,11 +227,6 @@ td{padding:9px 6px;white-space:nowrap;vertical-align:middle;}
 .subbar-bg{width:30px;flex-shrink:0;height:3px;background:var(--bord2);border-radius:2px;overflow:hidden;}
 .subbar-fill{height:100%;border-radius:2px;}
 .subbar-val{font-size:10px;font-weight:600;width:18px;text-align:right;flex-shrink:0;}
-/* Narrow score columns */
-#tbody tr td:nth-child(5),#tbody tr td:nth-child(6),#tbody tr td:nth-child(7),#tbody tr td:nth-child(8),
-thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8){max-width:72px;width:72px;}
-/* Compact table */
-table{min-width:0;}
 .tbl-outer{overflow-x:auto;}
 /* Compact table cell version */
 td .subbar-row{margin-bottom:0;}
@@ -957,7 +952,7 @@ function renderTable(){
 };
 const flagsHtml=d.flags.map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('');
     const ef=fmtD(d.earningsDate);
-    const edHtml=d.earningsDays!==null?`<span style="color:${d.earningsDays<=20?'var(--gold)':d.earningsDays<=45?'var(--orange)':'var(--txt)'}">📅 ${ef} <span style="opacity:.4;font-size:7px">${d.earningsDays}d</span></span>`:'<span class="cd">—</span>';
+    const edHtml=d.earningsDays!==null?`<span style="font-size:10px;color:${d.earningsDays<=20?'var(--gold)':d.earningsDays<=45?'var(--orange)':'var(--txt)'}">${ef} <span style="opacity:.5;font-size:8px">${d.earningsDays}d</span></span>`:'<span class="cd">—</span>';
     const vsHtml=`${d.volRatio?`<span class="${d.volRatio>2?'vol-spike':'cd'}">${d.volRatio>2?'⚡':''}${d.volRatio}x</span>`:''} ${d.shortPct?`<span class="${d.shortPct>15?'ct':'cd'}" style="margin-left:3px">${d.shortPct>15?'🎯':''}${d.shortPct}%</span>`:''}${!d.volRatio&&!d.shortPct?'<span class="cd">—</span>':''}`;
     const ch=d.priceChange1D;
     const prHtml=d.price?`$${d.price.toFixed(2)}<span style="font-size:8px;color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!==null?sgn(ch)+ch+'%':''}</span>`:'—';
