@@ -17,7 +17,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
 body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;min-height:100vh;overflow-x:hidden;}
-.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% -5%,#0d0d3a55,transparent),radial-gradient(ellipse 40% 30% at 90% 80%,#0a1a0a33,transparent),linear-gradient(var(--bord) 1px,transparent 1px),linear-gradient(90deg,var(--bord) 1px,transparent 1px);background-size:auto,auto,36px 36px,36px 36px;}
+.bg-grid{display:none;}
 
 /* NAV */
 nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:60px;background:rgba(2,2,9,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--bord2);}
@@ -310,6 +310,12 @@ td .subbar-bg{max-width:32px;}
 
 
 /* ── LEONARDO STYLE OVERRIDES ── */
+/* Row spacing — wrap each row in a visual gap using top/bottom margin simulation */
+tbody tr.mr td { border: none !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+tbody tr.mr td:first-child { padding-left: 12px !important; }
+tbody tr.mr td:last-child { padding-right: 12px !important; }
+/* Outer gap between rows via transparent border on bottom */
+tbody tr.mr { border-bottom: 6px solid #0a0a0a !important; }
 /* Row cards */
 tbody tr.mr td {
   background: #161616;
