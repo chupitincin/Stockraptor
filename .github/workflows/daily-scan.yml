@@ -2,8 +2,8 @@ name: StockRaptor Daily Scan
 
 on:
   schedule:
-    - cron: '0 8 * * 1-5'
-  workflow_dispatch:
+    - cron: '0 8 * * 1-5'   # 08:00 UTC, lunes a viernes
+  workflow_dispatch:         # permite lanzarlo manualmente desde GitHub
 
 jobs:
   scan:
@@ -20,11 +20,11 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install
-        
+        run: npm install node-fetch@3 @supabase/supabase-js
+
       - name: Run daily scan
-        run: node scripts/scan-daily.js
         env:
-          FMP_KEY: ${{ secrets.FMP_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          FMP_KEY:              ${{ secrets.FMP_KEY }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scan-daily.js
