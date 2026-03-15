@@ -202,7 +202,8 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .flag.tt::after{width:200px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;white-space:normal;}
 .flag.tt{cursor:help;border-bottom:none;}
 .flag.tt::after{width:200px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;bottom:calc(100% + 8px);white-space:normal;}
-.tbl-outer{overflow-x:auto;} .dr td{padding:0 !important;} .dr > td{max-width:100%;}
+.tbl-outer{overflow-x:auto;}
+thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8){text-align:center;color:var(--txt);} .dr td{padding:0 !important;} .dr > td{max-width:100%;}
 table{width:100%;border-collapse:collapse;display:none;}
 thead tr{border-bottom:1px solid var(--bord2);}
 th{padding:8px 6px;text-align:left;font-size:9px;color:#9090c0;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;overflow:hidden;text-overflow:ellipsis;}
@@ -228,6 +229,7 @@ td{padding:8px 6px;white-space:nowrap;vertical-align:middle;}
 .subbar-fill{height:100%;border-radius:2px;}
 .subbar-val{font-size:10px;font-weight:600;width:18px;text-align:right;flex-shrink:0;}
 .tbl-outer{overflow-x:auto;}
+thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8){text-align:center;color:var(--txt);}
 /* Compact table cell version */
 td .subbar-row{margin-bottom:0;}
 td .subbar-bg{max-width:32px;}
@@ -957,7 +959,7 @@ const flagsHtml=d.flags.map(f=>`<span class="flag tt" style="color:${f.color};bo
     const ch=d.priceChange1D;
     const prHtml=d.price?`$${d.price.toFixed(2)}<span style="font-size:8px;color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!==null?sgn(ch)+ch+'%':''}</span>`:'—';
     const upHtml=d.upside!==null?`<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>`:'<span class="cd">—</span>';
-    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return(s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td>${sbr(d.fund,25,'var(--blue)','')}</td><td>${sbr(d.sent,20,'var(--purple)','')}</td><td>${sbr(d.analyst,15,'var(--green)','')}</td><td>${sbr(d.momentum,17,'var(--gold)','')}</td><td>${edHtml}</td><td>${vsHtml}</td><td><div class="flag-row">${flagsHtml||'<span class="cd" style="font-size:8px">—</span>'}</div></td><td style="font-size:11px;color:var(--txb)">${prHtml}</td><td>${upHtml}</td></tr><tr class="dr" id="dt-${d.sym}"><td colspan="13" style="padding:0;width:100%;">${renderDet(d)}</td></tr>`;
+    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return(s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--blue)">${d.fund??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--purple)">${d.sent??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--green)">${d.analyst??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--gold)">${d.momentum??'—'}</span></td><td>${edHtml}</td><td>${vsHtml}</td><td><div class="flag-row">${flagsHtml||'<span class="cd" style="font-size:8px">—</span>'}</div></td><td style="font-size:11px;color:var(--txb)">${prHtml}</td><td>${upHtml}</td></tr><tr class="dr" id="dt-${d.sym}"><td colspan="13" style="padding:0;width:100%;">${renderDet(d)}</td></tr>`;
   }).join('');
 
   // Add upgrade banner after free rows if user is free
