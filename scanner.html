@@ -228,10 +228,12 @@ td{padding:9px 9px;white-space:nowrap;vertical-align:middle;}
 .subbar-fill{height:100%;border-radius:2px;}
 .subbar-val{font-size:10px;font-weight:600;width:24px;text-align:right;flex-shrink:0;}
 .cg{color:var(--green);}.cau{color:var(--gold);}.cr{color:var(--red);}.cb{color:var(--blue);}.cp{color:var(--purple);}.co{color:var(--orange);}.ct{color:var(--teal);}.ck{color:var(--pink);}.cd{color:#8080b0;}
-.det-inner{padding:16px 14px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;}
-.det-card{background:#08081a;border:1px solid #1e1e38;border-radius:6px;padding:12px 13px;}
+.det-inner{padding:16px 14px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;overflow:hidden;}
+.det-card{background:#08081a;border:1px solid #1e1e38;border-radius:6px;padding:12px 13px;overflow:hidden;min-width:0;}
 .det-title{font-size:10px;letter-spacing:2px;color:var(--txb);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--bord2);display:flex;align-items:center;gap:6px;}
-.det-r{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:8px;}
+.det-r{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:8px;min-width:0;}
+.dk{font-size:11px;color:var(--txt);flex-shrink:0;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dv{font-size:11px;color:var(--txb);text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dk{font-size:11px;color:#6060a0;}
 .dv{font-size:11px;font-weight:600;color:var(--txb);}
 .hr-mini{height:1px;background:var(--bord);margin:8px 0;}
@@ -1005,18 +1007,17 @@ function renderDet(d){
     <div style="margin-top:8px;">
       <div style="font-size:7px;letter-spacing:2px;color:var(--txt);margin-bottom:6px;">RECENT TRANSACTIONS</div>
       ${d.insiderData.transactions.slice(0,5).map(t => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--bord);font-size:10px;">
-          <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--bord);font-size:10px;gap:6px;min-width:0;overflow:hidden;">
+          <div style="min-width:0;overflow:hidden;flex-shrink:1;">
             <span style="color:${t.txCode==='P'?'var(--green)':t.txCode==='S'?'var(--red)':'var(--txt)'}">
-              ${t.txCode==='P'?'▲ BUY':t.txCode==='S'?'▼ SELL':'● '+t.type}
+              ${t.txCode==='P'?'▲':t.txCode==='S'?'▼':'●'}
             </span>
-            <span style="color:var(--txb);margin-left:6px;">${t.name.split(' ').slice(-1)[0]}</span>
-            <span style="color:var(--txt);margin-left:4px;font-size:9px;">${t.title.substring(0,15)}</span>
+            <span style="color:var(--txb);margin-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.name.split(' ').slice(-1)[0]}</span>
+            <span style="color:var(--txt);margin-left:4px;font-size:9px;">${t.title.substring(0,12)}</span>
           </div>
-          <div style="text-align:right;">
-            <span style="color:var(--txb)">${t.shares.toLocaleString()} shares</span>
-            ${t.value ? `<span style="color:var(--txt);margin-left:6px;font-size:9px;">$${(t.value/1000).toFixed(0)}K</span>` : ''}
-            <span style="color:var(--txt);margin-left:6px;font-size:9px;">${t.date}</span>
+          <div style="text-align:right;flex-shrink:0;white-space:nowrap;">
+            <span style="color:var(--txb)">${t.shares.toLocaleString()}</span>
+            ${t.value ? `<span style="color:var(--txt);margin-left:4px;font-size:9px;">$${(t.value/1000).toFixed(0)}K</span>` : ''}
           </div>
         </div>
       `).join('')}
@@ -1035,7 +1036,7 @@ function renderDet(d){
     ${sbr(d.fund,25,'var(--blue)','Fundamental')}${sbr(d.sent,20,'var(--purple)','Sentiment')}${sbr(d.analyst,15,'var(--green)','Analysts')}${sbr(d.momentum,17,'var(--gold)','Momentum')}${sbr(d.earPts,15,'var(--orange)','Earnings')}${sbr(d.volShort,13,'var(--teal)','Vol/Short')}
     ${d.dilPenalty<0?`<div style="font-size:8px;color:var(--red);margin-top:5px;">⚠ Dilution: ${d.dilPenalty}pts</div>`:''}${d.debtPenalty<0?`<div style="font-size:8px;color:var(--orange);">⚠ Debt+growth: ${d.debtPenalty}pts</div>`:''}
   </div>
-  <div class="det-card" style="grid-column:1/-1"><div class="det-title">📰 RECENT NEWS (14 days) &nbsp; ${sentLbl(d.newsSent)} ${d.newsSent!==null?`<div style="width:90px;height:4px;background:var(--bord2);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:7px"><div style="width:${sentPct}%;height:100%;background:${d.newsSent>0?'var(--green)':'var(--red)'};border-radius:2px"></div></div>`:''}</div>
+  <div class="det-card" style="grid-column:1/-1;overflow:hidden;min-width:0;"><div class="det-title">📰 RECENT NEWS (14 days) &nbsp; ${sentLbl(d.newsSent)} ${d.newsSent!==null?`<div style="width:90px;height:4px;background:var(--bord2);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:7px"><div style="width:${sentPct}%;height:100%;background:${d.newsSent>0?'var(--green)':'var(--red)'};border-radius:2px"></div></div>`:''}</div>
     <div style="display:flex;flex-direction:column;gap:0">${newsHtml}</div>
   </div></div>`;
 }
