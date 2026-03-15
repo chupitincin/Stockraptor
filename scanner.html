@@ -754,6 +754,19 @@ const TICKERS=[
 ];
 const SECTOR_PE={'Technology':28,'Biotechnology':35,'Healthcare':22,'Software':32,'Consumer Cyclical':18,'Financial Services':14,'Industrials':18,'Energy':12,'Real Estate':20,'Communication Services':20,'Consumer Defensive':20,'Utilities':16,'Basic Materials':14,'default':22};
 const SIG={'STRONG BUY':'#00ff94','INTERESTING':'#ffcc00','WATCH':'#ff7040','WEAK':'#ff2d55'};
+
+const FLAG_TIPS = {
+  '⚡ VOL SPIKE':   'Volume is 3x or more above the 10-day average. Something is happening — news, earnings, or unusual interest.',
+  '🎯 SQUEEZE':     'High short interest + rising price. Short sellers may be forced to buy, accelerating the move up.',
+  '👤 INSIDER BUY': 'A company executive or director bought shares with their own money in the last 90 days. Strong bullish signal.',
+  '💼 BIG INSIDER': 'An insider bought over $1M of shares with their own money. Very strong conviction signal.',
+  '📈 EPS STREAK':  'Beat analyst earnings estimates 3 or 4 quarters in a row. Company consistently outperforms expectations.',
+  '💰 FCF+':        'Positive Free Cash Flow two years in a row. Company generates real cash, not just accounting profits.',
+  '💎 EBITDA+':     'EBITDA margin above 25%. Very profitable core business before debt and taxes.',
+  '🚀 EPS GROWTH':  'Earnings per share grew more than 25% vs last year. Strong profit acceleration.',
+  '🎯 HIGH UPSIDE': 'Wall Street analysts have an average price target 35%+ above current price.',
+  '📊 ABOVE MA50':  'Price is 10%+ above the 50-day moving average. Strong upward momentum confirmed.',
+};
 const SIG_EN={'STRONG BUY':'STRONG BUY','INTERESTING':'INTERESTING','WATCH':'WATCH','WEAK':'WEAK'};
 let KEY='d6pfc69r01qo88aivvbgd6pfc69r01qo88aivvc0',allData=[],curF='ALL',curS='score',sortDir=1,running=false;
 const slp=ms=>new Promise(r=>setTimeout(r,ms));
@@ -941,19 +954,6 @@ function renderTable(){
       </tr>`;
     }
     const c=SIG[d.signal],vals=[d.fund,d.sent,d.analyst,d.momentum,d.earPts,d.volShort];
-    const bkd=`<div class="bkd">${vals.map((v,j)=>`<div class="bseg" style="width:${Math.max(2,Math.min(28,v/maxes[j]*28))}px;background:${cols[j]}"></div>`).join('')}</div>`;
-    const FLAG_TIPS = {
-  '⚡ VOL SPIKE':   'Volume is 3x or more above the 10-day average. Something is happening — news, earnings, or unusual interest.',
-  '🎯 SQUEEZE':     'High short interest + rising price. Short sellers may be forced to buy, accelerating the move up.',
-  '👤 INSIDER BUY': 'A company executive or director bought shares with their own money in the last 90 days. Strong bullish signal.',
-  '💼 BIG INSIDER': 'An insider bought over $1M of shares with their own money. Very strong conviction signal.',
-  '📈 EPS STREAK':  'Beat analyst earnings estimates 3 or 4 quarters in a row. Company consistently outperforms expectations.',
-  '💰 FCF+':        'Positive Free Cash Flow two years in a row. Company generates real cash, not just accounting profits.',
-  '💎 EBITDA+':     'EBITDA margin above 25%. Very profitable core business before debt and taxes.',
-  '🚀 EPS GROWTH':  'Earnings per share grew more than 25% vs last year. Strong profit acceleration.',
-  '🎯 HIGH UPSIDE': 'Wall Street analysts have an average price target 35%+ above current price.',
-  '📊 ABOVE MA50':  'Price is 10%+ above the 50-day moving average. Strong upward momentum confirmed.',
-};
 const flagsHtml=d.flags.map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('');
     const ef=fmtD(d.earningsDate);
     const edHtml=d.earningsDays!==null?`<span style="font-size:10px;color:${d.earningsDays<=20?'var(--gold)':d.earningsDays<=45?'var(--orange)':'var(--txt)'}">${ef} <span style="opacity:.5;font-size:8px">${d.earningsDays}d</span></span>`:'<span class="cd">—</span>';
@@ -1047,7 +1047,7 @@ function renderDet(d){
     <div class="hr-mini"></div>
     <div style="font-size:7px;letter-spacing:2px;color:var(--txt);margin-bottom:6px;margin-top:4px;">🚩 ALL ALERTS</div>
     <div style="display:flex;flex-wrap:wrap;gap:4px;">
-      ${d.flags.map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44;font-size:9px;padding:3px 7px;" data-tip="${(window.FLAG_TIPS&&window.FLAG_TIPS[f.label])||f.label}">${f.label}</span>`).join('')}
+      ${d.flags.map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44;font-size:9px;padding:3px 7px;" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('')}
     </div>` : ''}
   </div>
   <div class="det-card"><div class="det-title">${(window._detTitles&&window._detTitles().earnings)||"📅 EARNINGS & EPS"}</div>
