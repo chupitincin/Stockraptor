@@ -203,9 +203,9 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .flag.tt{cursor:help;border-bottom:none;}
 .flag.tt::after{width:200px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;bottom:calc(100% + 8px);white-space:normal;}
 .tbl-outer{overflow-x:auto;} .dr td{padding:0 !important;} .dr > td{max-width:100%;}
-table{width:100%;border-collapse:collapse;display:none;}
+table{width:100%;border-collapse:collapse;display:none;table-layout:fixed;}
 thead tr{border-bottom:1px solid var(--bord2);}
-th{padding:8px 9px;text-align:left;font-size:10px;color:#9090c0;letter-spacing:2px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;}
+th{padding:8px 6px;text-align:left;font-size:9px;color:#9090c0;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;overflow:hidden;text-overflow:ellipsis;}
 th:hover{color:var(--white);}
 .th-arrow{font-size:9px;margin-left:3px;color:var(--green);}
 tbody tr.mr{border-bottom:1px solid #0d0d1e;cursor:pointer;transition:background .15s;animation:rowIn .25s ease;}
@@ -213,7 +213,7 @@ tbody tr.mr:hover{background:#0a0a1a;}
 tbody tr.dr{display:none;background:#07071a;border-bottom:1px solid var(--bord2);}
 tbody tr.dr.open{display:table-row;}
 @keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-td{padding:9px 9px;white-space:nowrap;vertical-align:middle;}
+td{padding:9px 6px;white-space:nowrap;vertical-align:middle;overflow:hidden;}
 .tsym{font-family:'Archivo Black',sans-serif;font-size:14px;color:var(--white);letter-spacing:.5px;}
 .tsec{font-size:10px;color:#6868a8;margin-top:2px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tname{font-size:10px;color:#9090c0;margin-top:1px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -222,11 +222,14 @@ td{padding:9px 9px;white-space:nowrap;vertical-align:middle;}
 .sv{font-family:'Archivo Black',sans-serif;font-size:17px;}
 .bkd{display:flex;gap:2px;margin-top:3px;}
 .bseg{height:4px;border-radius:1px;min-width:1px;}
-.subbar-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.subbar-row{display:flex;align-items:center;gap:4px;margin-bottom:4px;}
 .subbar-lbl{font-size:10px;color:#8080b0;width:90px;flex-shrink:0;}
-.subbar-bg{flex:1;height:4px;background:var(--bord2);border-radius:2px;overflow:hidden;max-width:80px;}
+.subbar-bg{flex:1;height:3px;background:var(--bord2);border-radius:2px;overflow:hidden;max-width:40px;}
 .subbar-fill{height:100%;border-radius:2px;}
-.subbar-val{font-size:10px;font-weight:600;width:24px;text-align:right;flex-shrink:0;}
+.subbar-val{font-size:10px;font-weight:600;width:20px;text-align:right;flex-shrink:0;}
+/* Compact table cell version */
+td .subbar-row{margin-bottom:0;}
+td .subbar-bg{max-width:32px;}
 .cg{color:var(--green);}.cau{color:var(--gold);}.cr{color:var(--red);}.cb{color:var(--blue);}.cp{color:var(--purple);}.co{color:var(--orange);}.ct{color:var(--teal);}.ck{color:var(--pink);}.cd{color:#8080b0;}
 .det-inner{padding:16px 14px 20px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;overflow:hidden;box-sizing:border-box;width:100%;}
 .det-card{background:#08081a;border:1px solid #1e1e38;border-radius:6px;padding:12px 13px;overflow:hidden;min-width:0;word-break:break-word;}
@@ -643,8 +646,8 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
       <div class="vd ml"></div>
       <button class="bs on" onclick="setS('score',this)" id="ssScore">SCORE</button>
       <button class="bs"    onclick="setS('fund',this)" id="ssFund">FUND.</button>
-      <button class="bs"    onclick="setS('sent',this)" id="ssSent">SENTIMENT</button>
-      <button class="bs"    onclick="setS('momentum',this)" id="ssMomentum">MOMENTUM</button>
+      <button class="bs"    onclick="setS('sent',this)" id="ssSent">SENT.</button>
+      <button class="bs"    onclick="setS('momentum',this)" id="ssMomentum">MOME.</button>
       <button class="bs"    onclick="setS('short',this)">SHORT%</button>
       <button class="bs"    onclick="setS('earnings',this)" id="ssEarnings">EARNINGS</button>
     </div>
@@ -665,15 +668,30 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
     <div class="sum-grid" id="sumGrid"></div>
     <div class="tbl-outer">
       <table id="tbl">
-        <thead><tr id="theadRow">
+        <colgroup>
+  <col style="width:24px">
+  <col style="width:140px">
+  <col style="width:100px">
+  <col style="width:130px">
+  <col style="width:70px">
+  <col style="width:70px">
+  <col style="width:70px">
+  <col style="width:70px">
+  <col style="width:100px">
+  <col style="width:80px">
+  <col style="width:120px">
+  <col style="width:80px">
+  <col style="width:70px">
+</colgroup>
+<thead><tr id="theadRow">
           <th></th>
           <th onclick="thSort('ticker')">TICKER / SECTOR <span class="th-arrow" id="th-ticker"></span></th>
           <th onclick="thSort('signal')"><span class="tt" data-tip="Overall verdict based on the total score. STRONG BUY ≥72 · INTERESTING ≥48 · WATCH ≥25 · WEAK &lt;25">SIGNAL</span> <span class="th-arrow" id="th-signal"></span></th>
           <th onclick="thSort('score')"><span class="tt" data-tip="Composite score from 0–100 combining 14 factors: fundamentals, sentiment, analyst consensus, momentum, earnings, volume and short squeeze potential.">TOTAL SCORE</span> <span class="th-arrow" id="th-score">▾</span></th>
           <th onclick="thSort('fund')"><span class="tt" data-tip="Fundamental score (0–25 pts). Evaluates P/E ratio vs sector average, P/B ratio, debt/equity, revenue growth, gross margin and ROE. Penalizes share dilution &gt;8%/yr.">FUND.</span> <span class="th-arrow" id="th-fund"></span></th>
-          <th onclick="thSort('sent')"><span class="tt" data-tip="News sentiment score (0–12 pts). Analyzes the tone of news headlines from the last 14 days. Positive news coverage pushes this score up.">SENTIMENT</span> <span class="th-arrow" id="th-sent"></span></th>
-          <th onclick="thSort('analyst')"><span class="tt" data-tip="Analyst score (0–15 pts). Combines Wall Street consensus (Buy/Hold/Sell ratings) and average price target upside vs current price.">ANALYSTS</span> <span class="th-arrow" id="th-analyst"></span></th>
-          <th onclick="thSort('momentum')"><span class="tt" data-tip="Momentum score (0–17 pts). Measures 52-week price performance, 4-week trend, and volatility (Beta). High momentum = stock trending strongly upward.">MOMENTUM</span> <span class="th-arrow" id="th-momentum"></span></th>
+          <th onclick="thSort('sent')"><span class="tt" data-tip="News sentiment score (0–12 pts). Analyzes the tone of news headlines from the last 14 days. Positive news coverage pushes this score up.">SENT.</span> <span class="th-arrow" id="th-sent"></span></th>
+          <th onclick="thSort('analyst')"><span class="tt" data-tip="Analyst score (0–15 pts). Combines Wall Street consensus (Buy/Hold/Sell ratings) and average price target upside vs current price.">ANALY.</span> <span class="th-arrow" id="th-analyst"></span></th>
+          <th onclick="thSort('momentum')"><span class="tt" data-tip="Momentum score (0–17 pts). Measures 52-week price performance, 4-week trend, and volatility (Beta). High momentum = stock trending strongly upward.">MOME.</span> <span class="th-arrow" id="th-momentum"></span></th>
           <th onclick="thSort('earnings')"><span class="tt" data-tip="Earnings score (0–15 pts). Rewards companies with upcoming earnings dates and consecutive quarterly EPS beats. A 3+ quarter beat streak is a strong signal.">EARNINGS</span> <span class="th-arrow" id="th-earnings"></span></th>
           <th onclick="thSort('short')"><span class="tt" data-tip="Volume &amp; short interest score (0–13 pts). Detects volume spikes vs 10-day average, and high short float % which can trigger a short squeeze.">VOL/SHORT</span> <span class="th-arrow" id="th-short"></span></th>
           <th><span class="tt" data-tip="Special alerts: ⚡ Volume spike &gt;2.5x average · 🎯 Short squeeze setup · 📅 Earnings within 20 days · ⚠ Dilution detected">⚠ FLAGS</span></th>
