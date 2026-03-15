@@ -205,7 +205,7 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .tbl-outer{overflow-x:auto;}
 thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8){text-align:center;color:var(--txt);}
 thead th:nth-child(11),#tbody td:nth-child(11){width:140px;min-width:140px;max-width:140px;} .dr td{padding:0 !important;} .dr > td{max-width:100%;}
-table{width:100%;border-collapse:collapse;display:none;}
+table{width:100%;border-collapse:separate;border-spacing:0 6px;display:none;}
 thead tr{border-bottom:1px solid var(--bord2);}
 th{padding:8px 6px;text-align:left;font-size:9px;color:#9090c0;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;overflow:hidden;text-overflow:ellipsis;}
 th:hover{color:var(--white);}
@@ -310,12 +310,11 @@ td .subbar-bg{max-width:32px;}
 
 
 /* ── LEONARDO STYLE OVERRIDES ── */
-/* Row spacing — wrap each row in a visual gap using top/bottom margin simulation */
-tbody tr.mr td { border: none !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+/* Row spacing via border-separate */
+tbody tr.mr td { border: none !important; }
 tbody tr.mr td:first-child { padding-left: 12px !important; }
 tbody tr.mr td:last-child { padding-right: 12px !important; }
-/* Outer gap between rows via transparent border on bottom */
-tbody tr.mr { border-bottom: 6px solid #0a0a0a !important; }
+thead tr th { padding-bottom: 10px; }
 /* Row cards */
 tbody tr.mr td {
   background: #161616;
