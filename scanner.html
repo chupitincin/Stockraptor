@@ -210,7 +210,16 @@ thead tr{border-bottom:1px solid var(--bord2);}
 th{padding:8px 6px;text-align:left;font-size:9px;color:#9090c0;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;overflow:hidden;text-overflow:ellipsis;}
 th:hover{color:var(--white);}
 .th-arrow{font-size:9px;margin-left:3px;color:var(--green);}
-tbody tr.mr{border-bottom:1px solid #0d0d1e;cursor:pointer;height:120px;transition:background .15s;animation:rowIn .25s ease;}
+tbody tr.mr{cursor:pointer;height:120px;transition:all .2s;animation:rowIn .25s ease;}
+.mr td{background:#0d0d20;border-top:1px solid #13132a;border-bottom:1px solid #13132a;}
+.mr td:first-child{border-radius:8px 0 0 8px;}
+.mr td:last-child{border-right:1px solid #13132a;border-radius:0 8px 8px 0;}
+.mr:hover td{background:#121228;}
+tbody tr.mr td{background:#0d0d20;border-top:1px solid #13132a;border-bottom:1px solid #13132a;}
+tbody tr.mr td:first-child{border-left:1px solid #13132a;border-radius:8px 0 0 8px;}
+tbody tr.mr td:last-child{border-right:1px solid #13132a;border-radius:0 8px 8px 0;}
+tbody tr.mr:hover td{background:#121228;}
+tbody tr.mr + tr.mr td{border-top:none;}
 tbody tr.mr:hover{background:#0a0a1a;}
 tbody tr.dr{display:none;background:#07071a;border-bottom:1px solid var(--bord2);}
 tbody tr.dr.open{display:table-row;}
@@ -754,6 +763,7 @@ const TICKERS=[
 ];
 const SECTOR_PE={'Technology':28,'Biotechnology':35,'Healthcare':22,'Software':32,'Consumer Cyclical':18,'Financial Services':14,'Industrials':18,'Energy':12,'Real Estate':20,'Communication Services':20,'Consumer Defensive':20,'Utilities':16,'Basic Materials':14,'default':22};
 const SIG={'STRONG BUY':'#00ff94','INTERESTING':'#ffcc00','WATCH':'#ff7040','WEAK':'#ff2d55'};
+const SIG_BG={'STRONG BUY':'rgba(0,255,148,.04)','INTERESTING':'rgba(255,204,0,.04)','WATCH':'rgba(255,112,64,.03)','WEAK':'rgba(255,45,85,.02)'};
 
 const FLAG_TIPS = {
   '⚡ VOL SPIKE':   'Volume is 3x or more above the 10-day average. Something is happening — news, earnings, or unusual interest.',
@@ -961,7 +971,7 @@ const flagsHtml=d.flags.map(f=>`<span class="flag tt" style="color:${f.color};bo
     const ch=d.priceChange1D;
     const prHtml=d.price?`$${d.price.toFixed(2)}<span style="font-size:8px;color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!==null?sgn(ch)+ch+'%':''}</span>`:'—';
     const upHtml=d.upside!==null?`<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>`:'<span class="cd">—</span>';
-    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return(s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--blue)">${d.fund??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--purple)">${d.sent??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--green)">${d.analyst??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--gold)">${d.momentum??'—'}</span></td><td>${edHtml}</td><td>${vsHtml}</td><td><div style="display:flex;flex-direction:column;gap:3px;">
+    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td style="border-left:3px solid ${c} !important;"><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return(s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--blue)">${d.fund??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--purple)">${d.sent??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--green)">${d.analyst??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--gold)">${d.momentum??'—'}</span></td><td>${edHtml}</td><td>${vsHtml}</td><td><div style="display:flex;flex-direction:column;gap:3px;">
       ${d.flags && d.flags.length > 0 ? `
         <div style="display:flex;gap:3px;">
           ${d.flags.slice(0,2).map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('')}
