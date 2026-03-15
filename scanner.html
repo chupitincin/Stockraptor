@@ -203,7 +203,7 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .flag.tt{cursor:help;border-bottom:none;}
 .flag.tt::after{width:200px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;bottom:calc(100% + 8px);white-space:normal;}
 .tbl-outer{overflow-x:auto;} .dr td{padding:0 !important;} .dr > td{max-width:100%;}
-table{width:100%;border-collapse:collapse;display:none;table-layout:fixed;}
+table{width:100%;border-collapse:collapse;display:none;}
 thead tr{border-bottom:1px solid var(--bord2);}
 th{padding:8px 6px;text-align:left;font-size:9px;color:#9090c0;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;overflow:hidden;text-overflow:ellipsis;}
 th:hover{color:var(--white);}
@@ -213,7 +213,7 @@ tbody tr.mr:hover{background:#0a0a1a;}
 tbody tr.dr{display:none;background:#07071a;border-bottom:1px solid var(--bord2);}
 tbody tr.dr.open{display:table-row;}
 @keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-td{padding:9px 6px;white-space:nowrap;vertical-align:middle;overflow:hidden;}
+td{padding:9px 6px;white-space:nowrap;vertical-align:middle;}
 .tsym{font-family:'Archivo Black',sans-serif;font-size:14px;color:var(--white);letter-spacing:.5px;}
 .tsec{font-size:10px;color:#6868a8;margin-top:2px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tname{font-size:10px;color:#9090c0;margin-top:1px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -222,11 +222,17 @@ td{padding:9px 6px;white-space:nowrap;vertical-align:middle;overflow:hidden;}
 .sv{font-family:'Archivo Black',sans-serif;font-size:17px;}
 .bkd{display:flex;gap:2px;margin-top:3px;}
 .bseg{height:4px;border-radius:1px;min-width:1px;}
-.subbar-row{display:flex;align-items:center;gap:4px;margin-bottom:4px;}
+.subbar-row{display:flex;align-items:center;gap:3px;margin-bottom:4px;}
 .subbar-lbl{font-size:10px;color:#8080b0;width:90px;flex-shrink:0;}
-.subbar-bg{flex:1;height:3px;background:var(--bord2);border-radius:2px;overflow:hidden;max-width:40px;}
+.subbar-bg{width:30px;flex-shrink:0;height:3px;background:var(--bord2);border-radius:2px;overflow:hidden;}
 .subbar-fill{height:100%;border-radius:2px;}
-.subbar-val{font-size:10px;font-weight:600;width:20px;text-align:right;flex-shrink:0;}
+.subbar-val{font-size:10px;font-weight:600;width:18px;text-align:right;flex-shrink:0;}
+/* Narrow score columns */
+#tbody tr td:nth-child(5),#tbody tr td:nth-child(6),#tbody tr td:nth-child(7),#tbody tr td:nth-child(8),
+thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8){max-width:72px;width:72px;}
+/* Compact table */
+table{min-width:0;}
+.tbl-outer{overflow-x:auto;}
 /* Compact table cell version */
 td .subbar-row{margin-bottom:0;}
 td .subbar-bg{max-width:32px;}
@@ -668,21 +674,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
     <div class="sum-grid" id="sumGrid"></div>
     <div class="tbl-outer">
       <table id="tbl">
-        <colgroup>
-  <col style="width:24px">
-  <col style="width:140px">
-  <col style="width:100px">
-  <col style="width:130px">
-  <col style="width:70px">
-  <col style="width:70px">
-  <col style="width:70px">
-  <col style="width:70px">
-  <col style="width:100px">
-  <col style="width:80px">
-  <col style="width:120px">
-  <col style="width:80px">
-  <col style="width:70px">
-</colgroup>
+        
 <thead><tr id="theadRow">
           <th></th>
           <th onclick="thSort('ticker')">TICKER / SECTOR <span class="th-arrow" id="th-ticker"></span></th>
