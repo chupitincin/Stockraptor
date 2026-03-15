@@ -196,20 +196,21 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .scard:hover{transform:translateY(-2px);}
 .sc-n{font-family:'Archivo Black',sans-serif;font-size:28px;line-height:1;margin-bottom:3px;}
 .sc-l{font-size:10px;color:#8080b0;letter-spacing:2px;}
-.flag-row{display:flex;gap:3px;flex-wrap:wrap;max-width:130px;}
+.flag-row{display:flex;gap:3px;flex-wrap:nowrap;align-items:center;}
 .flag{font-size:8px;padding:2px 5px;border-radius:2px;border:1px solid;letter-spacing:.3px;font-weight:600;white-space:nowrap;}
 .flag.tt{cursor:help;}
 .flag.tt::after{width:200px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;white-space:normal;}
 .flag.tt{cursor:help;border-bottom:none;}
 .flag.tt::after{width:200px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;bottom:calc(100% + 8px);white-space:normal;}
 .tbl-outer{overflow-x:auto;}
-thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8){text-align:center;color:var(--txt);} .dr td{padding:0 !important;} .dr > td{max-width:100%;}
+thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8){text-align:center;color:var(--txt);}
+thead th:nth-child(11),#tbody td:nth-child(11){width:140px;min-width:140px;max-width:140px;} .dr td{padding:0 !important;} .dr > td{max-width:100%;}
 table{width:100%;border-collapse:collapse;display:none;}
 thead tr{border-bottom:1px solid var(--bord2);}
 th{padding:8px 6px;text-align:left;font-size:9px;color:#9090c0;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;overflow:hidden;text-overflow:ellipsis;}
 th:hover{color:var(--white);}
 .th-arrow{font-size:9px;margin-left:3px;color:var(--green);}
-tbody tr.mr{border-bottom:1px solid #0d0d1e;cursor:pointer;transition:background .15s;animation:rowIn .25s ease;}
+tbody tr.mr{border-bottom:1px solid #0d0d1e;cursor:pointer;height:52px;transition:background .15s;animation:rowIn .25s ease;}
 tbody tr.mr:hover{background:#0a0a1a;}
 tbody tr.dr{display:none;background:#07071a;border-bottom:1px solid var(--bord2);}
 tbody tr.dr.open{display:table-row;}
@@ -230,6 +231,7 @@ td{padding:8px 6px;white-space:nowrap;vertical-align:middle;}
 .subbar-val{font-size:10px;font-weight:600;width:18px;text-align:right;flex-shrink:0;}
 .tbl-outer{overflow-x:auto;}
 thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8){text-align:center;color:var(--txt);}
+thead th:nth-child(11),#tbody td:nth-child(11){width:140px;min-width:140px;max-width:140px;}
 /* Compact table cell version */
 td .subbar-row{margin-bottom:0;}
 td .subbar-bg{max-width:32px;}
@@ -959,7 +961,12 @@ const flagsHtml=d.flags.map(f=>`<span class="flag tt" style="color:${f.color};bo
     const ch=d.priceChange1D;
     const prHtml=d.price?`$${d.price.toFixed(2)}<span style="font-size:8px;color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!==null?sgn(ch)+ch+'%':''}</span>`:'—';
     const upHtml=d.upside!==null?`<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>`:'<span class="cd">—</span>';
-    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return(s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--blue)">${d.fund??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--purple)">${d.sent??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--green)">${d.analyst??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--gold)">${d.momentum??'—'}</span></td><td>${edHtml}</td><td>${vsHtml}</td><td><div class="flag-row">${flagsHtml||'<span class="cd" style="font-size:8px">—</span>'}</div></td><td style="font-size:11px;color:var(--txb)">${prHtml}</td><td>${upHtml}</td></tr><tr class="dr" id="dt-${d.sym}"><td colspan="13" style="padding:0;width:100%;">${renderDet(d)}</td></tr>`;
+    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return(s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--blue)">${d.fund??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--purple)">${d.sent??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--green)">${d.analyst??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--gold)">${d.momentum??'—'}</span></td><td>${edHtml}</td><td>${vsHtml}</td><td><div class="flag-row">${
+      d.flags && d.flags.length > 0
+        ? d.flags.slice(0,2).map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('')
+          + (d.flags.length > 2 ? `<span style="font-size:9px;color:#6060a0;margin-left:2px">+${d.flags.length-2}</span>` : '')
+        : '<span class="cd" style="font-size:8px">—</span>'
+    }</div></td><td style="font-size:11px;color:var(--txb)">${prHtml}</td><td>${upHtml}</td></tr><tr class="dr" id="dt-${d.sym}"><td colspan="13" style="padding:0;width:100%;">${renderDet(d)}</td></tr>`;
   }).join('');
 
   // Add upgrade banner after free rows if user is free
