@@ -1,5 +1,15 @@
 // ══════════════════════════════════════════════════════════════
-// StockRaptor · Daily Scan Worker — FMP v2 (correct field names)
+// StockRaptor · Daily Scan Worker — FMP v2
+// Scoring v3 improvements:
+// 1. Sentiment reducido de 12 a 8 pts (señal ruidosa)
+// 2. Momentum diario reducido de 4 a 2 pts máximo
+// 3. Bug insider corregido (0 pts cuando no hay actividad, no 2)
+// 4. Insider penaliza ventas netas (-2 pts)
+// 5. Penalización momentum trampa (-5 pts)
+// 6. Analyst: validación precio > targetHigh
+// 7. Sentiment: mínimo 4 noticias para que cuente
+// 8. Score normalizado a 0-100 al final
+// 9. Umbrales subidos: STRONG BUY ≥70, INTERESTING ≥55, WATCH ≥35
 // ══════════════════════════════════════════════════════════════
 import { createClient } from '@supabase/supabase-js';
 
@@ -23,6 +33,12 @@ const SECTOR_PE = {
   'Basic Materials': 15, 'Communication Services': 18,
   'Utilities': 16, 'default': 20
 };
+
+// Máximo teórico por factor — usado para normalizar a 0-100
+const MAX_SCORES = {
+  fund: 32, sent: 8, analyst: 15, momentum: 17, earPts: 15, volShort: 11, insider: 8
+};
+const MAX_TOTAL = Object.values(MAX_SCORES).reduce((a, b) => a + b, 0); // 106
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -100,7 +116,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     const income      = await fmp(`/income-statement?symbol=${sym}&limit=4`);
     const earnings    = await fmp(`/earnings?symbol=${sym}&limit=5`);
     const priceTarget = await fmp(`/price-target-consensus?symbol=${sym}`);
-    const news        = await fmp(`/news/stock?symbols=${sym}&limit=8`);
+    const news        = await fmp(`/news/stock?symbols=${sym}&limit=10`);
 
     const insiderRow = insiderCache[sym];
     const insider = insiderRow ? {
@@ -198,10 +214,12 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     fund += dilPenalty;
     fund = Math.max(0, Math.min(32, fund));
 
-    // ── 2. SENTIMENT (0-12 pts) ───────────────────────────────
+    // ── 2. SENTIMENT (0-8 pts) ────────────────────────────────
+    // FIX: reducido de 12 a 8 pts — señal ruidosa con keyword matching
+    // FIX: mínimo 4 noticias para que cuente, si no → 0 (neutral)
     let sent = 0, newsSent = null, newsItems = [];
-    if (Array.isArray(news) && news.length > 0) {
-      const recent = news.slice(0, 8);
+    if (Array.isArray(news) && news.length >= 4) {
+      const recent = news.slice(0, 10);
       const POS_WORDS = ['beat','beats','surge','surges','jumps','rises','gains','record','upgrade','upgraded','strong','growth','profit','revenue','bullish','buy','outperform','raises','raised','exceeds','positive','wins','award','partnership','deal','launch','launches'];
       const NEG_WORDS = ['miss','misses','falls','drops','decline','declines','loss','losses','downgrade','downgraded','weak','cut','cuts','lawsuit','investigation','recall','warning','disappoints','below','concern','risk','sell','underperform','layoffs','bankruptcy'];
       let posCount = 0, negCount = 0;
@@ -216,10 +234,11 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       });
       const total = recent.length;
       newsSent = total > 0 ? (posCount - negCount) / total : 0;
-      sent = Math.min(12, Math.round(((newsSent + 1) / 2) * 12));
+      sent = Math.min(8, Math.round(((newsSent + 1) / 2) * 8));
     }
 
     // ── 3. ANALYST (0-15 pts) ─────────────────────────────────
+    // FIX: validar que precio no esté por encima del targetHigh antes de calcular el rango
     let analyst = 0, targetPrice = null, upside = null;
     let recMean = null, recBuy = 0, recHold = 0, recSell = 0;
     if (pt) {
@@ -227,23 +246,30 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       recBuy = pt.numberOfAnalystOpinions || 0;
       if (targetPrice && price) {
         upside = Math.round(((targetPrice - price) / price) * 100);
-        analyst += upside > 40 ? 8 : upside > 25 ? 6 : upside > 15 ? 4 : upside > 5 ? 2 : 0;
+        analyst += upside > 40 ? 8 : upside > 25 ? 6 : upside > 15 ? 4 : upside > 5 ? 2 : upside < -10 ? -2 : 0;
       }
-      if (pt.targetHigh && pt.targetLow && price && (pt.targetHigh - pt.targetLow) > 0) {
+      // FIX: solo calcular el rango si el precio está dentro del rango high/low
+      if (pt.targetHigh && pt.targetLow && price &&
+          (pt.targetHigh - pt.targetLow) > 0 &&
+          price <= pt.targetHigh) {  // ← validación añadida
         const pct = (pt.targetHigh - price) / (pt.targetHigh - pt.targetLow);
         analyst += pct > 0.7 ? 7 : pct > 0.5 ? 5 : pct > 0.3 ? 3 : 1;
       }
     }
-    analyst = Math.min(15, analyst);
+    analyst = Math.min(15, Math.max(0, analyst));
 
     // ── 4. MOMENTUM (0-17 pts) ────────────────────────────────
+    // FIX: movimiento diario reducido de 4 a 2 pts máximo — muy ruidoso
+    // FIX: penalización trampa momentum añadida
     let momentum = 0;
     const prev     = q?.previousClose;
     const yearHigh = q?.yearHigh;
     const yearLow  = q?.yearLow;
     const volume   = q?.volume || p?.volume;
     const avgVol   = p?.averageVolume;
+
     const priceChange1D = prev && prev > 0 ? Math.round(((price - prev) / prev) * 100 * 10) / 10 : null;
+
     let pct52Low = null, pct52High = null;
     if (yearLow && yearHigh && price && yearHigh > yearLow) {
       pct52Low  = Math.round(((price - yearLow)  / yearLow)  * 100);
@@ -251,17 +277,30 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       const pos = (price - yearLow) / (yearHigh - yearLow);
       momentum += pos > 0.85 ? 8 : pos > 0.65 ? 6 : pos > 0.45 ? 4 : pos > 0.25 ? 2 : 0;
     }
+
+    // FIX: máximo 2 pts por movimiento diario (era 4 — demasiado ruidoso)
     if (priceChange1D != null) {
-      momentum += priceChange1D > 4 ? 4 : priceChange1D > 2 ? 3 : priceChange1D > 0.5 ? 2 : priceChange1D > -0.5 ? 1 : 0;
+      momentum += priceChange1D > 3 ? 2 : priceChange1D > 1 ? 1 : priceChange1D < -3 ? -1 : 0;
     }
+
     const beta = p?.beta;
     if (beta) momentum += beta > 1.8 ? 3 : beta > 1.3 ? 2 : beta > 0.9 ? 1 : 0;
+
     const ma50 = q?.priceAvg50;
     if (ma50 && price > ma50 * 1.05) momentum += 2;
     else if (ma50 && price > ma50) momentum += 1;
+
     const volRatio = volume && avgVol && avgVol > 0 ? Math.round((volume / avgVol) * 10) / 10 : null;
     if (volRatio) momentum += volRatio > 3 ? 2 : volRatio > 2 ? 1 : 0;
-    momentum = Math.min(17, momentum);
+
+    // FIX: penalización trampa — >40% bajo máximo + revenue negativo = caída estructural
+    let momentumTrap = 0;
+    if (pct52High !== null && pct52High < -40 && revGrowth !== null && revGrowth < 0) {
+      momentumTrap = -5;
+      momentum += momentumTrap;
+    }
+
+    momentum = Math.max(0, Math.min(17, momentum));
 
     // ── 5. EARNINGS (0-15 pts) ────────────────────────────────
     let earPts = 0, epsHistory = [], streak = 0;
@@ -296,14 +335,26 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     volShort = Math.min(11, volShort);
 
     // ── 7. INSIDER (0-8 pts) ──────────────────────────────────
+    // FIX: corregido bug — 0 pts cuando no hay actividad (era 2 erróneamente)
+    // FIX: penaliza ventas netas con -2 pts
     let insiderScore = 0, insiderChange = null, mspr = null;
-    if (insider && insider.transactions) {
+    if (insider && (insider.buys > 0 || insider.sells > 0)) {
       insiderChange = insider.netChange;
-      const total = insider.buys + insider.sells;
-      mspr = total > 0 ? Math.round((insider.netChange / total) * 100) / 100 : null;
-      insiderScore = insider.buys > 3 ? 8 : insider.buys > 1 ? 6 : insider.buys === 1 ? 4 : insider.sells > 2 ? 0 : 2;
-      if (insider.totalBuyValue > 500000) insiderScore = Math.min(8, insiderScore + 2);
+      const totalTx = insider.buys + insider.sells;
+      mspr = totalTx > 0 ? Math.round((insider.netChange / totalTx) * 100) / 100 : null;
+
+      if (insider.buys > 3)       insiderScore = 8;
+      else if (insider.buys > 1)  insiderScore = 6;
+      else if (insider.buys === 1) insiderScore = 4;
+      else if (insider.sells > 2)  insiderScore = -2; // FIX: penaliza ventas netas
+      else                         insiderScore = 0;  // FIX: era 2, ahora 0
+
+      // Bonus por volumen de compra significativo
+      if (insider.totalBuyValue > 1000000) insiderScore = Math.min(8, insiderScore + 2);
+      else if (insider.totalBuyValue > 500000) insiderScore = Math.min(8, insiderScore + 1);
     }
+    // Sin actividad insider → 0 (neutral, no penaliza ni bonifica)
+    insiderScore = Math.max(-2, Math.min(8, insiderScore));
 
     // ── FLAGS ─────────────────────────────────────────────────
     const flags = [];
@@ -316,9 +367,13 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     if (epsGrowth != null && epsGrowth > 25)                  flags.push({ label: '🚀 EPS GROWTH',  color: '#ff7040' });
     if (upside != null && upside > 35)                        flags.push({ label: '🎯 HIGH UPSIDE', color: '#ffcc00' });
     if (ma50 && price > ma50 * 1.1)                           flags.push({ label: '📊 ABOVE MA50',  color: '#00b4ff' });
+    if (momentumTrap < 0)                                     flags.push({ label: '⚠ TREND TRAP',  color: '#ff2d55' });
 
     // ── TOTAL & SIGNAL ────────────────────────────────────────
-    const total = fund + sent + analyst + momentum + earPts + volShort + insiderScore;
+    // FIX: normalizado a 0-100 para consistencia con umbrales
+    const rawTotal = fund + sent + analyst + momentum + earPts + volShort + insiderScore;
+    const total = Math.max(0, Math.min(100, Math.round((rawTotal / MAX_TOTAL) * 100)));
+
     const signal = total >= 70 ? 'STRONG BUY'
                  : total >= 55 ? 'INTERESTING'
                  : total >= 35 ? 'WATCH' : 'WEAK';
@@ -365,12 +420,11 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
 // ── MAIN ──────────────────────────────────────────────────────
 async function main() {
   const t0 = Date.now();
-  console.log('🦅 StockRaptor Daily Scan starting...');
+  console.log('🦅 StockRaptor Daily Scan v3 starting...');
 
   const universe = await getUniverse();
   const tickers = [...universe.keys()];
 
-  // Load insider cache
   console.log('📋 Loading insider cache...');
   let insiderCache = {};
   try {
