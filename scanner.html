@@ -202,7 +202,7 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .flag.tt::after{width:200px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;white-space:normal;}
 .flag.tt{cursor:help;border-bottom:none;}
 .flag.tt::after{width:200px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;bottom:calc(100% + 8px);white-space:normal;}
-.tbl-outer{overflow-x:auto;}
+.tbl-outer{overflow-x:auto;} .dr td{padding:0 !important;} .dr > td{max-width:100%;}
 table{width:100%;border-collapse:collapse;display:none;}
 thead tr{border-bottom:1px solid var(--bord2);}
 th{padding:8px 9px;text-align:left;font-size:10px;color:#9090c0;letter-spacing:2px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;}
@@ -228,18 +228,18 @@ td{padding:9px 9px;white-space:nowrap;vertical-align:middle;}
 .subbar-fill{height:100%;border-radius:2px;}
 .subbar-val{font-size:10px;font-weight:600;width:24px;text-align:right;flex-shrink:0;}
 .cg{color:var(--green);}.cau{color:var(--gold);}.cr{color:var(--red);}.cb{color:var(--blue);}.cp{color:var(--purple);}.co{color:var(--orange);}.ct{color:var(--teal);}.ck{color:var(--pink);}.cd{color:#8080b0;}
-.det-inner{padding:16px 14px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;overflow:hidden;}
-.det-card{background:#08081a;border:1px solid #1e1e38;border-radius:6px;padding:12px 13px;overflow:hidden;min-width:0;}
+.det-inner{padding:16px 14px 20px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;overflow:hidden;box-sizing:border-box;width:100%;}
+.det-card{background:#08081a;border:1px solid #1e1e38;border-radius:6px;padding:12px 13px;overflow:hidden;min-width:0;word-break:break-word;}
 .det-title{font-size:10px;letter-spacing:2px;color:var(--txb);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--bord2);display:flex;align-items:center;gap:6px;}
-.det-r{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:8px;min-width:0;}
-.dk{font-size:11px;color:var(--txt);flex-shrink:0;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.det-r{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:4px;min-width:0;overflow:hidden;}
+.dk{font-size:11px;color:var(--txt);flex-shrink:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%;}
 .dv{font-size:11px;color:var(--txb);text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dk{font-size:11px;color:#6060a0;}
 .dv{font-size:11px;font-weight:600;color:var(--txb);}
 .hr-mini{height:1px;background:var(--bord);margin:8px 0;}
 .stkbar{height:6px;background:var(--bord2);border-radius:3px;overflow:hidden;display:flex;margin:6px 0;}
 .stkbar div{height:100%;transition:width .9s ease;}
-.eps-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-top:7px;}
+.eps-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:7px;}
 .eps-cell{background:var(--bg);border:1px solid var(--bord);border-radius:3px;padding:5px;text-align:center;}
 .eps-q{font-size:10px;color:#8080b0;margin-bottom:3px;letter-spacing:.5px;}
 .eps-v{font-size:10px;font-weight:700;}
@@ -952,7 +952,7 @@ const flagsHtml=d.flags.map(f=>`<span class="flag tt" style="color:${f.color};bo
     const ch=d.priceChange1D;
     const prHtml=d.price?`$${d.price.toFixed(2)}<span style="font-size:8px;color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!==null?sgn(ch)+ch+'%':''}</span>`:'—';
     const upHtml=d.upside!==null?`<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>`:'<span class="cd">—</span>';
-    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return(s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td>${sbr(d.fund,25,'var(--blue)','')}</td><td>${sbr(d.sent,20,'var(--purple)','')}</td><td>${sbr(d.analyst,15,'var(--green)','')}</td><td>${sbr(d.momentum,17,'var(--gold)','')}</td><td>${edHtml}</td><td>${vsHtml}</td><td><div class="flag-row">${flagsHtml||'<span class="cd" style="font-size:8px">—</span>'}</div></td><td style="font-size:11px;color:var(--txb)">${prHtml}</td><td>${upHtml}</td></tr><tr class="dr" id="dt-${d.sym}"><td colspan="13">${renderDet(d)}</td></tr>`;
+    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return(s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td>${sbr(d.fund,25,'var(--blue)','')}</td><td>${sbr(d.sent,20,'var(--purple)','')}</td><td>${sbr(d.analyst,15,'var(--green)','')}</td><td>${sbr(d.momentum,17,'var(--gold)','')}</td><td>${edHtml}</td><td>${vsHtml}</td><td><div class="flag-row">${flagsHtml||'<span class="cd" style="font-size:8px">—</span>'}</div></td><td style="font-size:11px;color:var(--txb)">${prHtml}</td><td>${upHtml}</td></tr><tr class="dr" id="dt-${d.sym}"><td colspan="13" style="padding:0;width:100%;">${renderDet(d)}</td></tr>`;
   }).join('');
 
   // Add upgrade banner after free rows if user is free
@@ -1044,7 +1044,19 @@ function renderDet(d){
 function toggleDet(sym){
   const dt=document.getElementById('dt-'+sym),ar=document.getElementById('ar-'+sym),was=dt.classList.contains('open');
   document.querySelectorAll('.dr.open').forEach(r=>r.classList.remove('open'));document.querySelectorAll('.arr.op').forEach(a=>a.classList.remove('op'));
-  if(!was){dt.classList.add('open');ar.classList.add('op');}
+  if(!was){
+    dt.classList.add('open');ar.classList.add('op');
+    // Scroll row into view below fixed navbar
+    setTimeout(()=>{
+      const row=document.querySelector(`tr.mr [id="ar-${sym}"]`)?.closest('tr');
+      if(row){
+        const navH=document.getElementById('scannerNav')?.offsetHeight||90;
+        const bannerH=document.getElementById('cacheBanner')?.offsetHeight||32;
+        const top=row.getBoundingClientRect().top+window.scrollY-(navH+bannerH+8);
+        window.scrollTo({top,behavior:'smooth'});
+      }
+    },50);
+  }
 }
 
 async function runScan(){
@@ -1336,6 +1348,7 @@ async function loadDailyCache() {
     allData = data.results.map(r => ({
       ...r,
       ticker: r.ticker || r.sym,
+      priceChange4W: r.priceChange4W ?? null,
       // Merge insider data from insider_cache (more recent and detailed)
       insiderData: insiderMap[r.sym] || r.insiderData || null,
       insiderChange: insiderMap[r.sym]?.netChange ?? r.insiderChange,
