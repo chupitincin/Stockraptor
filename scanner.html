@@ -1701,10 +1701,18 @@ async function loadDailyCache() {
     // Load results from cache — normalize field names + merge insider data
     allData = data.results.map(r => ({
       ...r,
-      ticker: r.ticker || r.sym,
+      ticker:        r.ticker        || r.sym,
+      // Field name aliases: scan-daily uses different names than the original Finnhub frontend
+      revenueGrowth: r.revenueGrowth ?? r.revGrowth    ?? null,
       priceChange4W: r.priceChange4W ?? null,
+      epsStreak:     r.epsStreak     ?? r.streak        ?? 0,
+      fcfBonus:      r.fcfBonus      ?? (r.fcf ? 3 : 0),
+      // Safe defaults for arrays (prevent .filter/.length crashes)
+      epsHistory:    Array.isArray(r.epsHistory) ? r.epsHistory : [],
+      newsItems:     Array.isArray(r.newsItems)  ? r.newsItems  : [],
+      flags:         Array.isArray(r.flags)      ? r.flags      : [],
       // Merge insider data from insider_cache (more recent and detailed)
-      insiderData: insiderMap[r.sym] || r.insiderData || null,
+      insiderData:   insiderMap[r.sym] || r.insiderData || null,
       insiderChange: insiderMap[r.sym]?.netChange ?? r.insiderChange,
       mspr: insiderMap[r.sym] ? (
         (insiderMap[r.sym].buys + insiderMap[r.sym].sells) > 0
