@@ -194,6 +194,24 @@ const CONFIG = {
     </div>
   </div>
 </div>
+<script>
+// Show watchlist count instantly from localStorage — no flash
+(function(){
+  try {
+    const saved = localStorage.getItem('sr_watchlist');
+    if (!saved) return;
+    const syms = JSON.parse(saved);
+    if (syms.length > 0) {
+      document.getElementById('wlCount').textContent = syms.length + ' compan' + (syms.length === 1 ? 'y' : 'ies');
+      // Show loading placeholder rows while Supabase loads
+      document.getElementById('wlContent').innerHTML = `
+        <div style="padding:20px 0;font-size:11px;color:var(--txt);font-family:var(--font);letter-spacing:1px;">
+          Loading ${syms.length} watched compan${syms.length===1?'y':'ies'}...
+        </div>`;
+    }
+  } catch(e) {}
+})();
+</script>
 
 <div id="sr-tooltip"></div>
 
@@ -209,6 +227,12 @@ const fmtD = s => { if (!s) return null; return new Date(s).toLocaleDateString('
 const fmtCap = v => { if (!v) return '—'; if (v >= 1e9) return `$${(v/1e9).toFixed(1)}B`; return `$${(v/1e6).toFixed(0)}M`; };
 
 async function init() {
+  // Pre-load watchlist from localStorage for instant render
+  try {
+    const cached = localStorage.getItem('sr_watchlist');
+    if (cached) watchlist = new Set(JSON.parse(cached));
+  } catch(e) {}
+
   sb = createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
   const { data: { session } } = await sb.auth.getSession();
   if (!session?.user) { document.getElementById('authGate').style.display = 'flex'; return; }
@@ -224,9 +248,10 @@ async function init() {
   document.getElementById('snUserAvatar').textContent = username.charAt(0).toUpperCase();
   try { localStorage.setItem('sr_user', username); localStorage.setItem('sr_plan', plan); } catch(e) {}
 
-  await loadWatchlist();
   await loadScanData();
-  render();
+  render(); // First render with cached watchlist
+  await loadWatchlist(); // Then confirm with Supabase
+  render(); // Re-render with confirmed data
 }
 
 async function loadWatchlist() {
