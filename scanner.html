@@ -1739,10 +1739,12 @@ async function loadDailyCache() {
 
     renderSum();
     renderTable();
-    applyScannerLang();
+    if (typeof applyScannerLang === 'function') applyScannerLang();
 
     // Arrancar precios en tiempo real tras cargar la tabla
-    if (typeof startLivePrices === 'function') startLivePrices();
+    setTimeout(() => {
+      if (typeof startLivePrices === 'function') startLivePrices();
+    }, 500);
 
   } catch (e) {
     console.warn('Cache load failed:', e);
