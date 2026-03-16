@@ -245,7 +245,7 @@ const CONFIG = {
     </div>
     <div class="hero-stats">
       <div class="hst"><div class="hst-n" style="color:var(--green)">14</div><div class="hst-l">SCORING FACTORS</div></div>
-      <div class="hst"><div class="hst-n" style="color:var(--gold)">200</div><div class="hst-l">TRACKED TODAY</div></div>
+      <div class="hst"><div class="hst-n" style="color:var(--gold)" id="heroTrackedCount">—</div><div class="hst-l">TRACKED TODAY</div></div>
       <div class="hst"><div class="hst-n" style="color:var(--blue)">Live</div><div class="hst-l">MARKET DATA</div></div>
       <div class="hst"><div class="hst-n" style="color:var(--purple)">$0</div><div class="hst-l">TO START</div></div>
     </div>
@@ -866,9 +866,26 @@ function switchDashTab(tab) {
 
 // INIT
 // ══════════════════════════════════════════
+async function fetchScanCount() {
+  try {
+    if (!sb) return;
+    const { data } = await sb
+      .from('scan_cache')
+      .select('total_count')
+      .eq('id', 'daily')
+      .single();
+    const el = document.getElementById('heroTrackedCount');
+    if (el) el.textContent = (data?.total_count > 0) ? data.total_count : '200';
+  } catch(e) {
+    const el = document.getElementById('heroTrackedCount');
+    if (el) el.textContent = '200';
+  }
+}
+
 window.addEventListener('load', () => {
   if (initSupabase()) {
     checkAuth();
+    fetchScanCount();
     sb.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') showGuestState();
     });
