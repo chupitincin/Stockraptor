@@ -434,6 +434,22 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
     </a>
   </div>
 </div>
+<script>
+// Populate nav instantly from cache — no flash or layout shift
+(function(){
+  try {
+    const u = localStorage.getItem('sr_user');
+    const p = localStorage.getItem('sr_plan') || 'free';
+    if (u) {
+      document.getElementById('snUser').textContent = u;
+      document.getElementById('snUserAvatar').textContent = u.charAt(0).toUpperCase();
+      const el = document.getElementById('snPlan');
+      el.textContent = p.toUpperCase();
+      el.className = 'sn-plan ' + p;
+    }
+  } catch(e) {}
+})();
+</script>
 
 <!-- Cache banner: last scan timestamp -->
 <div id="cacheBanner" style="display:none;position:fixed;top:52px;left:0;right:0;z-index:90;background:#06060f;border-bottom:1px solid #0f0f20;padding:6px 24px;align-items:center;justify-content:space-between;gap:12px;">
@@ -1533,6 +1549,8 @@ async function initScannerAuth() {
   const username = scanUser.email.split('@')[0];
   document.getElementById('snUser').textContent = username;
   document.getElementById('snUserAvatar').textContent = username.charAt(0).toUpperCase();
+  // Cache for instant nav on next page load
+  try { localStorage.setItem('sr_user', username); localStorage.setItem('sr_plan', plan); } catch(e) {}
 
   // Limit tickers by plan
   applyPlanLimits(plan);
