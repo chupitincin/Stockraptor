@@ -20,23 +20,26 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15p
 .bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% -5%,#0d0d3a55,transparent),radial-gradient(ellipse 40% 30% at 90% 80%,#0a1a0a33,transparent),linear-gradient(var(--bord) 1px,transparent 1px),linear-gradient(90deg,var(--bord) 1px,transparent 1px);background-size:auto,auto,36px 36px,36px 36px;}
 
 /* NAV */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:60px;background:rgba(2,2,9,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--bord2);}
-.nav-logo{font-family:'Syne',sans-serif;font-size:20px;color:var(--white);letter-spacing:0px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;}
-.nav-logo span{color:var(--green);}
-.nav-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--green),#00996a);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px;}
-.nav-links{display:flex;gap:28px;align-items:center;}
-.nav-link{color:var(--txt);font-size:13px;font-weight:500;letter-spacing:.5px;transition:color .2s;cursor:pointer;}
-.nav-link:hover{color:var(--white);}
-.nav-cta{padding:8px 20px;background:var(--green);color:#000;border:none;border-radius:4px;font-family:var(--sans);font-weight:700;font-size:12px;letter-spacing:1.5px;cursor:pointer;transition:all .2s;text-transform:uppercase;}
-.nav-cta:hover{background:#00d07a;transform:translateY(-1px);}
-.nav-user{display:flex;align-items:center;gap:12px;}
-.nav-plan{font-size:10px;font-family:var(--font);letter-spacing:1.5px;padding:4px 10px;border-radius:10px;}
-.nav-plan.free{background:#ffffff11;color:var(--txt);}
-.nav-plan.pro{background:#00ff9422;color:var(--green);}
-.nav-plan.elite{background:#ffcc0022;color:var(--gold);}
-.nav-username{font-size:13px;color:var(--txb);}
-.nav-logout{padding:6px 14px;background:transparent;color:var(--txt);border:1px solid var(--bord2);border-radius:3px;cursor:pointer;font-family:var(--font);font-size:9px;letter-spacing:1px;transition:all .2s;}
-.nav-logout:hover{border-color:var(--red);color:var(--red);}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;gap:16px;background:rgba(6,6,15,.95);backdrop-filter:blur(12px);border-bottom:1px solid #181828;}
+.nav-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#e8e8f8;display:flex;align-items:center;gap:8px;cursor:pointer;text-decoration:none;flex-shrink:0;}
+.nav-logo span{color:#00ff94;}
+.nav-logo-icon{width:28px;height:28px;background:linear-gradient(135deg,#00ff94,#00996a);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.nav-links{display:flex;gap:4px;align-items:center;}
+.nav-link{display:flex;align-items:center;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;color:#707090;transition:all .15s;cursor:pointer;border:1px solid transparent;}
+.nav-link:hover{color:#b0b0d0;background:#0f0f20;}
+.nav-cta{padding:6px 16px;background:#00ff94;color:#000;border:none;border-radius:6px;font-family:'Inter',sans-serif;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;transition:all .15s;}
+.nav-cta:hover{background:#00d07a;}
+.nav-user{display:flex;align-items:center;gap:8px;}
+.nav-divider{width:1px;height:18px;background:#181828;}
+.nav-plan{font-size:9px;font-family:'Geist Mono',monospace;letter-spacing:1.5px;font-weight:700;padding:4px 10px;border-radius:20px;}
+.nav-plan.free{background:#ffffff10;color:#707090;border:1px solid #1e1e30;}
+.nav-plan.pro{background:#00ff9420;color:#00ff94;border:1px solid #00ff9430;}
+.nav-plan.elite{background:#ffcc0020;color:#ffcc00;border:1px solid #ffcc0030;}
+.nav-username{font-size:12px;color:#9090b0;}
+.nav-logout{padding:5px 12px;background:transparent;border:1px solid #1e1e35;color:#707090;border-radius:6px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.5px;transition:all .15s;}
+.nav-logout:hover{border-color:#707090;color:#b0b0d0;}
+.nav-login{padding:6px 14px;background:transparent;border:1px solid #2a2a45;color:#b0b0d0;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;transition:all .15s;}
+.nav-login:hover{border-color:#707090;color:#e8e8f8;}
 
 section{position:relative;z-index:1;}
 #landingPage{position:relative;z-index:1;}
@@ -217,16 +220,16 @@ const CONFIG = {
 <!-- NAV -->
 <nav>
   <div class="nav-logo" onclick="scrollToTop()">
-    <div class="nav-icon">🦅</div>
+    <div class="nav-logo-icon">🦅</div>
     Stock<span>Raptor</span>
   </div>
   <div class="nav-links" id="navLinks">
     <span class="nav-link" onclick="goTo('features')">Features</span>
-    <span class="nav-link" onclick="startCheckout('pro')">Pricing</span>
+    <span class="nav-link" onclick="goTo('pricing')">Pricing</span>
   </div>
-  <div id="navAuth">
-    <!-- filled by JS depending on auth state -->
-    <button class="nav-cta" onclick="openAuth('login')">Log In</button>
+  <div id="navAuth" style="display:flex;align-items:center;gap:8px;">
+    <button class="nav-login" onclick="openAuth('login')">Log In</button>
+    <button class="nav-cta" onclick="openAuth('register')">Start Free</button>
   </div>
 </nav>
 
@@ -524,7 +527,9 @@ async function loadProfile() {
 }
 
 function showGuestState() {
-  document.getElementById('navAuth').innerHTML = `<button class="nav-cta" onclick="openAuth('login')">Log In</button>`;
+  document.getElementById('navAuth').innerHTML = `
+    <button class="nav-login" onclick="openAuth('login')">Log In</button>
+    <button class="nav-cta" onclick="openAuth('register')">Start Free</button>`;
   document.getElementById('userDash').style.display = 'none';
   document.getElementById('landingPage').style.display = 'block';
   updatePricingButtons(null);
@@ -533,13 +538,13 @@ function showGuestState() {
 async function showUserState() {
   const plan = currentProfile?.plan || 'free';
   const email = currentUser.email;
-  const planColors = { free: '#ffffff33', pro: 'var(--green)', elite: 'var(--gold)' };
 
   document.getElementById('navAuth').innerHTML = `
     <div class="nav-user">
       <span class="nav-plan ${plan}">${plan.toUpperCase()}</span>
+      <div class="nav-divider"></div>
       <span class="nav-username">${email.split('@')[0]}</span>
-      <button class="nav-logout" onclick="signOut()">Sign Out</button>
+      <button class="nav-logout" onclick="signOut()">Sign out</button>
     </div>`;
 
   // Show dashboard
