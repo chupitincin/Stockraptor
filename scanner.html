@@ -1618,15 +1618,13 @@ async function startCheckoutFromScanner(plan) {
 }
 
 function applyPlanLimits(plan) {
-  // Show/hide ANALYZE NOW button based on plan
+  // Show/hide ANALYZE NOW button — Elite only
   const btnScan = document.getElementById('btnScan');
-  if (btnScan) {
-    if (plan === 'elite') {
-      btnScan.style.display = 'inline-flex';
-    } else {
-      btnScan.style.display = 'none';
-    }
-  }
+  if (btnScan) btnScan.style.display = plan === 'elite' ? 'inline-flex' : 'none';
+
+  // Show/hide RE-SCAN NOW button — Elite only
+  const btnRescan = document.getElementById('btnRescan');
+  if (btnRescan) btnRescan.style.display = plan === 'elite' ? 'inline-block' : 'none';
 
   // Free plan: limit to first 40 tickers
   if (plan === 'free' && typeof TICKERS !== 'undefined') {
