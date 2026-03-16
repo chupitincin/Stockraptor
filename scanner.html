@@ -1376,12 +1376,20 @@ function applyLivePriceToDet(sym, q) {
 async function pollTablePrices() {
   if (!allData || allData.length === 0) return;
   const syms = allData.map(d => d.sym);
-  // FMP acepta hasta 50 en batch; dividir si hay más
+
+  // FMP en la práctica solo devuelve bien batches pequeños
+  // Usamos chunks de 10 con pequeño delay entre cada uno para no saturar
+  const CHUNK = 10;
   const chunks = [];
-  for (let i = 0; i < syms.length; i += 50) chunks.push(syms.slice(i, i + 50));
+  for (let i = 0; i < syms.length; i += CHUNK) chunks.push(syms.slice(i, i + CHUNK));
+
   for (const chunk of chunks) {
     const prices = await fetchLivePrices(chunk);
-    Object.entries(prices).forEach(([sym, q]) => applyLivePriceToRow(sym, q));
+    if (prices && Object.keys(prices).length > 0) {
+      Object.entries(prices).forEach(([sym, q]) => applyLivePriceToRow(sym, q));
+    }
+    // Pequeña pausa para no saturar el rate limit de FMP (300 req/min en Starter)
+    await new Promise(r => setTimeout(r, 200));
   }
 }
 
@@ -1448,11 +1456,14 @@ function updateMarketStatus() {
 function startLivePrices() {
   stopLivePrices();
   updateMarketStatus();
-  // Actualizar estado de mercado cada minuto
   setInterval(updateMarketStatus, 60000);
   // Primer fetch inmediato
+  console.log('[LivePrice] Starting live price polling for', allData?.length, 'symbols');
   pollTablePrices();
-  _livePriceInterval = setInterval(pollTablePrices, 30000);
+  _livePriceInterval = setInterval(() => {
+    console.log('[LivePrice] Polling table prices...');
+    pollTablePrices();
+  }, 30000);
 }
 
 function stopLivePrices() {
