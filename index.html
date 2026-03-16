@@ -560,6 +560,8 @@ async function showUserState() {
         <span class="sn-user-name">${email.split('@')[0]}</span>
       </a>
     </div>`;
+  // Cache for instant nav on other pages
+  try { localStorage.setItem('sr_user', email.split('@')[0]); localStorage.setItem('sr_plan', plan); } catch(e) {}
 
   // Show dashboard
   document.getElementById('landingPage').style.display = 'none';
@@ -732,6 +734,7 @@ async function confirmCancelPlan() {
 async function signOut() {
   await sb.auth.signOut();
   currentUser = null; currentProfile = null;
+  try { localStorage.removeItem('sr_user'); localStorage.removeItem('sr_plan'); } catch(e) {}
   showToast('Signed out. See you soon! 👋', 'success');
   setTimeout(() => { showGuestState(); window.scrollTo(0,0); }, 500);
 }
