@@ -166,6 +166,21 @@ const CONFIG = {
     </a>
   </div>
 </nav>
+<script>
+(function(){
+  try {
+    const u = localStorage.getItem('sr_user');
+    const p = localStorage.getItem('sr_plan') || 'free';
+    if (u) {
+      document.getElementById('navUser').textContent = u;
+      document.getElementById('navUserAvatar').textContent = u.charAt(0).toUpperCase();
+      const el = document.getElementById('navPlan');
+      el.textContent = p.toUpperCase();
+      el.className = 'sn-plan ' + p;
+    }
+  } catch(e) {}
+})();
+</script>
 
 <!-- AUTH GATE -->
 <div id="authGate" style="display:none">
@@ -267,6 +282,7 @@ async function init() {
   document.getElementById('navUser').textContent = username;
   const avatarEl = document.getElementById('navUserAvatar');
   if (avatarEl) avatarEl.textContent = username.charAt(0).toUpperCase();
+  try { localStorage.setItem('sr_user', username); localStorage.setItem('sr_plan', plan); } catch(e) {}
 
   // Free users — show upgrade gate
   if (plan === 'free') {
