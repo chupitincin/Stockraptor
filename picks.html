@@ -19,19 +19,23 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15p
 .bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% -5%,#0d0d3a44,transparent),linear-gradient(var(--bord) 1px,transparent 1px),linear-gradient(90deg,var(--bord) 1px,transparent 1px);background-size:auto,36px 36px,36px 36px;}
 
 /* NAV */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;background:rgba(2,2,9,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--bord2);}
-.nav-logo{font-family:'Syne',sans-serif;font-size:16px;color:var(--white);display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;}
-.nav-logo span{color:var(--green);}
-.nav-links{display:flex;gap:6px;align-items:center;}
-.nav-link{padding:6px 14px;background:transparent;border:1px solid var(--bord2);color:var(--txt);border-radius:6px;cursor:pointer;font-family:var(--font);font-size:10px;letter-spacing:1px;transition:all .2s;text-decoration:none;display:inline-block;}
-.nav-link:hover{border-color:var(--txb);color:var(--white);}
-.nav-link.active{border-color:var(--green);color:var(--green);background:#00ff9410;}
-.nav-right{display:flex;align-items:center;gap:10px;}
-.nav-plan{font-size:9px;font-family:var(--font);letter-spacing:1.5px;padding:4px 10px;border-radius:10px;}
-.nav-plan.free{background:#ffffff11;color:var(--txt);}
-.nav-plan.pro{background:#00ff9422;color:var(--green);}
-.nav-plan.elite{background:#ffcc0022;color:var(--gold);}
-.nav-user{font-size:12px;color:var(--txb);}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;gap:16px;background:rgba(6,6,15,.95);backdrop-filter:blur(12px);border-bottom:1px solid #181828;}
+.sn-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#e8e8f8;display:flex;align-items:center;gap:8px;cursor:pointer;text-decoration:none;flex-shrink:0;}
+.sn-logo span{color:#00ff94;}
+.sn-logo-icon{width:28px;height:28px;background:linear-gradient(135deg,#00ff94,#00996a);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.sn-center{display:flex;align-items:center;gap:4px;}
+.sn-nav-item{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;color:#707090;cursor:pointer;text-decoration:none;transition:all .15s;border:1px solid transparent;white-space:nowrap;}
+.sn-nav-item:hover{color:#b0b0d0;background:#0f0f20;}
+.sn-nav-item.active{color:#e8e8f8;background:#0f0f20;border-color:#1e1e35;}
+.sn-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.sn-divider{width:1px;height:18px;background:#181828;}
+.sn-plan{font-size:9px;font-family:'Geist Mono',monospace;letter-spacing:1.5px;font-weight:700;padding:4px 10px;border-radius:20px;}
+.sn-plan.free{background:#ffffff10;color:#707090;border:1px solid #1e1e30;}
+.sn-plan.pro{background:#00ff9420;color:#00ff94;border:1px solid #00ff9430;}
+.sn-plan.elite{background:#ffcc0020;color:#ffcc00;border:1px solid #ffcc0030;}
+.sn-user{font-size:12px;color:#9090b0;}
+.sn-back{padding:5px 12px;background:transparent;border:1px solid #1e1e35;color:#707090;border-radius:6px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.5px;transition:all .15s;}
+.sn-back:hover{border-color:#707090;color:#b0b0d0;}
 
 /* LAYOUT */
 .page{max-width:1100px;margin:0 auto;padding:80px 24px 60px;position:relative;z-index:1;}
@@ -145,14 +149,19 @@ const CONFIG = {
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="window.location.href='/'">🦅 Stock<span>Raptor</span></div>
-  <div class="nav-links">
-    <a class="nav-link active" href="/picks.html">🎯 Daily Picks</a>
-    <a class="nav-link" href="/scanner.html">📊 Scanner</a>
+  <a class="sn-logo" href="/">
+    <div class="sn-logo-icon">🦅</div>
+    Stock<span>Raptor</span>
+  </a>
+  <div class="sn-center">
+    <a class="sn-nav-item" href="/scanner.html">📊 Scanner</a>
+    <a class="sn-nav-item active" href="/picks.html">🎯 Daily Picks</a>
   </div>
-  <div class="nav-right">
-    <span class="nav-plan free" id="navPlan">FREE</span>
-    <span class="nav-user" id="navUser"></span>
+  <div class="sn-right">
+    <span class="sn-plan free" id="navPlan">FREE</span>
+    <div class="sn-divider"></div>
+    <span class="sn-user" id="navUser"></span>
+    <button class="sn-back" id="navSignOut" onclick="signOut()" style="display:none">Sign out</button>
   </div>
 </nav>
 
@@ -222,6 +231,12 @@ const SCORE_COLS = [
   { key: 'volShort', label: 'VOL',   color: 'var(--teal)',   max: 11 },
 ];
 
+// ── SIGN OUT ─────────────────────────────────────────────
+async function signOut() {
+  if (sb) await sb.auth.signOut();
+  window.location.href = '/';
+}
+
 // ── INIT ──────────────────────────────────────────────────
 async function init() {
   if (CONFIG.supabaseUrl === 'YOUR_SUPABASE_URL') {
@@ -245,8 +260,10 @@ async function init() {
   const plan = profile?.plan || 'free';
   const navPlan = document.getElementById('navPlan');
   navPlan.textContent = plan.toUpperCase();
-  navPlan.className = 'nav-plan ' + plan;
+  navPlan.className = 'sn-plan ' + plan;
   document.getElementById('navUser').textContent = currentUser.email.split('@')[0];
+  const signOutBtn = document.getElementById('navSignOut');
+  if (signOutBtn) signOutBtn.style.display = 'inline-flex';
 
   // Free users — show upgrade gate
   if (plan === 'free') {
