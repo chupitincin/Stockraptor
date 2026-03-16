@@ -116,6 +116,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     const income      = await fmp(`/income-statement?symbol=${sym}&limit=4`);
     const earnings    = await fmp(`/earnings?symbol=${sym}&limit=5`);
     const priceTarget = await fmp(`/price-target-consensus?symbol=${sym}`);
+    const ratings     = await fmp(`/ratings-snapshot?symbol=${sym}`);
     const news        = await fmp(`/news/stock?symbols=${sym}&limit=10`);
 
     const insiderRow = insiderCache[sym];
@@ -152,7 +153,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     // ── 1. FUNDAMENTAL SCORE (0-32 pts) ──────────────────────
     let fund = 0;
 
-    const pe = r?.peRatioTTM;
+    const pe = r?.priceToEarningsRatioTTM ?? r?.peRatioTTM;
     if (pe && pe > 0 && pe < 300) {
       fund += pe < benchPE * 0.6 ? 6 : pe < benchPE * 0.85 ? 4 : pe < benchPE ? 2 : pe < benchPE * 1.3 ? 1 : 0;
     }
@@ -177,7 +178,9 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     const cr = r?.currentRatioTTM;
     if (cr) fund += cr >= 2 ? 3 : cr >= 1.5 ? 2 : cr >= 1 ? 1 : 0;
 
-    const roe = r?.returnOnEquityTTM != null ? r.returnOnEquityTTM * 100 : null;
+    const roe = r?.returnOnEquityTTM != null ? r.returnOnEquityTTM * 100
+              : km?.returnOnEquityTTM != null ? km.returnOnEquityTTM * 100
+              : null;
     if (roe != null) fund += roe > 20 ? 4 : roe > 12 ? 3 : roe > 8 ? 2 : roe > 0 ? 1 : 0;
 
     const netDebtEbitda = km?.netDebtToEBITDATTM;
@@ -197,7 +200,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       fund += epsGrowth > 20 ? 3 : epsGrowth > 10 ? 2 : epsGrowth > 0 ? 1 : 0;
     }
 
-    const de = r?.debtToEquityTTM;
+    const de = r?.debtToEquityRatioTTM ?? r?.debtToEquityTTM;
     let debtPenalty = 0;
     if (de != null && de > 2.5 && (revGrowth == null || revGrowth < 5)) debtPenalty = -5;
     else if (de != null && de > 4) debtPenalty = -3;
@@ -238,24 +241,39 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     }
 
     // ── 3. ANALYST (0-15 pts) ─────────────────────────────────
-    // FIX: validar que precio no esté por encima del targetHigh antes de calcular el rango
     let analyst = 0, targetPrice = null, upside = null;
     let recMean = null, recBuy = 0, recHold = 0, recSell = 0;
+
+    // Price target from /price-target-consensus
     if (pt) {
       targetPrice = pt.targetConsensus ? Math.round(pt.targetConsensus * 100) / 100 : null;
-      recBuy = pt.numberOfAnalystOpinions || 0;
       if (targetPrice && price) {
         upside = Math.round(((targetPrice - price) / price) * 100);
         analyst += upside > 40 ? 8 : upside > 25 ? 6 : upside > 15 ? 4 : upside > 5 ? 2 : upside < -10 ? -2 : 0;
       }
-      // FIX: solo calcular el rango si el precio está dentro del rango high/low
       if (pt.targetHigh && pt.targetLow && price &&
           (pt.targetHigh - pt.targetLow) > 0 &&
-          price <= pt.targetHigh) {  // ← validación añadida
+          price <= pt.targetHigh) {
         const pct = (pt.targetHigh - price) / (pt.targetHigh - pt.targetLow);
         analyst += pct > 0.7 ? 7 : pct > 0.5 ? 5 : pct > 0.3 ? 3 : 1;
       }
     }
+
+    // Buy/Hold/Sell consensus from /ratings-snapshot
+    const rs = ratings?.[0];
+    if (rs) {
+      recBuy  = (rs.strongBuyRatings || 0) + (rs.buyRatings || 0);
+      recHold = rs.holdRatings  || 0;
+      recSell = (rs.sellRatings || 0) + (rs.strongSellRatings || 0);
+      const total = recBuy + recHold + recSell;
+      if (total > 0) {
+        // recMean: 1=Strong Buy → 5=Strong Sell (igual que Finnhub)
+        recMean = Math.round(((recBuy * 1 + recHold * 3 + recSell * 5) / total) * 10) / 10;
+        // Bonus por consensus score
+        analyst += recMean <= 1.5 ? 5 : recMean <= 2.2 ? 3 : recMean <= 2.8 ? 1 : 0;
+      }
+    }
+
     analyst = Math.min(15, Math.max(0, analyst));
 
     // ── 4. MOMENTUM (0-17 pts) ────────────────────────────────
@@ -392,7 +410,9 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       pb: pb ? Math.round(pb * 10) / 10 : null,
       de: de != null ? Math.round(de * 100) / 100 : null,
       roe: roe != null ? Math.round(roe * 10) / 10 : null,
-      roa: r?.returnOnAssetsTTM != null ? Math.round(r.returnOnAssetsTTM * 1000) / 10 : null,
+      roa: r?.returnOnAssetsTTM != null ? Math.round(r.returnOnAssetsTTM * 1000) / 10
+         : km?.returnOnAssetsTTM != null ? Math.round(km.returnOnAssetsTTM * 1000) / 10
+         : null,
       grossMargin: grossMargin != null ? Math.round(grossMargin * 10) / 10 : null,
       ebitdaMargin: ebitdaMargin != null ? Math.round(ebitdaMargin * 10) / 10 : null,
       currentRatio: cr ? Math.round(cr * 100) / 100 : null,
