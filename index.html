@@ -38,6 +38,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .nav-username{font-size:12px;color:#9090b0;}
 .nav-logout{padding:5px 12px;background:transparent;border:1px solid #1e1e35;color:#707090;border-radius:6px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.5px;transition:all .15s;}
 .nav-logout:hover{border-color:#707090;color:#b0b0d0;}
+.sn-user-btn{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 5px;background:transparent;border:1px solid #1e1e35;border-radius:20px;cursor:pointer;transition:all .15s;text-decoration:none;}
+.sn-user-btn:hover{border-color:#3a3a55;background:#0f0f20;}
+.sn-user-avatar{width:22px;height:22px;border-radius:50%;background:#00ff9420;border:1px solid #00ff9440;display:flex;align-items:center;justify-content:center;font-size:10px;color:#00ff94;font-family:'Geist Mono',monospace;font-weight:700;flex-shrink:0;}
+.sn-user-name{font-size:11px;color:#9090b0;font-family:'Geist Mono',monospace;letter-spacing:.3px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .nav-login{padding:6px 14px;background:transparent;border:1px solid #2a2a45;color:#b0b0d0;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;transition:all .15s;}
 .nav-login:hover{border-color:#707090;color:#e8e8f8;}
 
@@ -542,9 +546,10 @@ async function showUserState() {
   document.getElementById('navAuth').innerHTML = `
     <div class="nav-user">
       <span class="nav-plan ${plan}">${plan.toUpperCase()}</span>
-      <div class="nav-divider"></div>
-      <span class="nav-username">${email.split('@')[0]}</span>
-      <button class="nav-logout" onclick="signOut()">Sign out</button>
+      <a class="sn-user-btn" href="/" style="display:flex">
+        <div class="sn-user-avatar">${email.charAt(0).toUpperCase()}</div>
+        <span class="sn-user-name">${email.split('@')[0]}</span>
+      </a>
     </div>`;
 
   // Show dashboard
