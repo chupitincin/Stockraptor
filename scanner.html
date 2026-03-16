@@ -417,7 +417,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
 </script>
 
 <!-- Scanner Nav (shown after auth) -->
-<div id="scannerNav" style="display:none">
+<div id="scannerNav">
   <a class="sn-logo" href="/">
     <div class="sn-logo-icon">🦅</div>
     Stock<span>Raptor</span>
@@ -1504,10 +1504,7 @@ let sb2, scanUser = null, scanProfile = null;
 
 async function initScannerAuth() {
   if (CONFIG.supabaseUrl === 'YOUR_SUPABASE_URL') {
-    // Dev mode: skip auth gate for local testing
     document.getElementById('authGate').style.display = 'none';
-    document.getElementById('scannerNav').style.display = 'flex';
-    document.querySelector('#scannerNav + *') && (document.querySelector('body > div:not(#authGate):not(#upgradeGate):not(#scannerNav):not(.bg-grid)').style.marginTop = '52px');
     addBodyPadding();
     return;
   }
@@ -1516,7 +1513,7 @@ async function initScannerAuth() {
   const { data: { session } } = await sb2.auth.getSession();
 
   if (!session?.user) {
-    // Not logged in — show gate, keep scanner hidden
+    // Not logged in — show auth gate
     document.getElementById('authGate').style.display = 'flex';
     return;
   }
@@ -1525,12 +1522,10 @@ async function initScannerAuth() {
   const { data: profile } = await sb2.from('profiles').select('*').eq('id', scanUser.id).single();
   scanProfile = profile;
 
-  // Hide gate, show nav
   document.getElementById('authGate').style.display = 'none';
-  document.getElementById('scannerNav').style.display = 'flex';
   addBodyPadding();
 
-  // Update nav
+  // Update nav content
   const plan = scanProfile?.plan || 'free';
   const snPlan = document.getElementById('snPlan');
   snPlan.textContent = plan.toUpperCase();
