@@ -1343,6 +1343,13 @@ function applyLivePriceToDet(sym, q) {
   const highEl    = det.querySelector('[data-live="high"]');
   const lowEl     = det.querySelector('[data-live="low"]');
 
+  if (!priceEl) {
+    // El det-inner está dentro de un <td> — buscar más profundo
+    const inner = det.querySelector('.det-inner');
+    console.warn('[LivePrice] det-inner found:', !!inner, '| data-live elements:', det.querySelectorAll('[data-live]').length);
+    return;
+  }
+
   if (priceEl   && q.price   !== null) priceEl.textContent   = '$' + q.price.toFixed(2);
   if (change1dEl && q.changePct !== null) {
     const pct = Math.round(q.changePct * 10) / 10;
@@ -1456,8 +1463,8 @@ function stopLivePrices() {
 function startLiveDetPrice(sym) {
   stopLiveDetPrice();
   _liveDetSym = sym;
-  // Fetch inmediato al abrir
-  pollDetPrice();
+  // Pequeño delay para que el DOM del detalle esté renderizado
+  setTimeout(() => pollDetPrice(), 200);
   _liveDetInterval = setInterval(pollDetPrice, 15000);
 }
 
