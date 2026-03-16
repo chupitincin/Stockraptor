@@ -27,34 +27,34 @@ exports.handler = async (event) => {
   }
 
   try {
-    // FMP /quote acepta símbolo único: hacemos batch en paralelo (máx 10 a la vez)
-    const symList = symbols.split(',').map(s => s.trim()).filter(Boolean).slice(0, 50);
+    const symList = symbols.split(',').map(s => s.trim()).filter(Boolean).slice(0, 10);
 
-    // FMP stable endpoint acepta comma-separated en /quote
-    const url = `${FMP_BASE}/quote?symbol=${symList.join(',')}&apikey=${FMP_KEY}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    // Llamadas individuales en paralelo — más fiable que batch en plan Starter
+    const results = await Promise.allSettled(
+      symList.map(sym =>
+        fetch(`${FMP_BASE}/quote?symbol=${sym}&apikey=${FMP_KEY}`, {
+          signal: AbortSignal.timeout(8000)
+        }).then(r => r.ok ? r.json() : null).catch(() => null)
+      )
+    );
 
-    if (!res.ok) {
-      return { statusCode: res.status, headers, body: JSON.stringify({ error: `FMP error ${res.status}` }) };
-    }
-
-    const data = await res.json();
-
-    // Devolver solo los campos necesarios para precio live (minimizar payload)
     const prices = {};
-    (Array.isArray(data) ? data : [data]).forEach(q => {
+    results.forEach((result, i) => {
+      if (result.status !== 'fulfilled' || !result.value) return;
+      const data = result.value;
+      const q = Array.isArray(data) ? data[0] : data;
       if (!q?.symbol) return;
       prices[q.symbol] = {
-        price:      q.price       ?? null,
-        change:     q.change      ?? null,
-        changePct:  q.changesPercentage ?? q.changePercent ?? q.pct ?? (q.change && q.prevClose ? Math.round((q.change / q.prevClose) * 1000) / 10 : null),
-        open:       q.open        ?? null,
-        high:       q.high        ?? q.dayHigh  ?? null,
-        low:        q.low         ?? q.dayLow   ?? null,
-        volume:     q.volume      ?? null,
-        avgVolume:  q.avgVolume   ?? q.averageVolume ?? null,
-        prevClose:  q.previousClose ?? q.prevClose ?? null,
-        timestamp:  q.timestamp   ?? null,
+        price:     q.price      ?? null,
+        change:    q.change     ?? null,
+        changePct: q.changesPercentage ?? (q.change && q.previousClose ? Math.round((q.change / q.previousClose) * 1000) / 10 : null),
+        open:      q.open       ?? null,
+        high:      q.high       ?? null,
+        low:       q.low        ?? null,
+        volume:    q.volume     ?? null,
+        avgVolume: q.avgVolume  ?? null,
+        prevClose: q.previousClose ?? null,
+        timestamp: q.timestamp  ?? null,
       };
     });
 
