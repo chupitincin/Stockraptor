@@ -1686,13 +1686,15 @@ async function toggleWatch(sym) {
   } else {
     watchlist.add(sym);
   }
+  const watched = watchlist.has(sym);
   // Update star in DOM immediately
   const star = document.getElementById('star-' + sym);
   if (star) {
-    const watched = watchlist.has(sym);
     star.textContent = watched ? '★' : '☆';
-    star.style.opacity = watched ? '1' : '0.3';
+    star.style.color = watched ? 'var(--gold)' : '#888899';
     star.title = watched ? 'Remove from watchlist' : 'Add to watchlist';
+    // Update onmouseout to reflect new state
+    star.onmouseout = () => { star.style.color = watched ? 'var(--gold)' : '#888899'; };
     // Flash animation
     star.style.transform = 'scale(1.4)';
     setTimeout(() => { star.style.transform = 'scale(1)'; }, 200);
