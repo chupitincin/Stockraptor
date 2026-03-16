@@ -116,7 +116,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     const income      = await fmp(`/income-statement?symbol=${sym}&limit=4`);
     const earnings    = await fmp(`/earnings?symbol=${sym}&limit=5`);
     const priceTarget = await fmp(`/price-target-consensus?symbol=${sym}`);
-    const ratings     = await fmp(`/ratings-snapshot?symbol=${sym}`);
+    const ratings     = await fmp(`/grades-consensus?symbol=${sym}`);
     const news        = await fmp(`/news/stock?symbols=${sym}&limit=10`);
 
     const insiderRow = insiderCache[sym];
@@ -178,8 +178,8 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     const cr = r?.currentRatioTTM;
     if (cr) fund += cr >= 2 ? 3 : cr >= 1.5 ? 2 : cr >= 1 ? 1 : 0;
 
-    const roe = r?.returnOnEquityTTM != null ? r.returnOnEquityTTM * 100
-              : km?.returnOnEquityTTM != null ? km.returnOnEquityTTM * 100
+    const roe = km?.returnOnEquityTTM != null ? km.returnOnEquityTTM * 100
+              : r?.returnOnEquityTTM  != null ? r.returnOnEquityTTM  * 100
               : null;
     if (roe != null) fund += roe > 20 ? 4 : roe > 12 ? 3 : roe > 8 ? 2 : roe > 0 ? 1 : 0;
 
@@ -259,17 +259,15 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       }
     }
 
-    // Buy/Hold/Sell consensus from /ratings-snapshot
-    const rs = ratings?.[0];
+    // Buy/Hold/Sell consensus from /grades-consensus
+    const rs = Array.isArray(ratings) ? ratings[0] : ratings;
     if (rs) {
-      recBuy  = (rs.strongBuyRatings || 0) + (rs.buyRatings || 0);
-      recHold = rs.holdRatings  || 0;
-      recSell = (rs.sellRatings || 0) + (rs.strongSellRatings || 0);
+      recBuy  = (rs.strongBuy || rs.strongBuyRatings || 0) + (rs.buy || rs.buyRatings || 0);
+      recHold = rs.hold || rs.holdRatings || 0;
+      recSell = (rs.sell || rs.sellRatings || 0) + (rs.strongSell || rs.strongSellRatings || 0);
       const total = recBuy + recHold + recSell;
       if (total > 0) {
-        // recMean: 1=Strong Buy → 5=Strong Sell (igual que Finnhub)
         recMean = Math.round(((recBuy * 1 + recHold * 3 + recSell * 5) / total) * 10) / 10;
-        // Bonus por consensus score
         analyst += recMean <= 1.5 ? 5 : recMean <= 2.2 ? 3 : recMean <= 2.8 ? 1 : 0;
       }
     }
@@ -284,7 +282,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     const yearHigh = q?.yearHigh;
     const yearLow  = q?.yearLow;
     const volume   = q?.volume || p?.volume;
-    const avgVol   = p?.averageVolume;
+    const avgVol   = p?.volAvg || p?.averageVolume || q?.avgVolume;
 
     const priceChange1D = prev && prev > 0 ? Math.round(((price - prev) / prev) * 100 * 10) / 10 : null;
 
@@ -410,9 +408,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       pb: pb ? Math.round(pb * 10) / 10 : null,
       de: de != null ? Math.round(de * 100) / 100 : null,
       roe: roe != null ? Math.round(roe * 10) / 10 : null,
-      roa: r?.returnOnAssetsTTM != null ? Math.round(r.returnOnAssetsTTM * 1000) / 10
-         : km?.returnOnAssetsTTM != null ? Math.round(km.returnOnAssetsTTM * 1000) / 10
-         : null,
+      roa: km?.returnOnAssetsTTM != null ? Math.round(km.returnOnAssetsTTM * 1000) / 10 : null,
       grossMargin: grossMargin != null ? Math.round(grossMargin * 10) / 10 : null,
       ebitdaMargin: ebitdaMargin != null ? Math.round(ebitdaMargin * 10) / 10 : null,
       currentRatio: cr ? Math.round(cr * 100) / 100 : null,
