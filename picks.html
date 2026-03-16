@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockRaptor — Daily Picks</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Geist+Mono:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#020209;--s1:#06060f;--s2:#09091a;--bord:#0f0f20;--bord2:#181828;
+  --green:#00ff94;--gold:#ffcc00;--red:#ff2d55;--blue:#00b4ff;
+  --purple:#bf5fff;--orange:#ff7040;--teal:#00e5cc;--pink:#ff4fa0;
+  --txt:#7070a0;--txb:#b0b0d0;--white:#e8e8f8;
+  --font:'Geist Mono',monospace;--sans:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;min-height:100vh;}
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% -5%,#0d0d3a44,transparent),linear-gradient(var(--bord) 1px,transparent 1px),linear-gradient(90deg,var(--bord) 1px,transparent 1px);background-size:auto,36px 36px,36px 36px;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;background:rgba(2,2,9,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--bord2);}
+.nav-logo{font-family:'Syne',sans-serif;font-size:16px;color:var(--white);display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;}
+.nav-logo span{color:var(--green);}
+.nav-links{display:flex;gap:6px;align-items:center;}
+.nav-link{padding:6px 14px;background:transparent;border:1px solid var(--bord2);color:var(--txt);border-radius:6px;cursor:pointer;font-family:var(--font);font-size:10px;letter-spacing:1px;transition:all .2s;text-decoration:none;display:inline-block;}
+.nav-link:hover{border-color:var(--txb);color:var(--white);}
+.nav-link.active{border-color:var(--green);color:var(--green);background:#00ff9410;}
+.nav-right{display:flex;align-items:center;gap:10px;}
+.nav-plan{font-size:9px;font-family:var(--font);letter-spacing:1.5px;padding:4px 10px;border-radius:10px;}
+.nav-plan.free{background:#ffffff11;color:var(--txt);}
+.nav-plan.pro{background:#00ff9422;color:var(--green);}
+.nav-plan.elite{background:#ffcc0022;color:var(--gold);}
+.nav-user{font-size:12px;color:var(--txb);}
+
+/* LAYOUT */
+.page{max-width:1100px;margin:0 auto;padding:80px 24px 60px;position:relative;z-index:1;}
+
+/* HEADER */
+.picks-header{margin-bottom:32px;}
+.picks-date{font-family:var(--font);font-size:10px;letter-spacing:2px;color:var(--green);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.picks-date-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.picks-title{font-family:'Syne',sans-serif;font-size:clamp(28px,4vw,42px);color:var(--white);font-weight:800;margin-bottom:8px;line-height:1.1;}
+.picks-title span{background:linear-gradient(135deg,var(--green),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.picks-sub{font-size:14px;color:var(--txt);font-weight:300;max-width:560px;line-height:1.7;}
+
+/* STATS BAR */
+.stats-bar{display:flex;gap:2px;margin-bottom:36px;border:1px solid var(--bord2);border-radius:8px;overflow:hidden;}
+.stat-item{flex:1;padding:14px 16px;background:var(--s1);text-align:center;border-right:1px solid var(--bord2);}
+.stat-item:last-child{border-right:none;}
+.stat-n{font-family:'Syne',sans-serif;font-size:22px;color:var(--white);font-weight:700;}
+.stat-l{font-size:9px;color:var(--txt);letter-spacing:1.5px;font-family:var(--font);margin-top:3px;}
+
+/* PICKS GRID */
+.picks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+
+/* PICK CARD */
+.pick-card{background:var(--s1);border:1px solid var(--bord2);border-radius:12px;overflow:hidden;transition:transform .2s,border-color .2s;cursor:pointer;}
+.pick-card:hover{transform:translateY(-2px);}
+.pick-card.type-squeeze{border-color:#00e5cc33;}
+.pick-card.type-catalyst{border-color:#ffcc0033;}
+.pick-card.type-volume{border-color:#ff4fa033;}
+.pick-card.type-insider{border-color:#00ff9433;}
+.pick-card.type-momentum{border-color:#00b4ff33;}
+
+.pick-top{padding:20px 20px 16px;}
+.pick-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.pick-type{font-size:9px;font-family:var(--font);letter-spacing:1.5px;padding:4px 10px;border-radius:10px;font-weight:600;}
+.pick-score{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;padding:4px 10px;border-radius:6px;background:var(--s2);}
+
+.pick-ticker{font-family:'Syne',sans-serif;font-size:26px;color:var(--white);font-weight:800;letter-spacing:-0.5px;}
+.pick-name{font-size:12px;color:var(--txt);margin-top:3px;margin-bottom:12px;}
+
+.pick-price{display:flex;align-items:baseline;gap:8px;margin-bottom:14px;}
+.pick-price-n{font-family:'Syne',sans-serif;font-size:20px;color:var(--white);font-weight:700;}
+.pick-price-chg{font-size:12px;font-family:var(--font);}
+
+/* SIGNALS */
+.pick-signals{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;}
+.signal-tag{font-size:9px;font-family:var(--font);letter-spacing:.5px;padding:4px 9px;border-radius:5px;border:1px solid;font-weight:600;white-space:nowrap;}
+
+/* AI SUMMARY */
+.pick-ai{padding:14px 20px 16px;border-top:1px solid var(--bord2);background:var(--bg);}
+.pick-ai-label{font-size:8px;font-family:var(--font);letter-spacing:2px;color:var(--purple);margin-bottom:7px;display:flex;align-items:center;gap:6px;}
+.pick-ai-text{font-size:13px;color:var(--txb);line-height:1.7;font-weight:300;}
+.pick-ai-loading{font-size:12px;color:var(--txt);font-family:var(--font);animation:pulse .8s infinite alternate;}
+@keyframes pulse{from{opacity:.4}to{opacity:1}}
+
+/* SCORE BARS */
+.pick-bars{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px;}
+.pick-bar-row{display:flex;align-items:center;gap:6px;}
+.pick-bar-lbl{font-size:9px;color:var(--txt);font-family:var(--font);width:52px;flex-shrink:0;}
+.pick-bar-bg{flex:1;height:3px;background:var(--bord2);border-radius:2px;overflow:hidden;}
+.pick-bar-fill{height:100%;border-radius:2px;transition:width .8s ease;}
+.pick-bar-val{font-size:9px;font-family:var(--font);font-weight:600;width:20px;text-align:right;flex-shrink:0;}
+
+/* VIEW IN SCANNER BTN */
+.pick-action{display:flex;justify-content:flex-end;padding:0 20px 16px;}
+.pick-btn{padding:7px 16px;background:transparent;border:1px solid var(--bord2);color:var(--txt);border-radius:6px;cursor:pointer;font-family:var(--font);font-size:9px;letter-spacing:1px;transition:all .2s;}
+.pick-btn:hover{border-color:var(--green);color:var(--green);}
+
+/* EMPTY / LOADING */
+.picks-loading{text-align:center;padding:80px 24px;}
+.picks-loading-icon{font-size:48px;margin-bottom:16px;animation:spin 2s linear infinite;}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.picks-loading-text{font-size:11px;color:var(--txt);font-family:var(--font);letter-spacing:1px;}
+
+.picks-empty{text-align:center;padding:80px 24px;}
+.picks-empty-icon{font-size:48px;margin-bottom:16px;}
+.picks-empty-title{font-family:'Syne',sans-serif;font-size:20px;color:var(--white);margin-bottom:8px;}
+.picks-empty-sub{font-size:13px;color:var(--txt);line-height:1.7;}
+
+/* UPGRADE GATE */
+.upgrade-gate{text-align:center;padding:80px 24px;max-width:480px;margin:0 auto;}
+.upgrade-gate-icon{font-size:48px;margin-bottom:20px;}
+.upgrade-gate-title{font-family:'Syne',sans-serif;font-size:28px;color:var(--white);font-weight:800;margin-bottom:10px;}
+.upgrade-gate-sub{font-size:14px;color:var(--txt);line-height:1.7;margin-bottom:28px;}
+.upgrade-btn{display:inline-block;padding:14px 32px;background:linear-gradient(135deg,var(--green),#00cc78);color:#000;border:none;border-radius:6px;font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;text-decoration:none;}
+.upgrade-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px #00ff9440;}
+
+/* AUTH GATE */
+#authGate{position:fixed;inset:0;z-index:500;background:rgba(2,2,9,.97);display:none;align-items:center;justify-content:center;}
+.gate-card{background:var(--s1);border:1px solid var(--bord2);border-radius:12px;padding:48px 40px;max-width:380px;width:100%;text-align:center;}
+.gate-logo{font-family:'Syne',sans-serif;font-size:22px;color:var(--white);margin-bottom:6px;font-weight:800;}
+.gate-logo span{color:var(--green);}
+.gate-sub{font-size:12px;color:var(--txt);font-family:var(--font);letter-spacing:1px;margin-bottom:24px;}
+.gate-btn{display:block;width:100%;padding:13px;border:none;border-radius:6px;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;transition:all .2s;margin-bottom:10px;text-decoration:none;text-align:center;}
+.gate-btn-green{background:linear-gradient(135deg,var(--green),#00cc78);color:#000;}
+.gate-btn-outline{background:transparent;color:var(--txb);border:1px solid var(--bord2);}
+
+/* DISCLAIMER */
+.disclaimer{margin-top:40px;padding:14px 18px;background:var(--s1);border:1px solid var(--bord2);border-radius:6px;font-size:10px;color:var(--txt);line-height:1.8;font-family:var(--font);}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<script>
+const CONFIG = {
+  supabaseUrl: 'https://ruqcgyctwlpjrlzmietj.supabase.co',
+  supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1cWNneWN0d2xwanJsem1pZXRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzQwMTAsImV4cCI6MjA4ODkxMDAxMH0.tkhdkbPOZqQI7brgIo24zWftVbEr6EXLSF3jAmog6YM',
+};
+</script>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo" onclick="window.location.href='/'">🦅 Stock<span>Raptor</span></div>
+  <div class="nav-links">
+    <a class="nav-link active" href="/picks.html">🎯 Daily Picks</a>
+    <a class="nav-link" href="/scanner.html">📊 Scanner</a>
+  </div>
+  <div class="nav-right">
+    <span class="nav-plan free" id="navPlan">FREE</span>
+    <span class="nav-user" id="navUser"></span>
+  </div>
+</nav>
+
+<!-- AUTH GATE -->
+<div id="authGate" style="display:none">
+  <div class="gate-card">
+    <div class="gate-logo">🦅 Stock<span>Raptor</span></div>
+    <div class="gate-sub">AI-POWERED · DAILY SIGNALS</div>
+    <a href="/" class="gate-btn gate-btn-green">Create Free Account</a>
+    <a href="/" class="gate-btn gate-btn-outline">Log In</a>
+  </div>
+</div>
+
+<!-- MAIN PAGE -->
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="picks-header">
+    <div class="picks-date">
+      <div class="picks-date-dot"></div>
+      <span id="picksDateLabel">TODAY'S SIGNALS</span>
+    </div>
+    <div class="picks-title">Daily <span>Picks</span></div>
+    <div class="picks-sub">Companies with unusual signal confluence today — volume anomalies, insider activity, earnings setups and short squeeze potential identified by the scanner.</div>
+  </div>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar" id="statsBar" style="display:none">
+    <div class="stat-item"><div class="stat-n" id="statTotal" style="color:var(--green)">—</div><div class="stat-l">PICKS TODAY</div></div>
+    <div class="stat-item"><div class="stat-n" id="statSqueeze" style="color:var(--teal)">—</div><div class="stat-l">SQUEEZE SETUPS</div></div>
+    <div class="stat-item"><div class="stat-n" id="statCatalyst" style="color:var(--gold)">—</div><div class="stat-l">EARNINGS CATALYST</div></div>
+    <div class="stat-item"><div class="stat-n" id="statVolume" style="color:var(--pink)">—</div><div class="stat-l">VOLUME SPIKES</div></div>
+    <div class="stat-item"><div class="stat-n" id="statInsider" style="color:var(--green)">—</div><div class="stat-l">INSIDER BUYING</div></div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="picksContent">
+    <div class="picks-loading">
+      <div class="picks-loading-icon">🔍</div>
+      <div class="picks-loading-text">LOADING TODAY'S SIGNALS...</div>
+    </div>
+  </div>
+
+  <div class="disclaimer">⚠️ <strong style="color:var(--txb)">Disclaimer:</strong> These picks are generated algorithmically for informational purposes only. Not financial advice. Always do your own research before investing.</div>
+
+</div>
+
+<script>
+const { createClient } = supabase;
+let sb, currentUser, currentProfile;
+
+// ── TYPE CONFIG ───────────────────────────────────────────
+const PICK_TYPES = {
+  squeeze:  { label: '🎯 SHORT SQUEEZE',   color: 'var(--teal)',   bg: '#00e5cc15', cardClass: 'type-squeeze' },
+  catalyst: { label: '📅 EARNINGS CATALYST', color: 'var(--gold)', bg: '#ffcc0015', cardClass: 'type-catalyst' },
+  volume:   { label: '⚡ VOLUME ANOMALY',  color: 'var(--pink)',   bg: '#ff4fa015', cardClass: 'type-volume' },
+  insider:  { label: '👤 INSIDER BUYING',  color: 'var(--green)',  bg: '#00ff9415', cardClass: 'type-insider' },
+  momentum: { label: '🚀 MOMENTUM BREAKOUT', color: 'var(--blue)', bg: '#00b4ff15', cardClass: 'type-momentum' },
+};
+
+const SCORE_COLS = [
+  { key: 'fund',     label: 'FUND',  color: 'var(--blue)',   max: 32 },
+  { key: 'sent',     label: 'SENT',  color: 'var(--purple)', max: 8  },
+  { key: 'analyst',  label: 'ANALY', color: 'var(--green)',  max: 15 },
+  { key: 'momentum', label: 'MOME',  color: 'var(--gold)',   max: 17 },
+  { key: 'earPts',   label: 'EARN',  color: 'var(--orange)', max: 15 },
+  { key: 'volShort', label: 'VOL',   color: 'var(--teal)',   max: 11 },
+];
+
+// ── INIT ──────────────────────────────────────────────────
+async function init() {
+  if (CONFIG.supabaseUrl === 'YOUR_SUPABASE_URL') {
+    renderPicks(MOCK_PICKS);
+    return;
+  }
+
+  sb = createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
+  const { data: { session } } = await sb.auth.getSession();
+
+  if (!session?.user) {
+    document.getElementById('authGate').style.display = 'flex';
+    return;
+  }
+
+  currentUser = session.user;
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  currentProfile = profile;
+
+  // Update nav
+  const plan = profile?.plan || 'free';
+  const navPlan = document.getElementById('navPlan');
+  navPlan.textContent = plan.toUpperCase();
+  navPlan.className = 'nav-plan ' + plan;
+  document.getElementById('navUser').textContent = currentUser.email.split('@')[0];
+
+  // Free users — show upgrade gate
+  if (plan === 'free') {
+    renderUpgradeGate();
+    return;
+  }
+
+  // Load picks
+  await loadPicks();
+}
+
+// ── LOAD PICKS FROM SUPABASE ──────────────────────────────
+async function loadPicks() {
+  try {
+    const { data, error } = await sb
+      .from('picks_cache')
+      .select('*')
+      .eq('id', 'daily')
+      .single();
+
+    if (error || !data?.picks?.length) {
+      // No picks yet — try to generate on-the-fly from scan_cache
+      await generatePicksFromCache();
+      return;
+    }
+
+    renderPicks(data.picks, data.generated_at);
+  } catch(e) {
+    await generatePicksFromCache();
+  }
+}
+
+// ── GENERATE PICKS FROM SCAN CACHE (fallback) ─────────────
+async function generatePicksFromCache() {
+  try {
+    const { data } = await sb
+      .from('scan_cache')
+      .select('results, scanned_at')
+      .eq('id', 'daily')
+      .single();
+
+    if (!data?.results?.length) {
+      renderEmpty();
+      return;
+    }
+
+    const picks = selectPicks(data.results);
+    renderPicks(picks, data.scanned_at, true); // true = AI summaries loading
+  } catch(e) {
+    renderEmpty();
+  }
+}
+
+// ── SELECT TOP PICKS FROM RESULTS ────────────────────────
+function selectPicks(results) {
+  const picks = [];
+  const used = new Set();
+
+  const norm = results.map(r => ({
+    ...r,
+    revenueGrowth: r.revenueGrowth ?? r.revGrowth ?? null,
+    epsHistory: Array.isArray(r.epsHistory) ? r.epsHistory : [],
+    flags: Array.isArray(r.flags) ? r.flags : [],
+  }));
+
+  // 1. SHORT SQUEEZE setups
+  norm.filter(r => r.shortPct > 15 && r.priceChange1D > 0 && r.total >= 45 && !used.has(r.sym))
+    .sort((a,b) => (b.shortPct * b.total) - (a.shortPct * a.total))
+    .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'squeeze' }); used.add(r.sym); });
+
+  // 2. EARNINGS CATALYST (≤14 days + EPS streak)
+  norm.filter(r => r.earningsDays != null && r.earningsDays <= 14 && r.streak >= 2 && !used.has(r.sym))
+    .sort((a,b) => (b.streak * 10 + b.total) - (a.streak * 10 + a.total))
+    .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'catalyst' }); used.add(r.sym); });
+
+  // 3. VOLUME ANOMALY (volRatio > 3 + good score)
+  norm.filter(r => r.volRatio > 3 && r.total >= 40 && !used.has(r.sym))
+    .sort((a,b) => b.volRatio - a.volRatio)
+    .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'volume' }); used.add(r.sym); });
+
+  // 4. INSIDER BUYING
+  norm.filter(r => r.flags?.some(f => f.label?.includes('INSIDER') || f.label?.includes('BIG')) && r.total >= 40 && !used.has(r.sym))
+    .sort((a,b) => b.total - a.total)
+    .slice(0, 1).forEach(r => { picks.push({ ...r, pickType: 'insider' }); used.add(r.sym); });
+
+  // 5. MOMENTUM BREAKOUT (high momentum score + strong fundamentals)
+  norm.filter(r => r.momentum >= 12 && r.fund >= 14 && r.total >= 55 && !used.has(r.sym))
+    .sort((a,b) => (b.momentum + b.fund) - (a.momentum + a.fund))
+    .slice(0, 1).forEach(r => { picks.push({ ...r, pickType: 'momentum' }); used.add(r.sym); });
+
+  return picks.slice(0, 8);
+}
+
+// ── RENDER PICKS ─────────────────────────────────────────
+function renderPicks(picks, generatedAt, aiLoading = false) {
+  const date = generatedAt ? new Date(generatedAt) : new Date();
+  const dateStr = date.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  document.getElementById('picksDateLabel').textContent = dateStr.toUpperCase() + ' · SIGNALS';
+
+  // Stats bar
+  document.getElementById('statsBar').style.display = 'flex';
+  document.getElementById('statTotal').textContent    = picks.length;
+  document.getElementById('statSqueeze').textContent  = picks.filter(p => p.pickType === 'squeeze').length;
+  document.getElementById('statCatalyst').textContent = picks.filter(p => p.pickType === 'catalyst').length;
+  document.getElementById('statVolume').textContent   = picks.filter(p => p.pickType === 'volume').length;
+  document.getElementById('statInsider').textContent  = picks.filter(p => p.pickType === 'insider').length;
+
+  if (!picks.length) { renderEmpty(); return; }
+
+  const html = picks.map((p, i) => renderPickCard(p, i, aiLoading)).join('');
+  document.getElementById('picksContent').innerHTML = `<div class="picks-grid">${html}</div>`;
+
+  // If AI loading, fetch summaries
+  if (aiLoading) {
+    picks.forEach((p, i) => fetchAISummary(p, i));
+  }
+}
+
+// ── RENDER SINGLE PICK CARD ───────────────────────────────
+function renderPickCard(p, idx, aiLoading) {
+  const type = PICK_TYPES[p.pickType] || PICK_TYPES.momentum;
+  const chg = p.priceChange1D;
+  const chgColor = chg > 0 ? 'var(--green)' : chg < 0 ? 'var(--red)' : 'var(--txt)';
+  const chgSign = chg > 0 ? '+' : '';
+
+  // Score bars
+  const bars = SCORE_COLS.map(col => {
+    const val = p[col.key] ?? 0;
+    const pct = Math.min(100, Math.round(val / col.max * 100));
+    return `<div class="pick-bar-row">
+      <div class="pick-bar-lbl">${col.label}</div>
+      <div class="pick-bar-bg"><div class="pick-bar-fill" style="width:${pct}%;background:${col.color}"></div></div>
+      <div class="pick-bar-val" style="color:${col.color}">${val}</div>
+    </div>`;
+  }).join('');
+
+  // Key signals to highlight
+  const keySignals = buildSignals(p);
+  const signalsHtml = keySignals.map(s =>
+    `<span class="signal-tag" style="color:${s.color};border-color:${s.color}44;background:${s.color}10">${s.label}</span>`
+  ).join('');
+
+  // AI summary section
+  const aiHtml = p.aiSummary
+    ? `<div class="pick-ai-text">${p.aiSummary}</div>`
+    : aiLoading
+    ? `<div class="pick-ai-loading" id="ai-loading-${idx}">Generating analysis...</div>`
+    : `<div class="pick-ai-text" style="color:var(--txt);font-style:italic">Analysis unavailable</div>`;
+
+  return `<div class="pick-card ${type.cardClass}" onclick="goToScanner('${p.sym}')">
+    <div class="pick-top">
+      <div class="pick-meta">
+        <span class="pick-type" style="color:${type.color};background:${type.bg}">${type.label}</span>
+        <span class="pick-score" style="color:${p.total >= 65 ? 'var(--green)' : p.total >= 50 ? 'var(--gold)' : 'var(--orange)'}">
+          ${p.total}/100
+        </span>
+      </div>
+      <div class="pick-ticker">${p.sym}</div>
+      <div class="pick-name">${p.companyName || ''} · ${p.sector || ''}</div>
+      <div class="pick-price">
+        <span class="pick-price-n">$${p.price?.toFixed(2) ?? '—'}</span>
+        ${chg !== null ? `<span class="pick-price-chg" style="color:${chgColor}">${chgSign}${chg}% today</span>` : ''}
+      </div>
+      <div class="pick-signals">${signalsHtml}</div>
+      <div class="pick-bars">${bars}</div>
+    </div>
+    <div class="pick-ai">
+      <div class="pick-ai-label">✦ <span style="letter-spacing:1.5px">AI ANALYSIS</span></div>
+      <div id="ai-text-${idx}">${aiHtml}</div>
+    </div>
+    <div class="pick-action">
+      <button class="pick-btn" onclick="event.stopPropagation();goToScanner('${p.sym}')">View in Scanner →</button>
+    </div>
+  </div>`;
+}
+
+// ── BUILD SIGNAL TAGS ─────────────────────────────────────
+function buildSignals(p) {
+  const signals = [];
+  if (p.volRatio > 2.5)  signals.push({ label: `VOL ${p.volRatio}x avg`, color: 'var(--pink)' });
+  if (p.shortPct > 15)   signals.push({ label: `${p.shortPct}% short float`, color: 'var(--teal)' });
+  if (p.earningsDays != null && p.earningsDays <= 20)
+    signals.push({ label: `Earnings in ${p.earningsDays}d`, color: 'var(--gold)' });
+  if (p.streak >= 2)     signals.push({ label: `${p.streak}/4 EPS beats`, color: 'var(--orange)' });
+  if (p.upside > 25)     signals.push({ label: `+${p.upside}% analyst upside`, color: 'var(--green)' });
+  if (p.revenueGrowth > 20) signals.push({ label: `Rev +${p.revenueGrowth}% YoY`, color: 'var(--blue)' });
+  const insiderFlag = p.flags?.find(f => f.label?.includes('INSIDER') || f.label?.includes('BIG'));
+  if (insiderFlag) signals.push({ label: insiderFlag.label, color: 'var(--green)' });
+  if (p.shortPct > 15 && p.priceChange1D > 0) signals.push({ label: 'Squeeze setup', color: 'var(--teal)' });
+  return signals.slice(0, 4);
+}
+
+// ── FETCH AI SUMMARY ──────────────────────────────────────
+async function fetchAISummary(pick, idx) {
+  try {
+    const prompt = buildPrompt(pick);
+    const res = await fetch('/.netlify/functions/ai-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, sym: pick.sym })
+    });
+    if (!res.ok) return;
+    const { summary } = await res.json();
+    if (summary) {
+      const el = document.getElementById('ai-text-' + idx);
+      if (el) el.innerHTML = `<div class="pick-ai-text">${summary}</div>`;
+    }
+  } catch(e) {
+    console.warn('AI summary failed for', pick.sym);
+  }
+}
+
+function buildPrompt(p) {
+  const signals = [];
+  if (p.volRatio > 2.5)  signals.push(`volume is ${p.volRatio}x the 10-day average`);
+  if (p.shortPct > 15)   signals.push(`${p.shortPct}% of float is sold short`);
+  if (p.earningsDays != null && p.earningsDays <= 20) signals.push(`earnings in ${p.earningsDays} days`);
+  if (p.streak >= 2)     signals.push(`${p.streak} consecutive EPS beats`);
+  if (p.upside > 20)     signals.push(`analyst price target ${p.upside}% above current price`);
+  if (p.revenueGrowth > 15) signals.push(`revenue growing ${p.revenueGrowth}% YoY`);
+
+  return `You are a concise financial analyst. Write a 2-sentence analysis of why ${p.sym} (${p.companyName}, ${p.sector}) is an interesting setup today. 
+Key data: price $${p.price}, score ${p.total}/100, signals: ${signals.join(', ')}.
+Be specific, factual and direct. Do NOT use disclaimers or say "it's important to note". Max 40 words total.`;
+}
+
+// ── NAVIGATION ────────────────────────────────────────────
+function goToScanner(sym) {
+  window.location.href = `/scanner.html?highlight=${sym}`;
+}
+
+// ── UPGRADE GATE ──────────────────────────────────────────
+function renderUpgradeGate() {
+  document.getElementById('picksContent').innerHTML = `
+    <div class="upgrade-gate">
+      <div class="upgrade-gate-icon">🎯</div>
+      <div class="upgrade-gate-title">Daily Picks</div>
+      <div class="upgrade-gate-sub">Get 5–8 AI-curated trade ideas every morning — short squeeze setups, earnings catalysts, volume anomalies and insider buying signals. Pro and Elite only.</div>
+      <a href="/" class="upgrade-btn">⬆ Upgrade to Pro →</a>
+    </div>`;
+}
+
+function renderEmpty() {
+  document.getElementById('picksContent').innerHTML = `
+    <div class="picks-empty">
+      <div class="picks-empty-icon">🦅</div>
+      <div class="picks-empty-title">No picks today</div>
+      <div class="picks-empty-sub">The daily scan hasn't run yet or no strong signal confluences were found today.<br>Check back after market open.</div>
+    </div>`;
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
