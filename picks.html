@@ -294,7 +294,8 @@ async function generatePicksFromCache() {
     }
 
     const picks = selectPicks(data.results);
-    renderPicks(picks, data.scanned_at, true); // true = AI summaries loading
+    // No AI summaries here — they come pre-generated from scan-daily.js
+    renderPicks(picks, data.scanned_at, false);
   } catch(e) {
     renderEmpty();
   }
@@ -356,13 +357,8 @@ function renderPicks(picks, generatedAt, aiLoading = false) {
 
   if (!picks.length) { renderEmpty(); return; }
 
-  const html = picks.map((p, i) => renderPickCard(p, i, aiLoading)).join('');
+  const html = picks.map((p, i) => renderPickCard(p, i, false)).join('');
   document.getElementById('picksContent').innerHTML = `<div class="picks-grid">${html}</div>`;
-
-  // If AI loading, fetch summaries
-  if (aiLoading) {
-    picks.forEach((p, i) => fetchAISummary(p, i));
-  }
 }
 
 // ── RENDER SINGLE PICK CARD ───────────────────────────────
@@ -437,40 +433,6 @@ function buildSignals(p) {
   if (insiderFlag) signals.push({ label: insiderFlag.label, color: 'var(--green)' });
   if (p.shortPct > 15 && p.priceChange1D > 0) signals.push({ label: 'Squeeze setup', color: 'var(--teal)' });
   return signals.slice(0, 4);
-}
-
-// ── FETCH AI SUMMARY ──────────────────────────────────────
-async function fetchAISummary(pick, idx) {
-  try {
-    const prompt = buildPrompt(pick);
-    const res = await fetch('/.netlify/functions/ai-summary', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, sym: pick.sym })
-    });
-    if (!res.ok) return;
-    const { summary } = await res.json();
-    if (summary) {
-      const el = document.getElementById('ai-text-' + idx);
-      if (el) el.innerHTML = `<div class="pick-ai-text">${summary}</div>`;
-    }
-  } catch(e) {
-    console.warn('AI summary failed for', pick.sym);
-  }
-}
-
-function buildPrompt(p) {
-  const signals = [];
-  if (p.volRatio > 2.5)  signals.push(`volume is ${p.volRatio}x the 10-day average`);
-  if (p.shortPct > 15)   signals.push(`${p.shortPct}% of float is sold short`);
-  if (p.earningsDays != null && p.earningsDays <= 20) signals.push(`earnings in ${p.earningsDays} days`);
-  if (p.streak >= 2)     signals.push(`${p.streak} consecutive EPS beats`);
-  if (p.upside > 20)     signals.push(`analyst price target ${p.upside}% above current price`);
-  if (p.revenueGrowth > 15) signals.push(`revenue growing ${p.revenueGrowth}% YoY`);
-
-  return `You are a concise financial analyst. Write a 2-sentence analysis of why ${p.sym} (${p.companyName}, ${p.sector}) is an interesting setup today. 
-Key data: price $${p.price}, score ${p.total}/100, signals: ${signals.join(', ')}.
-Be specific, factual and direct. Do NOT use disclaimers or say "it's important to note". Max 40 words total.`;
 }
 
 // ── NAVIGATION ────────────────────────────────────────────
