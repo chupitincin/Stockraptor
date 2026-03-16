@@ -430,6 +430,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
   <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:#606060;font-family:'Geist Mono',monospace;">
     <span id="livdot" class="livdot done"></span>
     <span id="cacheStamp">Loading scan data...</span>
+    <span id="marketStatus" style="margin-left:8px;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:10px;display:none;"></span>
   </div>
   <button id="btnRescan" onclick="triggerRescan()" style="background:transparent;border:1px solid #181828;color:#707070;font-size:10px;font-family:'Geist Mono',monospace;letter-spacing:1px;padding:4px 10px;border-radius:3px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#00ff94';this.style.color='#00ff94'" onmouseout="this.style.borderColor='#181828';this.style.color='#707070'">&#x21BB; RE-SCAN NOW</button>
 </div>
@@ -1122,13 +1123,15 @@ function renderDet(d){
     <div class="det-r"><span class="dk" style="color:${d.dilPenalty<-3?'var(--red)':'var(--txt)'}">⚠ Share dilution/yr</span><span class="dv ${d.sharesDilution>8?'cr':d.sharesDilution>3?'co':'cg'}">${d.sharesDilution!==null?sgn(d.sharesDilution)+d.sharesDilution+'%':'—'} ${d.dilPenalty<0?`(${d.dilPenalty}pts)`:''}</span></div>
     <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipMarketCap)||'Market cap.'}">Market Cap</span><span class="dv cd">${fmtCap(d.cap)}</span></div>
   </div>
-  <div class="det-card"><div class="det-title">${(window._detTitles&&window._detTitles().momentum)||"⚡ PRICE & MOMENTUM"}</div>
-    <div class="det-r"><span class="dk">Price</span><span class="dv cd">${d.price?'$'+d.price.toFixed(2):'—'}</span></div>
-    <div class="det-r"><span class="dk">1-Day</span><span class="dv ${d.priceChange1D>0?'cg':d.priceChange1D<0?'cr':'cd'}">${d.priceChange1D!==null?sgn(d.priceChange1D)+d.priceChange1D+'%':'—'}</span></div>
+  <div class="det-card"><div class="det-title">${(window._detTitles&&window._detTitles().momentum)||"⚡ PRICE & MOMENTUM"} <span data-live="ts" style="font-size:8px;color:var(--green);margin-left:6px;font-family:var(--font);letter-spacing:0;font-weight:400;"></span></div>
+    <div class="det-r"><span class="dk">Price</span><span class="dv cd" data-live="price">${d.price?'$'+d.price.toFixed(2):'—'}</span></div>
+    <div class="det-r"><span class="dk">1-Day</span><span class="dv ${d.priceChange1D>0?'cg':d.priceChange1D<0?'cr':'cd'}" data-live="change1d">${d.priceChange1D!==null?sgn(d.priceChange1D)+d.priceChange1D+'%':'—'}</span></div>
     <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tip4W)||'4-week price change.'}">4-Week</span><span class="dv ${d.priceChange4W>5?'cg':d.priceChange4W<-5?'cr':'cd'}">${d.priceChange4W!==null?sgn(d.priceChange4W)+d.priceChange4W+'%':'—'}</span></div>
+    <div class="det-r"><span class="dk">Day High</span><span class="dv cd" data-live="high">—</span></div>
+    <div class="det-r"><span class="dk">Day Low</span><span class="dv cd" data-live="low">—</span></div>
     <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tip52WLow)||'52-week low.'}">52W Low</span><span class="dv cd">${d.lo52?'$'+d.lo52.toFixed(2):'—'} ${d.pct52Low!==null?'(+'+d.pct52Low+'%)':''}</span></div>
     <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tip52WHigh)||'52-week high.'}">52W High</span><span class="dv cd">${d.hi52?'$'+d.hi52.toFixed(2):'—'} ${d.pct52High!==null?'('+d.pct52High+'%)':''}</span></div>
-    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipVolAvg)||'Volume vs 10D average.'}">Volume vs 10D avg</span><span class="dv ${d.volRatio>2.5?'ck':d.volRatio>1.5?'cau':'cd'}">${d.volRatio?d.volRatio+'x':'—'}${d.volRatio>2.5?' ⚡':''}</span></div>
+    <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipVolAvg)||'Volume vs avg.'}">Volume vs avg</span><span class="dv ${d.volRatio>2.5?'ck':d.volRatio>1.5?'cau':'cd'}" data-live="volume">${d.volRatio?d.volRatio+'x':'—'}${d.volRatio>2.5?' ⚡':''}</span></div>
     <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipShortFloat)||'Short % of float.'}">Short % float</span><span class="dv ${d.shortPct>20?'ct':d.shortPct>10?'cau':'cd'}">${d.shortPct!==null?d.shortPct+'%':'—'}${d.shortPct>20?' 🎯':''}</span></div>
     <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipSqueeze)||'Short squeeze potential.'}">Squeeze Potential</span><span class="dv ${d.shortPct>15&&d.priceChange4W>3?'ct':'cd'}">${d.shortPct>20&&d.priceChange4W>5?(window._st&&window._st.lSqHigh)||'🔥 HIGH':d.shortPct>15&&d.priceChange4W>0?(window._st&&window._st.lSqMod)||'📈 MOD':d.shortPct>10?(window._st&&window._st.lSqWatch)||'👁 WATCH':'—'}</span></div>
     <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipBeta)||'Beta volatility.'}">Beta</span><span class="dv cd">${d.beta?Math.round(d.beta*100)/100:'—'}</span></div>
@@ -1187,8 +1190,12 @@ function renderDet(d){
 function toggleDet(sym){
   const dt=document.getElementById('dt-'+sym),ar=document.getElementById('ar-'+sym),was=dt.classList.contains('open');
   document.querySelectorAll('.dr.open').forEach(r=>r.classList.remove('open'));document.querySelectorAll('.arr.op').forEach(a=>a.classList.remove('op'));
+  // Parar polling del detalle anterior
+  if (typeof stopLiveDetPrice === 'function') stopLiveDetPrice();
   if(!was){
     dt.classList.add('open');ar.classList.add('op');
+    // Arrancar polling live para este símbolo
+    if (typeof startLiveDetPrice === 'function') startLiveDetPrice(sym);
     // Scroll row into view below fixed navbar
     setTimeout(()=>{
       const row=document.querySelector(`tr.mr [id="ar-${sym}"]`)?.closest('tr');
@@ -1227,6 +1234,8 @@ async function runScan(){
   document.getElementById('progWrap').style.display='none';
   document.getElementById('rlWarn').style.display='none';
   running=false;
+  // Arrancar precios live tras scan manual
+  if (typeof startLivePrices === 'function') startLivePrices();
 }
 
 function setF(v,btn){curF=v;document.querySelectorAll('.bf').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');renderTable();}
@@ -1261,6 +1270,201 @@ window.addEventListener('load',()=>{
   try{const k=localStorage.getItem('sr_key');if(k)document.getElementById('modalKeyInp').value=k;}catch{}
   document.getElementById('modalKeyInp').addEventListener('keydown',e=>{if(e.key==='Enter')activateScanner();});
 });
+
+// ══════════════════════════════════════════
+// LIVE PRICE ENGINE
+// Polling cada 30s para toda la tabla
+// Polling cada 15s para el detalle abierto
+// ══════════════════════════════════════════
+let _livePriceInterval = null;   // intervalo tabla
+let _liveDetInterval   = null;   // intervalo detalle
+let _liveDetSym        = null;   // símbolo con detalle abierto
+
+// Fetch precios via Netlify proxy (protege la FMP key)
+async function fetchLivePrices(symbols) {
+  if (!symbols || symbols.length === 0) return {};
+  try {
+    const res = await fetch(
+      `/.netlify/functions/quote?symbols=${symbols.join(',')}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if (!res.ok) return {};
+    return await res.json();
+  } catch { return {}; }
+}
+
+// Actualiza una celda de precio en la tabla con animación flash
+function applyLivePriceToRow(sym, q) {
+  // Busca la celda de precio: penúltima <td> de la fila del símbolo
+  const arEl = document.getElementById('ar-' + sym);
+  if (!arEl) return;
+  const row = arEl.closest('tr.mr');
+  if (!row) return;
+  const tds = row.querySelectorAll('td');
+  const priceTd = tds[tds.length - 2]; // columna PRICE
+  if (!priceTd) return;
+
+  const price = q.price;
+  const pct   = q.changePct !== null ? Math.round(q.changePct * 10) / 10 : null;
+  if (price === null) return;
+
+  const prevText = priceTd.textContent;
+  const prevPrice = parseFloat(prevText.replace('$','')) || 0;
+  const dir = price > prevPrice ? 'up' : price < prevPrice ? 'down' : '';
+
+  const color = pct > 0 ? 'var(--green)' : pct < 0 ? 'var(--red)' : 'var(--txt)';
+  const sign  = pct !== null ? (pct > 0 ? '+' : '') : '';
+
+  priceTd.innerHTML = `$${price.toFixed(2)}<span style="font-size:8px;color:${color};margin-left:3px">${pct !== null ? sign + pct + '%' : ''}</span>`;
+
+  // Flash animado verde/rojo al cambiar
+  if (dir) {
+    priceTd.style.transition = 'background .15s';
+    priceTd.style.background = dir === 'up' ? '#00ff9418' : '#ff2d5518';
+    setTimeout(() => { priceTd.style.background = ''; }, 600);
+  }
+
+  // Actualiza también el objeto en memoria para consistencia al re-render
+  const d = allData.find(x => x.sym === sym);
+  if (d) {
+    d.price        = price;
+    d.priceChange1D = pct;
+  }
+}
+
+// Actualiza el panel de detalle abierto con precio live
+function applyLivePriceToDet(sym, q) {
+  const det = document.getElementById('dt-' + sym);
+  if (!det || !det.classList.contains('open')) return;
+
+  const priceEl   = det.querySelector('[data-live="price"]');
+  const change1dEl= det.querySelector('[data-live="change1d"]');
+  const volEl     = det.querySelector('[data-live="volume"]');
+  const highEl    = det.querySelector('[data-live="high"]');
+  const lowEl     = det.querySelector('[data-live="low"]');
+
+  if (priceEl   && q.price   !== null) priceEl.textContent   = '$' + q.price.toFixed(2);
+  if (change1dEl && q.changePct !== null) {
+    const pct = Math.round(q.changePct * 10) / 10;
+    change1dEl.textContent = (pct > 0 ? '+' : '') + pct + '%';
+    change1dEl.style.color = pct > 0 ? 'var(--green)' : pct < 0 ? 'var(--red)' : 'var(--txt)';
+  }
+  if (volEl && q.volume !== null && q.avgVolume) {
+    const ratio = Math.round(q.volume / q.avgVolume * 10) / 10;
+    volEl.textContent = ratio + 'x';
+    volEl.style.color = ratio > 2.5 ? 'var(--pink)' : ratio > 1.5 ? 'var(--gold)' : 'var(--txt)';
+  }
+  if (highEl && q.high !== null) highEl.textContent = '$' + q.high.toFixed(2);
+  if (lowEl  && q.low  !== null) lowEl.textContent  = '$' + q.low.toFixed(2);
+
+  // Timestamp live indicator
+  const tsEl = det.querySelector('[data-live="ts"]');
+  if (tsEl) {
+    const now = new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    tsEl.textContent = 'Live · ' + now;
+  }
+}
+
+// Polling global de la tabla (todos los tickers visibles, cada 30s)
+async function pollTablePrices() {
+  if (!allData || allData.length === 0) return;
+  const syms = allData.map(d => d.sym);
+  // FMP acepta hasta 50 en batch; dividir si hay más
+  const chunks = [];
+  for (let i = 0; i < syms.length; i += 50) chunks.push(syms.slice(i, i + 50));
+  for (const chunk of chunks) {
+    const prices = await fetchLivePrices(chunk);
+    Object.entries(prices).forEach(([sym, q]) => applyLivePriceToRow(sym, q));
+  }
+}
+
+// Polling del detalle abierto (cada 15s)
+async function pollDetPrice() {
+  if (!_liveDetSym) return;
+  const prices = await fetchLivePrices([_liveDetSym]);
+  const q = prices[_liveDetSym];
+  if (q) {
+    applyLivePriceToRow(_liveDetSym, q);
+    applyLivePriceToDet(_liveDetSym, q);
+  }
+}
+
+// Detecta si el mercado NYSE/NASDAQ está abierto (ET)
+function updateMarketStatus() {
+  const el = document.getElementById('marketStatus');
+  if (!el) return;
+
+  const now = new Date();
+  // Convertir a Eastern Time
+  const et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const day = et.getDay(); // 0=Dom, 6=Sáb
+  const h = et.getHours();
+  const m = et.getMinutes();
+  const timeVal = h * 60 + m;
+
+  const preOpen  = 4 * 60;        // 4:00 AM ET
+  const open     = 9 * 60 + 30;   // 9:30 AM ET
+  const close    = 16 * 60;       // 4:00 PM ET
+  const afterEnd = 20 * 60;       // 8:00 PM ET
+
+  el.style.display = 'inline';
+
+  if (day === 0 || day === 6) {
+    // Fin de semana
+    el.textContent = '● CLOSED';
+    el.style.background = '#ff2d5515';
+    el.style.color = '#ff2d55';
+  } else if (timeVal >= open && timeVal < close) {
+    // Mercado abierto
+    el.textContent = '● MARKET OPEN';
+    el.style.background = '#00ff9418';
+    el.style.color = '#00ff94';
+  } else if (timeVal >= preOpen && timeVal < open) {
+    // Pre-market
+    el.textContent = '◐ PRE-MARKET';
+    el.style.background = '#ffcc0015';
+    el.style.color = '#ffcc00';
+  } else if (timeVal >= close && timeVal < afterEnd) {
+    // After-hours
+    el.textContent = '◑ AFTER HOURS';
+    el.style.background = '#ff703015';
+    el.style.color = '#ff7040';
+  } else {
+    // Cerrado
+    el.textContent = '● CLOSED';
+    el.style.background = '#ff2d5515';
+    el.style.color = '#ff2d55';
+  }
+}
+
+// Arranca los intervalos de polling (llamar tras cargar datos)
+function startLivePrices() {
+  stopLivePrices();
+  updateMarketStatus();
+  // Actualizar estado de mercado cada minuto
+  setInterval(updateMarketStatus, 60000);
+  // Primer fetch inmediato
+  pollTablePrices();
+  _livePriceInterval = setInterval(pollTablePrices, 30000);
+}
+
+function stopLivePrices() {
+  if (_livePriceInterval) { clearInterval(_livePriceInterval); _livePriceInterval = null; }
+  stopLiveDetPrice();
+}
+
+function startLiveDetPrice(sym) {
+  stopLiveDetPrice();
+  _liveDetSym = sym;
+  // Fetch inmediato al abrir
+  pollDetPrice();
+  _liveDetInterval = setInterval(pollDetPrice, 15000);
+}
+
+function stopLiveDetPrice() {
+  if (_liveDetInterval) { clearInterval(_liveDetInterval); _liveDetInterval = null; }
+  _liveDetSym = null;
+}
 </script>
 
 <script>
@@ -1536,6 +1740,9 @@ async function loadDailyCache() {
     renderSum();
     renderTable();
     applyScannerLang();
+
+    // Arrancar precios en tiempo real tras cargar la tabla
+    if (typeof startLivePrices === 'function') startLivePrices();
 
   } catch (e) {
     console.warn('Cache load failed:', e);
