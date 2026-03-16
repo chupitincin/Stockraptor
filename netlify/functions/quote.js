@@ -47,13 +47,13 @@ exports.handler = async (event) => {
       prices[q.symbol] = {
         price:      q.price       ?? null,
         change:     q.change      ?? null,
-        changePct:  q.changesPercentage ?? null,
+        changePct:  q.changesPercentage ?? q.changePercent ?? q.pct ?? (q.change && q.prevClose ? Math.round((q.change / q.prevClose) * 1000) / 10 : null),
         open:       q.open        ?? null,
-        high:       q.dayHigh     ?? null,
-        low:        q.dayLow      ?? null,
+        high:       q.high        ?? q.dayHigh  ?? null,
+        low:        q.low         ?? q.dayLow   ?? null,
         volume:     q.volume      ?? null,
-        avgVolume:  q.avgVolume   ?? null,
-        prevClose:  q.previousClose ?? null,
+        avgVolume:  q.avgVolume   ?? q.averageVolume ?? null,
+        prevClose:  q.previousClose ?? q.prevClose ?? null,
         timestamp:  q.timestamp   ?? null,
       };
     });
