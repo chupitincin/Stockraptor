@@ -530,7 +530,7 @@ function showGuestState() {
   updatePricingButtons(null);
 }
 
-function showUserState() {
+async function showUserState() {
   const plan = currentProfile?.plan || 'free';
   const email = currentUser.email;
   const planColors = { free: '#ffffff33', pro: 'var(--green)', elite: 'var(--gold)' };
