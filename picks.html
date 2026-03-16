@@ -33,9 +33,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .sn-plan.free{background:#ffffff10;color:#707090;border:1px solid #1e1e30;}
 .sn-plan.pro{background:#00ff9420;color:#00ff94;border:1px solid #00ff9430;}
 .sn-plan.elite{background:#ffcc0020;color:#ffcc00;border:1px solid #ffcc0030;}
-.sn-user{font-size:12px;color:#9090b0;}
-.sn-back{padding:5px 12px;background:transparent;border:1px solid #1e1e35;color:#707090;border-radius:6px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.5px;transition:all .15s;}
-.sn-back:hover{border-color:#707090;color:#b0b0d0;}
+.sn-user-btn{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 5px;background:transparent;border:1px solid #1e1e35;border-radius:20px;cursor:pointer;transition:all .15s;text-decoration:none;}
+.sn-user-btn:hover{border-color:#3a3a55;background:#0f0f20;}
+.sn-user-avatar{width:22px;height:22px;border-radius:50%;background:#00ff9420;border:1px solid #00ff9440;display:flex;align-items:center;justify-content:center;font-size:10px;color:#00ff94;font-family:'Geist Mono',monospace;font-weight:700;flex-shrink:0;}
+.sn-user-name{font-size:11px;color:#9090b0;font-family:'Geist Mono',monospace;letter-spacing:.3px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 /* LAYOUT */
 .page{max-width:1100px;margin:0 auto;padding:80px 24px 60px;position:relative;z-index:1;}
@@ -159,9 +160,10 @@ const CONFIG = {
   </div>
   <div class="sn-right">
     <span class="sn-plan free" id="navPlan">FREE</span>
-    <div class="sn-divider"></div>
-    <span class="sn-user" id="navUser"></span>
-    <button class="sn-back" id="navSignOut" onclick="window.location.href='/'" style="display:none">⚙ Account</button>
+    <a class="sn-user-btn" href="/" id="navUserBtn" style="display:none">
+      <div class="sn-user-avatar" id="navUserAvatar">?</div>
+      <span class="sn-user-name" id="navUser"></span>
+    </a>
   </div>
 </nav>
 
@@ -261,9 +263,12 @@ async function init() {
   const navPlan = document.getElementById('navPlan');
   navPlan.textContent = plan.toUpperCase();
   navPlan.className = 'sn-plan ' + plan;
-  document.getElementById('navUser').textContent = currentUser.email.split('@')[0];
-  const signOutBtn = document.getElementById('navSignOut');
-  if (signOutBtn) signOutBtn.style.display = 'inline-flex';
+  const username = currentUser.email.split('@')[0];
+  document.getElementById('navUser').textContent = username;
+  const avatarEl = document.getElementById('navUserAvatar');
+  if (avatarEl) avatarEl.textContent = username.charAt(0).toUpperCase();
+  const userBtn = document.getElementById('navUserBtn');
+  if (userBtn) userBtn.style.display = 'flex';
 
   // Free users — show upgrade gate
   if (plan === 'free') {
