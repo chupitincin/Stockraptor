@@ -796,6 +796,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
           <th><span class="tt" data-tip="Special alerts: ⚡ Volume spike · 🎯 Short squeeze · 📅 Earnings · ⚠ Dilution">⚠ FLAGS</span></th>
           <th onclick="thSort('price')">PRICE <span class="th-arrow" id="th-price"></span></th>
           <th onclick="thSort('upside')"><span class="tt" data-tip="Analyst price target upside vs current price.">UPSIDE</span> <span class="th-arrow" id="th-upside"></span></th>
+          <th style="text-align:center">★</th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -1085,13 +1086,13 @@ function renderTable(){
         <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
         <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">██</td>
         <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">██</td>
+        <td></td>
       </tr>`;
     }
     const c=SIG[d.signal],vals=[d.fund,d.sent,d.analyst,d.momentum,d.earPts,d.volShort];
     const _cols=['var(--blue)','var(--purple)','var(--green)','var(--gold)','var(--orange)','var(--teal)'];
     const _maxes=[25,20,15,17,15,13];
     const bkd=`<div class="bkd">${vals.map((v,j)=>`<div class="bseg" style="width:${Math.max(2,Math.min(28,v/_maxes[j]*28))}px;background:${_cols[j]}"></div>`).join('')}</div>`;
-const flagsHtml=d.flags.map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('');
     const ef=fmtD(d.earningsDate);
     const edHtml=d.earningsDays!==null?`<span style="font-size:10px;color:${d.earningsDays<=20?'var(--gold)':d.earningsDays<=45?'var(--orange)':'var(--txt)'}">${ef} <span style="opacity:.5;font-size:8px">${d.earningsDays}d</span></span>`:'<span class="cd">—</span>';
     const vsHtml=`${d.volRatio?`<span class="${d.volRatio>2?'vol-spike':'cd'}">${d.volRatio>2?'⚡':''}${d.volRatio}x</span>`:''} ${d.shortPct?`<span class="${d.shortPct>15?'ct':'cd'}" style="margin-left:3px">${d.shortPct>15?'🎯':''}${d.shortPct}%</span>`:''}${!d.volRatio&&!d.shortPct?'<span class="cd">—</span>':''}`;
@@ -1108,18 +1109,26 @@ const flagsHtml=d.flags.map(f=>`<span class="flag tt" style="color:${f.color};bo
       ? `<span style="font-size:11px;font-weight:700;font-family:var(--font);color:var(--red)">▼${Math.abs(d.rankDelta)}</span>`
       : `<span style="font-size:10px;color:var(--txt);">—</span>`;
     const isWatched = watchlist.has(d.sym);
-    const starHtml = `<button onclick="event.stopPropagation();toggleWatch('${d.sym}')" id="star-${d.sym}" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;transition:all .15s;color:${isWatched?'var(--gold)':'#888899'};line-height:1;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='${isWatched?'var(--gold)':'#888899'}'" title="${isWatched?'Remove from watchlist':'Add to watchlist'}">${isWatched?'★':'☆'}</button>`;
-    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div style="display:flex;align-items:center;gap:4px;">${starHtml}<div><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div></div></div></td><td style="text-align:center">${deltaHtml}</td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return(s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--blue)">${d.fund??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--purple)">${d.sent??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--green)">${d.analyst??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--gold)">${d.momentum??'—'}</span></td><td>${edHtml}</td><td>${vsHtml}</td><td><div style="display:flex;flex-direction:column;gap:3px;">
-      ${d.flags && d.flags.length > 0 ? `
-        <div style="display:flex;gap:3px;">
-          ${d.flags.slice(0,2).map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('')}
-        </div>
-        ${d.flags.length > 2 ? `<div style="display:flex;gap:3px;align-items:center;">
-          <span class="flag tt" style="color:${d.flags[2].color};border-color:${d.flags[2].color}44" data-tip="${FLAG_TIPS[d.flags[2].label]||d.flags[2].label}">${d.flags[2].label}</span>
-          ${d.flags.length > 3 ? `<span style="font-size:9px;color:#686868;font-family:var(--font);letter-spacing:.5px;">+${d.flags.length-3}</span>` : ''}
-        </div>` : ''}
-      ` : '<span class="cd" style="font-size:8px">—</span>'}
-    </div></td><td style="font-size:11px;color:var(--txb)">${prHtml}</td><td>${upHtml}</td></tr><tr class="dr" id="dt-${d.sym}"><td colspan="14" style="padding:0;width:100%;">${renderDet(d)}</td></tr>`;
+    const flagsHtml = d.flags.length
+      ? `<div style="display:flex;gap:3px;flex-wrap:nowrap;align-items:center;">${d.flags.slice(0,3).map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('')}${d.flags.length>3?`<span style="font-size:9px;color:#686868;font-family:var(--font);">+${d.flags.length-3}</span>`:''}</div>`
+      : '<span class="cd" style="font-size:8px">—</span>';
+    return`<tr class="mr" onclick="toggleDet('${d.sym}')">
+      <td><span class="arr" id="ar-${d.sym}">▶</span></td>
+      <td><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div></td>
+      <td style="text-align:center">${deltaHtml}</td>
+      <td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return s;})(d.signal)}</span></td>
+      <td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td>
+      <td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--blue)">${d.fund??'—'}</span></td>
+      <td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--purple)">${d.sent??'—'}</span></td>
+      <td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--green)">${d.analyst??'—'}</span></td>
+      <td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--gold)">${d.momentum??'—'}</span></td>
+      <td>${edHtml}</td>
+      <td>${vsHtml}</td>
+      <td>${flagsHtml}</td>
+      <td style="font-size:11px;color:var(--txb)">${prHtml}</td>
+      <td>${upHtml}</td>
+      <td style="text-align:center"><button onclick="event.stopPropagation();toggleWatch('${d.sym}')" id="star-${d.sym}" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;transition:all .15s;color:${isWatched?'var(--gold)':'#888899'};line-height:1;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='${isWatched?'var(--gold)':'#888899'}'" title="${isWatched?'Remove from watchlist':'Add to watchlist'}">${isWatched?'★':'☆'}</button></td>
+    </tr><tr class="dr" id="dt-${d.sym}"><td colspan="15" style="padding:0;width:100%;">${renderDet(d)}</td></tr>`;
   }).join('');
 
   // Add upgrade banner after free rows if user is free
