@@ -283,17 +283,23 @@ td .subbar-bg{max-width:32px;}
 .upgrade-title{font-family:'Syne',sans-serif;font-size:22px;color:#e8e8f8;margin-bottom:8px;}
 .upgrade-desc{font-size:13px;color:#707070;line-height:1.7;margin-bottom:28px;}
 /* plan badge in nav */
-#scannerNav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;background:rgba(2,2,9,.9);backdrop-filter:blur(12px);border-bottom:1px solid #181828;}
-.sn-logo{font-family:'Syne',sans-serif;font-size:16px;color:#e8e8f8;display:flex;align-items:center;gap:8px;cursor:pointer;}
+#scannerNav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;gap:16px;background:rgba(6,6,15,.95);backdrop-filter:blur(12px);border-bottom:1px solid #181828;}
+.sn-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#e8e8f8;display:flex;align-items:center;gap:8px;cursor:pointer;text-decoration:none;flex-shrink:0;}
 .sn-logo span{color:#00ff94;}
-.sn-right{display:flex;align-items:center;gap:12px;}
-.sn-plan{font-size:9px;font-family:'Geist Mono',monospace;letter-spacing:1.5px;padding:4px 10px;border-radius:10px;}
-.sn-plan.free{background:#ffffff11;color:#707070;}
-.sn-plan.pro{background:#00ff9422;color:#00ff94;}
-.sn-plan.elite{background:#ffcc0022;color:#ffcc00;}
-.sn-user{font-size:12px;color:#a0a0a0;}
-.sn-back{padding:6px 14px;background:transparent;border:1px solid #181828;color:#707070;border-radius:3px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:1px;transition:all .2s;}
-.sn-back:hover{border-color:#a0a0a0;color:#e8e8f8;}
+.sn-logo-icon{width:28px;height:28px;background:linear-gradient(135deg,#00ff94,#00996a);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.sn-center{display:flex;align-items:center;gap:4px;}
+.sn-nav-item{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;color:#707090;cursor:pointer;text-decoration:none;transition:all .15s;border:1px solid transparent;white-space:nowrap;}
+.sn-nav-item:hover{color:#b0b0d0;background:#0f0f20;}
+.sn-nav-item.active{color:#e8e8f8;background:#0f0f20;border-color:#1e1e35;}
+.sn-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.sn-divider{width:1px;height:18px;background:#181828;}
+.sn-plan{font-size:9px;font-family:'Geist Mono',monospace;letter-spacing:1.5px;font-weight:700;padding:4px 10px;border-radius:20px;}
+.sn-plan.free{background:#ffffff10;color:#707090;border:1px solid #1e1e30;}
+.sn-plan.pro{background:#00ff9420;color:#00ff94;border:1px solid #00ff9430;}
+.sn-plan.elite{background:#ffcc0020;color:#ffcc00;border:1px solid #ffcc0030;}
+.sn-user{font-size:12px;color:#9090b0;}
+.sn-back{padding:5px 12px;background:transparent;border:1px solid #1e1e35;color:#707090;border-radius:6px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.5px;transition:all .15s;}
+.sn-back:hover{border-color:#707090;color:#b0b0d0;}
 
 
 /* ── TOOLTIPS ── */
@@ -393,12 +399,6 @@ tbody tr.dr { background: #0f0f0f !important; }
   border: 1px solid rgba(255,255,255,.10) !important;
 }
 
-/* Plan badge */
-.sn-plan { border-radius: 20px !important; }
-
-/* Back button */
-.sn-back { border-radius: 6px !important; }
-
 /* Body background darker */
 body { background: #0a0a0a !important; }
 
@@ -417,12 +417,19 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
 
 <!-- Scanner Nav (shown after auth) -->
 <div id="scannerNav" style="display:none">
-  <div class="sn-logo" onclick="window.location.href='/'">🦅 Stock<span>Raptor</span></div>
+  <a class="sn-logo" href="/">
+    <div class="sn-logo-icon">🦅</div>
+    Stock<span>Raptor</span>
+  </a>
+  <div class="sn-center">
+    <a class="sn-nav-item active" href="/scanner.html">📊 Scanner</a>
+    <a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>
+  </div>
   <div class="sn-right">
-    <a href="/picks.html" style="padding:6px 14px;background:transparent;border:1px solid #00ff9433;color:var(--green);border-radius:6px;font-family:var(--font);font-size:9px;letter-spacing:1px;text-decoration:none;transition:all .2s;" onmouseover="this.style.background='#00ff9415'" onmouseout="this.style.background='transparent'">🎯 Daily Picks</a>
     <span class="sn-plan free" id="snPlan">FREE</span>
+    <div class="sn-divider"></div>
     <span class="sn-user" id="snUser"></span>
-    <button class="sn-back" onclick="window.location.href='/'">← Home</button>
+    <button class="sn-back" onclick="signOutScanner()">Sign out</button>
   </div>
 </div>
 
@@ -1545,6 +1552,11 @@ async function initScannerAuth() {
 
 function addBodyPadding() {
   document.body.style.paddingTop = '90px';
+}
+
+async function signOutScanner() {
+  if (sb2) await sb2.auth.signOut();
+  window.location.href = '/';
 }
 
 function showUpgradeModal() {
