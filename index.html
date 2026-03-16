@@ -241,6 +241,48 @@ const CONFIG = {
     <button class="nav-cta" onclick="openAuth('register')">Start Free</button>
   </div>
 </nav>
+<script>
+(function(){
+  try {
+    const u = localStorage.getItem('sr_user');
+    const p = localStorage.getItem('sr_plan') || 'free';
+    if (!u) return;
+    // Logged in — show nav as user state immediately
+    document.getElementById('navLinks').innerHTML =
+      '<a class="sn-nav-item" href="/scanner.html">📊 Scanner</a>' +
+      '<a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>';
+    document.getElementById('navAuth').innerHTML =
+      '<div class="nav-user">' +
+        '<span class="nav-plan ' + p + '">' + p.toUpperCase() + '</span>' +
+        '<a class="sn-user-btn active" href="/" style="display:flex">' +
+          '<div class="sn-user-avatar">' + u.charAt(0).toUpperCase() + '</div>' +
+          '<span class="sn-user-name">' + u + '</span>' +
+        '</a>' +
+      '</div>';
+  } catch(e) {}
+})();
+</script>
+<script>
+(function(){
+  try {
+    const u = localStorage.getItem('sr_user');
+    const p = localStorage.getItem('sr_plan') || 'free';
+    if (u) {
+      document.getElementById('navLinks').innerHTML =
+        '<a class="sn-nav-item" href="/scanner.html">📊 Scanner</a>' +
+        '<a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>';
+      document.getElementById('navAuth').innerHTML =
+        '<div class="nav-user">' +
+          '<span class="nav-plan ' + p + '">' + p.toUpperCase() + '</span>' +
+          '<a class="sn-user-btn active" href="/" style="display:flex">' +
+            '<div class="sn-user-avatar">' + u.charAt(0).toUpperCase() + '</div>' +
+            '<span class="sn-user-name">' + u + '</span>' +
+          '</a>' +
+        '</div>';
+    }
+  } catch(e) {}
+})();
+</script>
 
 <!-- ══ LANDING ══ -->
 <div id="landingPage" style="display:none">
@@ -517,12 +559,34 @@ function initSupabase() {
 // ══════════════════════════════════════════
 async function checkAuth() {
   if (!sb) return;
+
+  // Show dashboard instantly if we have cached user — no flash
+  const cachedUser = localStorage.getItem('sr_user');
+  const cachedPlan = localStorage.getItem('sr_plan') || 'free';
+  if (cachedUser) {
+    document.getElementById('landingPage').style.display = 'none';
+    document.getElementById('userDash').style.display = 'block';
+    document.getElementById('navLinks').innerHTML = `
+      <a class="sn-nav-item" href="/scanner.html">📊 Scanner</a>
+      <a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>`;
+    document.getElementById('navAuth').innerHTML = `
+      <div class="nav-user">
+        <span class="nav-plan ${cachedPlan}">${cachedPlan.toUpperCase()}</span>
+        <a class="sn-user-btn active" href="/" style="display:flex">
+          <div class="sn-user-avatar">${cachedUser.charAt(0).toUpperCase()}</div>
+          <span class="sn-user-name">${cachedUser}</span>
+        </a>
+      </div>`;
+  }
+
   const { data: { session } } = await sb.auth.getSession();
   if (session?.user) {
     currentUser = session.user;
     await loadProfile();
     showUserState();
   } else {
+    // Clear stale cache and show guest
+    try { localStorage.removeItem('sr_user'); localStorage.removeItem('sr_plan'); } catch(e) {}
     showGuestState();
   }
 }
