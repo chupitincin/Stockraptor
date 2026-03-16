@@ -486,6 +486,90 @@ async function main() {
     console.log(`   ${i+1}. ${r.sym.padEnd(6)} ${r.signal.padEnd(12)} score:${r.total}`)
   );
 
+  // ── PHASE 3: DELTA RANKING + TOP MOVERS ──────────────────
+  console.log('\n📈 Phase 3: Calculating rank deltas...');
+
+  // Load yesterday's ranking from scan_history
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().substring(0, 10);
+
+  let prevRanks = {};
+  try {
+    const { data: hist } = await sb
+      .from('scan_history')
+      .select('rankings')
+      .eq('scan_date', yesterdayStr)
+      .single();
+    if (hist?.rankings) {
+      hist.rankings.forEach((sym, idx) => { prevRanks[sym] = idx + 1; });
+      console.log(`   Loaded ${Object.keys(prevRanks).length} previous ranks from ${yesterdayStr}`);
+    }
+  } catch(e) {
+    console.warn('   No previous ranking found — first run or new day');
+  }
+
+  // Calculate delta for each result and find top movers
+  const todayRankings = results.map(r => r.sym);
+  results.forEach((r, idx) => {
+    const todayRank = idx + 1;
+    const prevRank  = prevRanks[r.sym];
+    r.rankToday = todayRank;
+    r.rankDelta = prevRank != null ? prevRank - todayRank : null; // positive = moved up
+    r.rankNew   = prevRank == null;
+  });
+
+  // Save today's ranking to scan_history
+  const { error: histError } = await sb.from('scan_history').upsert({
+    scan_date: new Date().toISOString().substring(0, 10),
+    scanned_at: new Date().toISOString(),
+    rankings: todayRankings,
+    total_count: results.length,
+  });
+  if (histError) console.warn('⚠ scan_history save failed:', histError.message);
+  else console.log(`   ✅ Saved today's rankings to scan_history`);
+
+  // Top 10 movers (biggest rank increase)
+  const topMovers = results
+    .filter(r => r.rankDelta != null && r.rankDelta >= 3)
+    .sort((a, b) => b.rankDelta - a.rankDelta)
+    .slice(0, 10);
+
+  console.log(`   Top movers: ${topMovers.length} companies moved up 3+ positions`);
+
+  // Generate AI summaries for top movers
+  if (topMovers.length > 0 && process.env.ANTHROPIC_API_KEY) {
+    console.log('   Generating mover AI summaries...');
+    for (const mover of topMovers) {
+      mover.moverSummary = await generateMoverSummary(mover);
+      process.stdout.write('.');
+      await sleep(300);
+    }
+    console.log(' done');
+  }
+
+  // Update scan_cache with deltas included
+  await sb.from('scan_cache').upsert({
+    id: 'daily',
+    scan_date: new Date().toISOString().substring(0, 10),
+    scanned_at: new Date().toISOString(),
+    results, total_count: results.length, errors,
+    top_movers: topMovers.map(r => ({
+      sym: r.sym, companyName: r.companyName, sector: r.sector,
+      rankDelta: r.rankDelta, rankToday: r.rankToday,
+      total: r.total, signal: r.signal,
+      price: r.price, priceChange1D: r.priceChange1D,
+      volRatio: r.volRatio, earningsDays: r.earningsDays,
+      revenueGrowth: r.revGrowth ?? r.revenueGrowth,
+      moverSummary: r.moverSummary || null,
+    })),
+  });
+
+  console.log(`\n🔺 Top 10 Movers:`);
+  topMovers.forEach((r, i) =>
+    console.log(`   ${i+1}. ${r.sym.padEnd(6)} ▲${r.rankDelta} (now #${r.rankToday})`)
+  );
+
   // ── PHASE 3: GENERATE DAILY PICKS + AI SUMMARIES ─────────
   console.log('\n🎯 Phase 3: Generating daily picks...');
   const picks = selectPicks(results);
@@ -551,6 +635,42 @@ function selectPicks(results) {
     .slice(0, 1).forEach(r => { picks.push({ ...r, pickType: 'momentum' }); used.add(r.sym); });
 
   return picks.slice(0, 8);
+}
+
+// ── GENERATE MOVER SUMMARY ────────────────────────────────
+async function generateMoverSummary(p) {
+  try {
+    const reasons = [];
+    if (p.volRatio > 2)        reasons.push(`volume ${p.volRatio}x above average`);
+    if (p.priceChange1D > 2)   reasons.push(`price up ${p.priceChange1D}% today`);
+    if (p.earningsDays != null && p.earningsDays <= 14) reasons.push(`earnings in ${p.earningsDays} days`);
+    if ((p.revGrowth ?? p.revenueGrowth) > 20) reasons.push(`revenue growing ${p.revGrowth ?? p.revenueGrowth}%`);
+    if (p.shortPct > 15 && p.priceChange1D > 0) reasons.push(`short squeeze setup (${p.shortPct}% short)`);
+
+    const prompt = `You are a concise financial analyst. ${p.sym} (${p.companyName}, ${p.sector}) just jumped ${p.rankDelta} positions in the StockRaptor ranking to #${p.rankToday} today.
+Score: ${p.total}/100. Key signals: ${reasons.length ? reasons.join(', ') : 'improved fundamentals and momentum'}.
+In exactly 2 sentences, explain why this stock moved up today. Be specific and direct. No disclaimers. Max 35 words.`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 100,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.content?.[0]?.text?.trim() || null;
+  } catch(e) {
+    console.warn(`  ⚠ Mover summary failed for ${p.sym}:`, e.message);
+    return null;
+  }
 }
 
 // ── GENERATE AI SUMMARY ───────────────────────────────────
