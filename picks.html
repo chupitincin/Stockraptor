@@ -160,7 +160,7 @@ const CONFIG = {
   </div>
   <div class="sn-right">
     <span class="sn-plan free" id="navPlan">FREE</span>
-    <a class="sn-user-btn" href="/" id="navUserBtn" style="display:none">
+    <a class="sn-user-btn" href="/" id="navUserBtn">
       <div class="sn-user-avatar" id="navUserAvatar">?</div>
       <span class="sn-user-name" id="navUser"></span>
     </a>
@@ -267,8 +267,6 @@ async function init() {
   document.getElementById('navUser').textContent = username;
   const avatarEl = document.getElementById('navUserAvatar');
   if (avatarEl) avatarEl.textContent = username.charAt(0).toUpperCase();
-  const userBtn = document.getElementById('navUserBtn');
-  if (userBtn) userBtn.style.display = 'flex';
 
   // Free users — show upgrade gate
   if (plan === 'free') {
