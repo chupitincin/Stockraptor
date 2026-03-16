@@ -16,7 +16,8 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
-body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;min-height:100vh;overflow-x:hidden;position:relative;}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;min-height:100vh;overflow-x:hidden;position:relative;display:flex;flex-direction:column;}
+footer{margin-top:auto;}
 .bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% -5%,#0d0d3a55,transparent),radial-gradient(ellipse 40% 30% at 90% 80%,#0a1a0a33,transparent),linear-gradient(var(--bord) 1px,transparent 1px),linear-gradient(90deg,var(--bord) 1px,transparent 1px);background-size:auto,auto,36px 36px,36px 36px;}
 
 /* NAV */
@@ -160,7 +161,7 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .footer-copy{font-size:10px;color:var(--txt);font-family:var(--font);}
 
 /* USER DASHBOARD SECTION */
-#userDash{display:none;padding:80px 24px 60px;margin-top:60px;position:relative;z-index:1;}
+#userDash{display:none;padding:80px 24px 60px;margin-top:0;position:relative;z-index:1;min-height:calc(100vh - 52px);}
 .dash-card{background:var(--s1);border:1px solid var(--bord2);border-radius:10px;padding:36px;max-width:700px;margin:0 auto;}
 .dash-title{font-family:'Syne',sans-serif;font-size:24px;color:var(--white);margin-bottom:6px;}
 .dash-sub{font-size:13px;color:var(--txt);margin-bottom:32px;}
@@ -364,7 +365,6 @@ const CONFIG = {
       <!-- OVERVIEW TAB -->
       <div class="dash-section active" id="sectionOverview">
         <div class="dash-actions">
-          <button class="dash-btn dash-btn-green" id="btnOpenScanner" onclick="window.location.href='scanner.html'">▶ Open Scanner</button>
           <button class="dash-btn dash-btn-outline" id="dashUpgradeBtn" onclick="startCheckout('pro')">⬆ Upgrade Plan</button>
           <button class="dash-btn dash-btn-outline" id="btnSignOut" onclick="signOut()">Sign Out</button>
         </div>
@@ -542,6 +542,11 @@ function showGuestState() {
 async function showUserState() {
   const plan = currentProfile?.plan || 'free';
   const email = currentUser.email;
+
+  // Fix: swap nav links to Scanner / Daily Picks
+  document.getElementById('navLinks').innerHTML = `
+    <a class="nav-link" href="/scanner.html">📊 Scanner</a>
+    <a class="nav-link" href="/picks.html">🎯 Daily Picks</a>`;
 
   document.getElementById('navAuth').innerHTML = `
     <div class="nav-user">
