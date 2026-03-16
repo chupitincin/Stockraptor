@@ -877,6 +877,7 @@ const FLAG_TIPS = {
 };
 const SIG_EN={'STRONG BUY':'STRONG BUY','INTERESTING':'INTERESTING','WATCH':'WATCH','WEAK':'WEAK'};
 let KEY='d6pfc69r01qo88aivvbgd6pfc69r01qo88aivvc0',allData=[],curF='ALL',curS='score',sortDir=1,running=false;
+let watchlist = new Set();
 const slp=ms=>new Promise(r=>setTimeout(r,ms));
 const toDay=()=>new Date().toISOString().slice(0,10);
 const futD=d=>{const t=new Date();t.setDate(t.getDate()+d);return t.toISOString().slice(0,10);}
@@ -1650,7 +1651,6 @@ window.addEventListener('load', initScannerAuth);
 // ══════════════════════════════════════════
 // WATCHLIST SYSTEM
 // ══════════════════════════════════════════
-let watchlist = new Set();
 
 async function loadWatchlist() {
   if (!sb2 || !scanUser) return;
