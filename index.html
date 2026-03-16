@@ -547,14 +547,30 @@ function showUserState() {
   document.getElementById('userDash').style.display = 'block';
 
   const planNames = { free: 'Free Plan 🦅', pro: 'Pro Plan ⚡', elite: 'Elite Plan 🔥' };
-  const planDescs = { free: '40 companies · Manual scan only', pro: '200 companies · Daily updates · AI summaries', elite: '400+ companies · 2× daily · AI chat' };
-  const companyCounts = { free: '40', pro: '200', elite: '400+' };
 
   document.getElementById('dashEmail').textContent = email;
   document.getElementById('dashPlanName').textContent = planNames[plan] || 'Free Plan';
-  document.getElementById('dashPlanDesc').textContent = planDescs[plan] || '';
-  document.getElementById('statCompanies').textContent = companyCounts[plan] || '40';
   document.getElementById('statPlan').textContent = plan.toUpperCase();
+
+  // Fetch real scanned count from cache, then fill in dynamic values
+  try {
+    const { data: cacheData } = await sb.from('scan_cache').select('total_count').eq('id', 'daily').single();
+    const realCount = cacheData?.total_count > 0 ? cacheData.total_count : null;
+    const countLabel = realCount ? `${realCount}` : '200';
+    const planDescs = {
+      free: '40 companies · Manual scan only',
+      pro: `${countLabel} companies · Daily updates · AI summaries`,
+      elite: `${realCount ? realCount + '+' : '400+'} companies · 2× daily · AI chat`
+    };
+    const companyCounts = { free: '40', pro: countLabel, elite: realCount ? realCount + '+' : '400+' };
+    document.getElementById('dashPlanDesc').textContent = planDescs[plan] || '';
+    document.getElementById('statCompanies').textContent = companyCounts[plan] || '40';
+  } catch(e) {
+    const planDescs = { free: '40 companies · Manual scan only', pro: '200 companies · Daily updates · AI summaries', elite: '400+ companies · 2× daily · AI chat' };
+    const companyCounts = { free: '40', pro: '200', elite: '400+' };
+    document.getElementById('dashPlanDesc').textContent = planDescs[plan] || '';
+    document.getElementById('statCompanies').textContent = companyCounts[plan] || '40';
+  }
   document.getElementById('statScans').textContent = currentProfile?.scans_today || 0;
   // populate settings panel
   const emailSet = document.getElementById('dashEmailSettings');
