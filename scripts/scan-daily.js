@@ -485,6 +485,110 @@ async function main() {
   results.slice(0, 10).forEach((r, i) =>
     console.log(`   ${i+1}. ${r.sym.padEnd(6)} ${r.signal.padEnd(12)} score:${r.total}`)
   );
+
+  // ── PHASE 3: GENERATE DAILY PICKS + AI SUMMARIES ─────────
+  console.log('\n🎯 Phase 3: Generating daily picks...');
+  const picks = selectPicks(results);
+  console.log(`   ${picks.length} picks selected`);
+
+  if (picks.length > 0 && process.env.ANTHROPIC_API_KEY) {
+    console.log('   Generating AI summaries...');
+    for (const pick of picks) {
+      pick.aiSummary = await generateAISummary(pick);
+      process.stdout.write('.');
+      await sleep(300); // avoid rate limits
+    }
+    console.log(' done');
+  }
+
+  const { error: picksError } = await sb.from('picks_cache').upsert({
+    id: 'daily',
+    scan_date: new Date().toISOString().substring(0, 10),
+    generated_at: new Date().toISOString(),
+    picks,
+    total_count: picks.length,
+  });
+
+  if (picksError) console.warn('⚠ picks_cache save failed:', picksError.message);
+  else console.log(`✅ ${picks.length} picks saved to picks_cache`);
+}
+
+// ── SELECT TOP PICKS ──────────────────────────────────────
+function selectPicks(results) {
+  const picks = [];
+  const used = new Set();
+
+  const norm = results.map(r => ({
+    ...r,
+    revenueGrowth: r.revenueGrowth ?? r.revGrowth ?? null,
+    epsHistory: Array.isArray(r.epsHistory) ? r.epsHistory : [],
+    flags: Array.isArray(r.flags) ? r.flags : [],
+  }));
+
+  // 1. SHORT SQUEEZE setups
+  norm.filter(r => r.shortPct > 15 && r.priceChange1D > 0 && r.total >= 45 && !used.has(r.sym))
+    .sort((a,b) => (b.shortPct * b.total) - (a.shortPct * a.total))
+    .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'squeeze' }); used.add(r.sym); });
+
+  // 2. EARNINGS CATALYST (≤14 days + EPS streak)
+  norm.filter(r => r.earningsDays != null && r.earningsDays <= 14 && r.streak >= 2 && !used.has(r.sym))
+    .sort((a,b) => (b.streak * 10 + b.total) - (a.streak * 10 + a.total))
+    .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'catalyst' }); used.add(r.sym); });
+
+  // 3. VOLUME ANOMALY (volRatio > 3 + good score)
+  norm.filter(r => r.volRatio > 3 && r.total >= 40 && !used.has(r.sym))
+    .sort((a,b) => b.volRatio - a.volRatio)
+    .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'volume' }); used.add(r.sym); });
+
+  // 4. INSIDER BUYING
+  norm.filter(r => r.flags?.some(f => f.label?.includes('INSIDER') || f.label?.includes('BIG')) && r.total >= 40 && !used.has(r.sym))
+    .sort((a,b) => b.total - a.total)
+    .slice(0, 1).forEach(r => { picks.push({ ...r, pickType: 'insider' }); used.add(r.sym); });
+
+  // 5. MOMENTUM BREAKOUT
+  norm.filter(r => r.momentum >= 12 && r.fund >= 14 && r.total >= 55 && !used.has(r.sym))
+    .sort((a,b) => (b.momentum + b.fund) - (a.momentum + a.fund))
+    .slice(0, 1).forEach(r => { picks.push({ ...r, pickType: 'momentum' }); used.add(r.sym); });
+
+  return picks.slice(0, 8);
+}
+
+// ── GENERATE AI SUMMARY ───────────────────────────────────
+async function generateAISummary(p) {
+  try {
+    const signals = [];
+    if (p.volRatio > 2.5)    signals.push(`volume is ${p.volRatio}x the 10-day average`);
+    if (p.shortPct > 15)     signals.push(`${p.shortPct}% of float is sold short`);
+    if (p.earningsDays != null && p.earningsDays <= 20) signals.push(`earnings in ${p.earningsDays} days`);
+    if (p.streak >= 2)       signals.push(`${p.streak} consecutive EPS beats`);
+    if (p.upside > 20)       signals.push(`analyst price target ${p.upside}% above current price`);
+    if (p.revenueGrowth > 15) signals.push(`revenue growing ${p.revenueGrowth}% YoY`);
+
+    const prompt = `You are a concise financial analyst. Write a 2-sentence analysis of why ${p.sym} (${p.companyName}, ${p.sector}) is an interesting setup today.
+Key data: price $${p.price}, score ${p.total}/100, signals: ${signals.join(', ')}.
+Be specific, factual and direct. Do NOT use disclaimers. Max 40 words total.`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 120,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.content?.[0]?.text?.trim() || null;
+  } catch(e) {
+    console.warn(`  ⚠ AI summary failed for ${p.sym}:`, e.message);
+    return null;
+  }
 }
 
 main().catch(e => { console.error('Fatal:', e); process.exit(1); });
