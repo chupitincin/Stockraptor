@@ -726,18 +726,18 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
 <thead><tr id="theadRow">
           <th></th>
           <th onclick="thSort('ticker')">TICKER / SECTOR <span class="th-arrow" id="th-ticker"></span></th>
-          <th onclick="thSort('delta')" style="text-align:center"><span class="tt" data-tip="Rank change vs yesterday. ▲ = moved up positions · ▼ = moved down · NEW = first time in ranking">RANK</span> <span class="th-arrow" id="th-delta"></span></th>
-          <th onclick="thSort('signal')"><span class="tt" data-tip="Overall verdict based on the total score. STRONG BUY ≥72 · INTERESTING ≥48 · WATCH ≥25 · WEAK &lt;25">SIGNAL</span> <span class="th-arrow" id="th-signal"></span></th>
-          <th onclick="thSort('score')"><span class="tt" data-tip="Composite score from 0–100 combining 14 factors: fundamentals, sentiment, analyst consensus, momentum, earnings, volume and short squeeze potential.">TOTAL SCORE</span> <span class="th-arrow" id="th-score">▾</span></th>
-          <th onclick="thSort('fund')"><span class="tt" data-tip="Fundamental score (0–25 pts).">FUND.</span> <span class="th-arrow" id="th-fund"></span></th>
-          <th onclick="thSort('sent')"><span class="tt" data-tip="News sentiment score (0–12 pts).">SENT.</span> <span class="th-arrow" id="th-sent"></span></th>
-          <th onclick="thSort('analyst')"><span class="tt" data-tip="Analyst score (0–15 pts).">ANALY.</span> <span class="th-arrow" id="th-analyst"></span></th>
-          <th onclick="thSort('momentum')"><span class="tt" data-tip="Momentum score (0–17 pts).">MOME.</span> <span class="th-arrow" id="th-momentum"></span></th>
-          <th onclick="thSort('earnings')"><span class="tt" data-tip="Earnings score (0–15 pts).">EARNINGS</span> <span class="th-arrow" id="th-earnings"></span></th>
-          <th onclick="thSort('short')"><span class="tt" data-tip="Volume &amp; short interest score (0–13 pts).">VOL/SHORT</span> <span class="th-arrow" id="th-short"></span></th>
-          <th><span class="tt" data-tip="Special alerts: ⚡ Volume spike · 🎯 Short squeeze · 📅 Earnings · ⚠ Dilution">⚠ FLAGS</span></th>
+          <th onclick="thSort('delta')" style="text-align:center">RANK <span class="th-arrow" id="th-delta"></span></th>
+          <th onclick="thSort('signal')">SIGNAL <span class="th-arrow" id="th-signal"></span></th>
+          <th onclick="thSort('score')">TOTAL SCORE <span class="th-arrow" id="th-score">▾</span></th>
+          <th onclick="thSort('fund')" style="text-align:center">FUND. <span class="th-arrow" id="th-fund"></span></th>
+          <th onclick="thSort('sent')" style="text-align:center">SENT. <span class="th-arrow" id="th-sent"></span></th>
+          <th onclick="thSort('analyst')" style="text-align:center">ANALY. <span class="th-arrow" id="th-analyst"></span></th>
+          <th onclick="thSort('momentum')" style="text-align:center">MOME. <span class="th-arrow" id="th-momentum"></span></th>
+          <th onclick="thSort('earnings')">EARNINGS <span class="th-arrow" id="th-earnings"></span></th>
+          <th onclick="thSort('short')">VOL/SHORT <span class="th-arrow" id="th-short"></span></th>
+          <th>⚠ FLAGS</th>
           <th onclick="thSort('price')">PRICE <span class="th-arrow" id="th-price"></span></th>
-          <th onclick="thSort('upside')"><span class="tt" data-tip="Analyst price target upside vs current price.">UPSIDE</span> <span class="th-arrow" id="th-upside"></span></th>
+          <th onclick="thSort('upside')">UPSIDE <span class="th-arrow" id="th-upside"></span></th>
           <th style="text-align:center">★</th>
         </tr></thead>
         <tbody id="tbody"></tbody>
