@@ -769,6 +769,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
       <button class="bf"    onclick="setF('EPS_STREAK',this)" id="fEps">📈 EPS STREAK</button>
       <button class="bf"    onclick="setF('FCF_POS',this)" id="fFcf">💰 FCF+</button>
       <button class="bf"    onclick="setF('HIGH_UPSIDE',this)" id="fUpside">🎯 HIGH UPSIDE</button>
+      <button class="bf"    onclick="setF('MOVERS',this)" id="fMovers">🔺 TOP MOVERS</button>
       <div class="vd ml"></div>
       <button class="bs on" onclick="setS('score',this)" id="ssScore">SCORE</button>
       <button class="bs"    onclick="setS('fund',this)" id="ssFund">FUND.</button>
@@ -798,17 +799,18 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
 <thead><tr id="theadRow">
           <th></th>
           <th onclick="thSort('ticker')">TICKER / SECTOR <span class="th-arrow" id="th-ticker"></span></th>
+          <th onclick="thSort('delta')" style="text-align:center"><span class="tt" data-tip="Rank change vs yesterday. ▲ = moved up positions · ▼ = moved down · NEW = first time in ranking">RANK</span> <span class="th-arrow" id="th-delta"></span></th>
           <th onclick="thSort('signal')"><span class="tt" data-tip="Overall verdict based on the total score. STRONG BUY ≥72 · INTERESTING ≥48 · WATCH ≥25 · WEAK &lt;25">SIGNAL</span> <span class="th-arrow" id="th-signal"></span></th>
           <th onclick="thSort('score')"><span class="tt" data-tip="Composite score from 0–100 combining 14 factors: fundamentals, sentiment, analyst consensus, momentum, earnings, volume and short squeeze potential.">TOTAL SCORE</span> <span class="th-arrow" id="th-score">▾</span></th>
-          <th onclick="thSort('fund')"><span class="tt" data-tip="Fundamental score (0–25 pts). Evaluates P/E ratio vs sector average, P/B ratio, debt/equity, revenue growth, gross margin and ROE. Penalizes share dilution &gt;8%/yr.">FUND.</span> <span class="th-arrow" id="th-fund"></span></th>
-          <th onclick="thSort('sent')"><span class="tt" data-tip="News sentiment score (0–12 pts). Analyzes the tone of news headlines from the last 14 days. Positive news coverage pushes this score up.">SENT.</span> <span class="th-arrow" id="th-sent"></span></th>
-          <th onclick="thSort('analyst')"><span class="tt" data-tip="Analyst score (0–15 pts). Combines Wall Street consensus (Buy/Hold/Sell ratings) and average price target upside vs current price.">ANALY.</span> <span class="th-arrow" id="th-analyst"></span></th>
-          <th onclick="thSort('momentum')"><span class="tt" data-tip="Momentum score (0–17 pts). Measures 52-week price performance, 4-week trend, and volatility (Beta). High momentum = stock trending strongly upward.">MOME.</span> <span class="th-arrow" id="th-momentum"></span></th>
-          <th onclick="thSort('earnings')"><span class="tt" data-tip="Earnings score (0–15 pts). Rewards companies with upcoming earnings dates and consecutive quarterly EPS beats. A 3+ quarter beat streak is a strong signal.">EARNINGS</span> <span class="th-arrow" id="th-earnings"></span></th>
-          <th onclick="thSort('short')"><span class="tt" data-tip="Volume &amp; short interest score (0–13 pts). Detects volume spikes vs 10-day average, and high short float % which can trigger a short squeeze.">VOL/SHORT</span> <span class="th-arrow" id="th-short"></span></th>
-          <th><span class="tt" data-tip="Special alerts: ⚡ Volume spike &gt;2.5x average · 🎯 Short squeeze setup · 📅 Earnings within 20 days · ⚠ Dilution detected">⚠ FLAGS</span></th>
+          <th onclick="thSort('fund')"><span class="tt" data-tip="Fundamental score (0–25 pts).">FUND.</span> <span class="th-arrow" id="th-fund"></span></th>
+          <th onclick="thSort('sent')"><span class="tt" data-tip="News sentiment score (0–12 pts).">SENT.</span> <span class="th-arrow" id="th-sent"></span></th>
+          <th onclick="thSort('analyst')"><span class="tt" data-tip="Analyst score (0–15 pts).">ANALY.</span> <span class="th-arrow" id="th-analyst"></span></th>
+          <th onclick="thSort('momentum')"><span class="tt" data-tip="Momentum score (0–17 pts).">MOME.</span> <span class="th-arrow" id="th-momentum"></span></th>
+          <th onclick="thSort('earnings')"><span class="tt" data-tip="Earnings score (0–15 pts).">EARNINGS</span> <span class="th-arrow" id="th-earnings"></span></th>
+          <th onclick="thSort('short')"><span class="tt" data-tip="Volume &amp; short interest score (0–13 pts).">VOL/SHORT</span> <span class="th-arrow" id="th-short"></span></th>
+          <th><span class="tt" data-tip="Special alerts: ⚡ Volume spike · 🎯 Short squeeze · 📅 Earnings · ⚠ Dilution">⚠ FLAGS</span></th>
           <th onclick="thSort('price')">PRICE <span class="th-arrow" id="th-price"></span></th>
-          <th onclick="thSort('upside')"><span class="tt" data-tip="Analyst price target upside. The % difference between the current price and the average analyst 12-month price target. &gt;20% is considered high upside.">UPSIDE</span> <span class="th-arrow" id="th-upside"></span></th>
+          <th onclick="thSort('upside')"><span class="tt" data-tip="Analyst price target upside vs current price.">UPSIDE</span> <span class="th-arrow" id="th-upside"></span></th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -1054,10 +1056,12 @@ function renderTable(){
     if(curF==='EPS_STREAK')return d.flags?.some(f=>f.label.includes('EPS STREAK'));
     if(curF==='FCF_POS')return d.flags?.some(f=>f.label.includes('FCF'));
     if(curF==='HIGH_UPSIDE')return d.flags?.some(f=>f.label.includes('UPSIDE'));
+    if(curF==='MOVERS')return d.rankDelta!=null&&d.rankDelta>=3 || d.rankNew;
     return d.signal===curF;});
   rows.sort((a,b)=>{
     let v=0;
     if(curS==='score')v=b.total-a.total;
+    else if(curS==='delta')v=(b.rankDelta??-999)-(a.rankDelta??-999);
     else if(curS==='fund')v=b.fund-a.fund;
     else if(curS==='sent')v=(b.sent+b.analyst)-(a.sent+a.analyst);
     else if(curS==='analyst')v=b.analyst-a.analyst;
@@ -1070,6 +1074,8 @@ function renderTable(){
     else if(curS==='signal'){const o={'STRONG BUY':0,'INTERESTING':1,'WATCH':2,'WEAK':3};v=(o[a.signal]||0)-(o[b.signal]||0);}
     return v*sortDir;
   });
+  // Auto-sort by delta when MOVERS filter active
+  if(curF==='MOVERS' && curS==='score') rows.sort((a,b)=>(b.rankDelta??-999)-(a.rankDelta??-999));
   document.getElementById('tbl').style.display=rows.length?'table':'none';
   document.getElementById('empty').style.display=rows.length?'none':'block';
   const maxes=[25,20,15,17,15,13],cols=['var(--blue)','var(--purple)','var(--green)','var(--gold)','var(--orange)','var(--teal)'];
@@ -1106,7 +1112,16 @@ const flagsHtml=d.flags.map(f=>`<span class="flag tt" style="color:${f.color};bo
     const ch=d.priceChange1D;
     const prHtml=d.price?`$${d.price.toFixed(2)}<span style="font-size:8px;color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!==null?sgn(ch)+ch+'%':''}</span>`:'—';
     const upHtml=d.upside!==null?`<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>`:'<span class="cd">—</span>';
-    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div></td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return(s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--blue)">${d.fund??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--purple)">${d.sent??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--green)">${d.analyst??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--gold)">${d.momentum??'—'}</span></td><td>${edHtml}</td><td>${vsHtml}</td><td><div style="display:flex;flex-direction:column;gap:3px;">
+    const deltaHtml = d.rankNew
+      ? `<span style="font-size:9px;font-family:var(--font);color:var(--blue);background:#00b4ff15;border:1px solid #00b4ff33;padding:2px 6px;border-radius:4px;">NEW</span>`
+      : d.rankDelta == null
+      ? `<span style="color:var(--txt);font-size:10px;">—</span>`
+      : d.rankDelta > 0
+      ? `<span style="font-size:11px;font-weight:700;font-family:var(--font);color:var(--green)">▲${d.rankDelta}</span>`
+      : d.rankDelta < 0
+      ? `<span style="font-size:11px;font-weight:700;font-family:var(--font);color:var(--red)">▼${Math.abs(d.rankDelta)}</span>`
+      : `<span style="font-size:10px;color:var(--txt);">—</span>`;
+    return`<tr class="mr" onclick="toggleDet('${d.sym}')"><td><span class="arr" id="ar-${d.sym}">▶</span></td><td><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div></td><td style="text-align:center">${deltaHtml}</td><td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return(s);})(d.signal)}</span></td><td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--blue)">${d.fund??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--purple)">${d.sent??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--green)">${d.analyst??'—'}</span></td><td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--gold)">${d.momentum??'—'}</span></td><td>${edHtml}</td><td>${vsHtml}</td><td><div style="display:flex;flex-direction:column;gap:3px;">
       ${d.flags && d.flags.length > 0 ? `
         <div style="display:flex;gap:3px;">
           ${d.flags.slice(0,2).map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('')}
@@ -1208,6 +1223,13 @@ function renderDet(d){
     ${sbr(d.fund,25,'var(--blue)','Fundamental')}${sbr(d.sent,20,'var(--purple)','Sentiment')}${sbr(d.analyst,15,'var(--green)','Analysts')}${sbr(d.momentum,17,'var(--gold)','Momentum')}${sbr(d.earPts,15,'var(--orange)','Earnings')}${sbr(d.volShort,13,'var(--teal)','Vol/Short')}
     ${d.dilPenalty<0?`<div style="font-size:8px;color:var(--red);margin-top:5px;">⚠ Dilution: ${d.dilPenalty}pts</div>`:''}${d.debtPenalty<0?`<div style="font-size:8px;color:var(--orange);">⚠ Debt+growth: ${d.debtPenalty}pts</div>`:''}
   </div>
+  ${d.moverSummary ? `
+  <div class="det-card" style="grid-column:1/-1;background:linear-gradient(135deg,#00ff9408,#00e5cc05);border-color:#00ff9420;">
+    <div class="det-title" style="color:var(--green);">🔺 WHY IT MOVED TODAY
+      ${d.rankDelta!=null?`<span style="font-size:9px;font-family:var(--font);margin-left:8px;color:var(--green);background:#00ff9415;padding:2px 8px;border-radius:4px;">▲${d.rankDelta} positions</span>`:''}
+    </div>
+    <div style="font-size:13px;color:var(--txb);line-height:1.7;font-weight:300;">${d.moverSummary}</div>
+  </div>` : ''}
   <div class="det-card" style="grid-column:1/-1;overflow:hidden;min-width:0;"><div class="det-title">📰 RECENT NEWS (14 days) &nbsp; ${sentLbl(d.newsSent)} ${d.newsSent!==null?`<div style="width:90px;height:4px;background:var(--bord2);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:7px"><div style="width:${sentPct}%;height:100%;background:${d.newsSent>0?'var(--green)':'var(--red)'};border-radius:2px"></div></div>`:''}</div>
     <div style="display:flex;flex-direction:column;gap:0">${newsHtml}</div>
   </div></div>`;
@@ -1743,15 +1765,18 @@ async function loadDailyCache() {
     allData = data.results.map(r => ({
       ...r,
       ticker:        r.ticker        || r.sym,
-      // Field name aliases: scan-daily uses different names than the original Finnhub frontend
       revenueGrowth: r.revenueGrowth ?? r.revGrowth    ?? null,
       priceChange4W: r.priceChange4W ?? null,
       epsStreak:     r.epsStreak     ?? r.streak        ?? 0,
       fcfBonus:      r.fcfBonus      ?? (r.fcf ? 3 : 0),
-      // Safe defaults for arrays (prevent .filter/.length crashes)
       epsHistory:    Array.isArray(r.epsHistory) ? r.epsHistory : [],
       newsItems:     Array.isArray(r.newsItems)  ? r.newsItems  : [],
       flags:         Array.isArray(r.flags)      ? r.flags      : [],
+      // Delta ranking
+      rankDelta:     r.rankDelta     ?? null,
+      rankToday:     r.rankToday     ?? null,
+      rankNew:       r.rankNew       ?? false,
+      moverSummary:  r.moverSummary  ?? null,
       // Merge insider data from insider_cache (more recent and detailed)
       insiderData:   insiderMap[r.sym] || r.insiderData || null,
       insiderChange: insiderMap[r.sym]?.netChange ?? r.insiderChange,
