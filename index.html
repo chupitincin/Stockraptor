@@ -250,7 +250,8 @@ const CONFIG = {
     // Logged in — show nav as user state immediately
     document.getElementById('navLinks').innerHTML =
       '<a class="sn-nav-item" href="/scanner.html">📊 Scanner</a>' +
-      '<a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>';
+      '<a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>' +
+      '<a class="sn-nav-item" href="/watchlist.html">⭐ Watchlist</a>';
     document.getElementById('navAuth').innerHTML =
       '<div class="nav-user">' +
         '<span class="nav-plan ' + p + '">' + p.toUpperCase() + '</span>' +
@@ -614,7 +615,8 @@ async function showUserState() {
   // Fix: swap nav links to Scanner / Daily Picks
   document.getElementById('navLinks').innerHTML = `
     <a class="sn-nav-item" href="/scanner.html">📊 Scanner</a>
-    <a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>`;
+    <a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>
+    <a class="sn-nav-item" href="/watchlist.html">⭐ Watchlist</a>`;
 
   document.getElementById('navAuth').innerHTML = `
     <div class="nav-user">
