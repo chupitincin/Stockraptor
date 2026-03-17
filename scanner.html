@@ -1036,7 +1036,12 @@ function renderTable(){
     const vsHtml=`${d.volRatio?`<span class="${d.volRatio>2?'vol-spike':'cd'}">${d.volRatio>2?'⚡':''}${d.volRatio}x</span>`:''} ${d.shortPct?`<span class="${d.shortPct>15?'ct':'cd'}" style="margin-left:3px">${d.shortPct>15?'🎯':''}${d.shortPct}%</span>`:''}${!d.volRatio&&!d.shortPct?'<span class="cd">—</span>':''}`;
     const ch=d.priceChange1D;
     const prHtml=d.price?`$${d.price.toFixed(2)}<span style="font-size:10px;font-family:var(--sans);color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!==null?sgn(ch)+ch+'%':''}</span>`:'—';
-    const upHtml=d.upside!==null?`<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>`:'<span class="cd">—</span>';
+    const _up=d.upside;
+    const upHtml=_up!==null
+      ? _up>150
+        ? `<span class="cd tt" data-tip="Analyst target may be outdated — stock is far below its 52w high">+150%?</span>`
+        : `<span class="${_up>20?'cg':_up<0?'cr':'cd'}">${sgn(_up)}${_up}%</span>`
+      : '<span class="cd">—</span>';
     const deltaHtml = d.rankNew
       ? `<span style="font-size:9px;font-family:var(--font);color:var(--blue);background:#00b4ff15;border:1px solid #00b4ff33;padding:2px 6px;border-radius:4px;">NEW</span>`
       : d.rankDelta == null && d.rankToday != null
