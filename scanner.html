@@ -1012,22 +1012,19 @@ function renderTable(){
     const isLocked = plan === 'free' && idx < freeLimit;
     if (isLocked) {
       return `<tr class="mr locked-row" onclick="showUpgradeModal()" style="cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#0d0d2a'" onmouseout="this.style.background=''">
-        <td style="filter:blur(3px);user-select:none;pointer-events:none"><span style="color:#3a3a60">▶</span></td>
+        <td style="user-select:none;pointer-events:none"><span style="color:#3a3a60">▶</span></td>
         <td style="filter:blur(5px);user-select:none;pointer-events:none"><div class="tsym" style="color:#3a3a60">XXXX</div><div class="tsec" style="color:#2a2a50">██████</div></td>
+        <td style="filter:blur(3px);user-select:none;pointer-events:none;text-align:center;color:#2a2a60">—</td>
         <td style="filter:blur(4px);user-select:none;pointer-events:none"><span class="badge" style="color:#2a2a60;border-color:#2a2a6044">██████</span></td>
         <td style="filter:blur(4px);user-select:none;pointer-events:none"><div class="sw"><span class="sv" style="color:#2a2a60">██</span></div></td>
         <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
         <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
-        <td style="text-align:center;vertical-align:middle;">
+        <td style="text-align:center;vertical-align:middle;" colspan="5">
           <span style="font-size:11px;color:#00ff94;letter-spacing:1.5px;font-weight:700;background:#00ff9415;padding:5px 16px;border-radius:4px;border:1px solid #00ff9433;white-space:nowrap;">🔒 UNLOCK PRO</span>
         </td>
-        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
-        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
-        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
-        <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">████</td>
         <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">██</td>
         <td style="filter:blur(4px);user-select:none;pointer-events:none;color:#2a2a60">██</td>
-        <td></td>
+        <td style="text-align:center"><span style="color:#3a3a60;font-size:15px">★</span></td>
       </tr>`;
     }
     const c=SIG[d.signal],vals=[d.fund,d.sent,d.analyst,d.momentum,d.earPts,d.volShort];
@@ -1642,7 +1639,7 @@ async function loadWatchlist() {
       .single();
     if (data?.symbols) {
       watchlist = new Set(data.symbols);
-      try { localStorage.setItem('sr_watchlist', JSON.stringify([...watchlist])); } catch(e) {}
+      try { localStorage.setItem('sr_watchlist_'+scanUser.id, JSON.stringify([...watchlist])); } catch(e) {}
     }
   } catch(e) { watchlist = new Set(); }
 }
@@ -1654,9 +1651,9 @@ async function saveWatchlist() {
       user_id: scanUser.id,
       symbols: [...watchlist],
       updated_at: new Date().toISOString(),
-    });
+    }, { onConflict: 'user_id' });
     // Cache locally for instant render on watchlist.html
-    try { localStorage.setItem('sr_watchlist', JSON.stringify([...watchlist])); } catch(e) {}
+    try { localStorage.setItem('sr_watchlist_'+scanUser.id, JSON.stringify([...watchlist])); } catch(e) {}
   } catch(e) { console.warn('Watchlist save failed:', e); }
 }
 
