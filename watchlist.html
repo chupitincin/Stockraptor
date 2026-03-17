@@ -51,6 +51,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .tbl-outer{overflow-x:auto;}
 table{width:100%;border-collapse:separate;border-spacing:0 6px;}
 thead tr{border-bottom:1px solid var(--bord2);}
+thead{position:sticky;top:52px;z-index:50;background:rgba(6,6,15,.97);backdrop-filter:blur(12px);}
 th{padding:8px 6px;text-align:left;font-size:9px;color:#888888;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;}
 th:hover{color:var(--white);}
 .th-arrow{font-size:9px;margin-left:3px;color:var(--green);}
@@ -308,20 +309,20 @@ function render() {
       <table>
         <thead><tr>
           <th></th>
-          <th>TICKER / SECTOR</th>
-          <th style="text-align:center">RANK</th>
-          <th>SIGNAL</th>
-          <th>TOTAL SCORE</th>
-          <th style="text-align:center">FUND.</th>
-          <th style="text-align:center">SENT.</th>
-          <th style="text-align:center">ANALY.</th>
-          <th style="text-align:center">MOME.</th>
-          <th>EARNINGS</th>
-          <th>VOL/SHORT</th>
-          <th>⚠ FLAGS</th>
-          <th>PRICE</th>
-          <th>UPSIDE</th>
-          <th style="text-align:center">★</th>
+          <th><span class="tt" data-tip="Company ticker symbol, full name and market sector.">TICKER / SECTOR</span></th>
+          <th style="text-align:center"><span class="tt" data-tip="Daily rank change vs yesterday. ▲ moved up · ▼ moved down · NEW = first appearance.">RANK</span></th>
+          <th><span class="tt" data-tip="Overall verdict: STRONG BUY (≥70) · INTERESTING (≥55) · WATCH (≥35) · WEAK. Based on the total score.">SIGNAL</span></th>
+          <th><span class="tt" data-tip="Score 0–100 combining fundamentals, sentiment, analyst ratings, momentum, earnings and volume. Higher = stronger setup.">TOTAL SCORE</span></th>
+          <th style="text-align:center"><span class="tt" data-tip="Financial health score. Measures P/E ratio, revenue growth, profit margins, debt levels and cash flow.">FUND.</span></th>
+          <th style="text-align:center"><span class="tt" data-tip="News sentiment: how positive or negative recent headlines are about this company.">SENT.</span></th>
+          <th style="text-align:center"><span class="tt" data-tip="Analyst score. Combines Wall Street Buy/Hold/Sell ratings and how far the price is below the analyst price target.">ANALY.</span></th>
+          <th style="text-align:center"><span class="tt" data-tip="Price momentum: how strongly the stock has been trending upward over the past 52 weeks.">MOME.</span></th>
+          <th><span class="tt" data-tip="Next earnings date + beat streak. Companies reporting soon that keep beating estimates often move sharply.">EARNINGS</span></th>
+          <th><span class="tt" data-tip="⚡ Unusual volume spike vs average · 🎯 High short float (>15%) = potential short squeeze if price rises.">VOL/SHORT</span></th>
+          <th><span class="tt" data-tip="Special alerts: ⚡ Volume spike · 👤 Insider buying · 💰 Cash flow+ · 📈 EPS beat streak · 🎯 High analyst upside">⚠ FLAGS</span></th>
+          <th><span class="tt" data-tip="Current stock price with today's % change. Green = up today · Red = down today. Updated live every 30s.">PRICE</span></th>
+          <th><span class="tt" data-tip="How much % the stock could rise to reach the average analyst 12-month price target. +20% or more = significant upside.">UPSIDE</span></th>
+          <th style="text-align:center"><span class="tt" data-tip="Click ★ to remove this stock from your watchlist.">★</span></th>
         </tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
