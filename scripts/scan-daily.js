@@ -408,14 +408,33 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     // FIX: corregido bug — 0 pts cuando no hay actividad (era 2 erróneamente)
     // FIX: penaliza ventas netas con -2 pts
     let insiderScore = 0, insiderChange = null, mspr = null;
+    let freshInsiderDays = null; // days since most recent insider buy
+    let freshInsiderValue = 0;   // $ value of buys in last 7 days
+
     if (insider && (insider.buys > 0 || insider.sells > 0)) {
       insiderChange = insider.netChange;
       const totalTx = insider.buys + insider.sells;
       mspr = totalTx > 0 ? Math.round((insider.netChange / totalTx) * 100) / 100 : null;
 
-      if (insider.buys > 3)       insiderScore = 8;
-      else if (insider.buys > 1)  insiderScore = 6;
-      else if (insider.buys === 1) insiderScore = 4;
+      // Calculate recency from transaction dates
+      const today = Date.now();
+      const buyTxs = (insider.transactions || []).filter(t => t.txCode === 'P' && t.date);
+      if (buyTxs.length > 0) {
+        const sortedDates = buyTxs.map(t => new Date(t.date).getTime()).sort((a,b) => b-a);
+        freshInsiderDays = Math.floor((today - sortedDates[0]) / 86400000);
+        freshInsiderValue = buyTxs
+          .filter(t => (today - new Date(t.date).getTime()) < 7 * 86400000)
+          .reduce((s, t) => s + (t.value || 0), 0);
+      }
+
+      // Recency multiplier: buys this week worth 2x, this month 1.5x, older 1x
+      const recencyMult = freshInsiderDays !== null
+        ? (freshInsiderDays <= 7 ? 2 : freshInsiderDays <= 30 ? 1.5 : 1)
+        : 1;
+
+      if (insider.buys > 3)        insiderScore = Math.round(8 * recencyMult);
+      else if (insider.buys > 1)   insiderScore = Math.round(6 * recencyMult);
+      else if (insider.buys === 1) insiderScore = Math.round(4 * recencyMult);
       else if (insider.sells > 2)  insiderScore = -2; // FIX: penaliza ventas netas
       else                         insiderScore = 0;  // FIX: era 2, ahora 0
 
@@ -431,6 +450,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     if (volRatio && volRatio > 3)                             flags.push({ label: '⚡ VOL SPIKE',   color: '#00b4ff' });
     if (insider?.buys > 0 && insider?.netChange > 0)          flags.push({ label: '👤 INSIDER BUY', color: '#00ff94' });
     if (insider?.totalBuyValue > 1000000)                     flags.push({ label: '💼 BIG INSIDER',  color: '#00ff94' });
+    if (freshInsiderDays !== null && freshInsiderDays <= 7 && freshInsiderValue > 50000) flags.push({ label: '🔥 FRESH INSIDER', color: '#ff7040' });
     if (streak >= 3)                                          flags.push({ label: '📈 EPS STREAK',  color: '#ffcc00' });
     if (fcf != null && fcf > 0 && fcf1 != null && fcf1 > 0)  flags.push({ label: '💰 FCF+',        color: '#00e5cc' });
     if (ebitdaMargin != null && ebitdaMargin > 25)            flags.push({ label: '💎 EBITDA+',     color: '#bf5fff' });
@@ -481,6 +501,8 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       ma200: ma200 ? Math.round(ma200 * 100) / 100 : null,
       goldenCross: (ma50 && ma200 && ma50 > ma200) ? true : false,
       shortPct, mspr, insiderChange,
+      freshInsiderDays: freshInsiderDays,
+      freshInsiderValue: freshInsiderValue > 0 ? Math.round(freshInsiderValue) : null,
       insiderData: insider ? {
         buys: insider.buys, sells: insider.sells, netChange: insider.netChange,
         totalBuyValue: insider.totalBuyValue, totalSellValue: insider.totalSellValue,
@@ -755,7 +777,20 @@ function selectPicks(results) {
   );
   picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'squeeze'; });
 
-  // ── 4. INSIDER BUYING ────────────────────────────────────
+  // ── 4a. FRESH INSIDER — significant buy in last 7 days ───
+  fillSlots(
+    r => r.freshInsiderDays !== null && r.freshInsiderDays <= 7
+      && r.freshInsiderValue > 50000 && r.total >= 45,
+    (a, b) => {
+      const sa = (a.freshInsiderValue||0)/1000 + a.total + a.confluence * 4;
+      const sb = (b.freshInsiderValue||0)/1000 + b.total + b.confluence * 4;
+      return sb - sa;
+    },
+    1
+  );
+  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'fresh_insider'; });
+
+  // ── 4b. INSIDER BUYING (last 90 days) ────────────────────
   fillSlots(
     r => r.flags?.some(f => f.label?.includes('INSIDER') || f.label?.includes('BIG'))
       && r.total >= 45 && r.fund >= 12,
