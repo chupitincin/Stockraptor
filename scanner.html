@@ -11,7 +11,7 @@
   --bg:#020209;--s1:#06060f;--s2:#09091a;--bord:#0f0f20;--bord2:#181828;
   --green:#00ff94;--gold:#ffcc00;--red:#ff2d55;--blue:#00b4ff;
   --purple:#bf5fff;--orange:#ff7040;--teal:#00e5cc;--pink:#ff4fa0;
-  --txt:#707070;--txb:#a0a0a0;--white:#e8e8f8;
+  --txt:#7070a0;--txb:#b0b0d0;--white:#e8e8f8;
   --font:'Geist Mono',monospace;--sans:'Inter',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -207,7 +207,7 @@ thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7),thead th:nth-c
 .dr td{padding:0 !important;} .dr > td{max-width:100%;}
 table{width:100%;border-collapse:separate;border-spacing:0 6px;display:none;}
 thead tr{border-bottom:1px solid var(--bord2);}
-th{padding:8px 6px;text-align:left;font-size:9px;color:#888888;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;overflow:hidden;text-overflow:ellipsis;}
+th{padding:8px 6px;text-align:left;font-size:9px;color:#888888;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;}
 th:hover{color:var(--white);}
 .th-arrow{font-size:9px;margin-left:3px;color:var(--green);}
 tbody tr.mr{border-bottom:1px solid #0d0d1e;cursor:pointer;height:64px;transition:background .15s;animation:rowIn .25s ease;}
@@ -228,8 +228,6 @@ td{padding:8px 6px;white-space:nowrap;vertical-align:middle;}
 .subbar-bg{width:30px;flex-shrink:0;height:3px;background:var(--bord2);border-radius:2px;overflow:hidden;}
 .subbar-fill{height:100%;border-radius:2px;}
 .subbar-val{font-size:10px;font-weight:600;width:18px;text-align:right;flex-shrink:0;}
-.tbl-outer{overflow-x:auto;}
-thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8){text-align:center;color:var(--txt);}
 /* Compact table cell version */
 td .subbar-row{margin-bottom:0;}
 td .subbar-bg{max-width:32px;}
@@ -728,7 +726,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
           <th onclick="thSort('ticker')">TICKER / SECTOR <span class="th-arrow" id="th-ticker"></span></th>
           <th onclick="thSort('delta')" style="text-align:center">RANK <span class="th-arrow" id="th-delta"></span></th>
           <th onclick="thSort('signal')">SIGNAL <span class="th-arrow" id="th-signal"></span></th>
-          <th onclick="thSort('score')">TOTAL SCORE <span class="th-arrow" id="th-score">▾</span></th>
+          <th onclick="thSort('score')">SCORE <span class="th-arrow" id="th-score">▾</span></th>
           <th onclick="thSort('fund')" style="text-align:center">FUND. <span class="th-arrow" id="th-fund"></span></th>
           <th onclick="thSort('sent')" style="text-align:center">SENT. <span class="th-arrow" id="th-sent"></span></th>
           <th onclick="thSort('analyst')" style="text-align:center">ANALY. <span class="th-arrow" id="th-analyst"></span></th>
@@ -1010,7 +1008,7 @@ function renderTable(){
   const maxes=[25,20,15,17,15,13],cols=['var(--blue)','var(--purple)','var(--green)','var(--gold)','var(--orange)','var(--teal)'];
   document.getElementById('tbody').innerHTML=rows.map((d,idx)=>{
     // Free users: show first 20 normally, rest locked
-    const isLocked = plan === 'free' && idx < freeLimit;
+    const isLocked = plan === 'free' && idx >= freeLimit;
     if (isLocked) {
       return `<tr class="mr locked-row" onclick="showUpgradeModal()" style="cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#0d0d2a'" onmouseout="this.style.background=''">
         <td style="filter:blur(3px);user-select:none;pointer-events:none"><span style="color:#3a3a60">▶</span></td>
@@ -1836,8 +1834,8 @@ const SCANNER_LANG = {
     fWatch:'🟠 WATCH', fWeak:'🔴 WEAK', fVolSpike:'⚡ VOL SPIKE', fShortSq:'🎯 SHORT SQUEEZE', fInsider:'👤 INSIDER BUY', fEps:'📈 EPS STREAK', fFcf:'💰 FCF+', fUpside:'🎯 HIGH UPSIDE',
     ssScore:'SCORE', ssFund:'FUND.', ssSent:'SENTIMENT', ssMomentum:'MOMENTUM', ssEarnings:'EARNINGS',
     // table headers
-    thTicker:'TICKER / SECTOR', thSignal:'SIGNAL', thScore:'TOTAL SCORE', thFund:'FUND.',
-    thSent:'SENTIMENT', thAnalyst:'ANALYSTS', thMomentum:'MOMENTUM', thEarnings:'EARNINGS',
+    thTicker:'TICKER / SECTOR', thSignal:'SIGNAL', thScore:'SCORE', thFund:'FUND.',
+    thSent:'SENT.', thAnalyst:'ANALY.', thMomentum:'MOME.', thEarnings:'EARNINGS',
     thShort:'VOL/SHORT', thFlags:'⚠ FLAGS', thPrice:'PRICE', thUpside:'UPSIDE',
     // empty / stats
     emptyState:'READY TO HUNT · 200 STOCKS · ~25 MIN',
@@ -1905,8 +1903,8 @@ const SCANNER_LANG = {
     fWatch:'🟠 VIGILAR', fWeak:'🔴 DÉBIL', fVolSpike:'⚡ PICO VOLUMEN', fShortSq:'🎯 SHORT SQUEEZE', fInsider:'👤 INSIDER COMPRA', fEps:'📈 RACHA EPS', fFcf:'💰 FCF+', fUpside:'🎯 ALTO POTENCIAL',
     ssScore:'SCORE', ssFund:'FUND.', ssSent:'SENTIMIENTO', ssMomentum:'MOMENTUM', ssEarnings:'RESULTADOS',
     // table headers
-    thTicker:'TICKER / SECTOR', thSignal:'SEÑAL', thScore:'SCORE TOTAL', thFund:'FUND.',
-    thSent:'SENTIMIENTO', thAnalyst:'ANALISTAS', thMomentum:'MOMENTUM', thEarnings:'RESULTADOS',
+    thTicker:'TICKER / SECTOR', thSignal:'SEÑAL', thScore:'SCORE', thFund:'FUND.',
+    thSent:'SENT.', thAnalyst:'ANALY.', thMomentum:'MOME.', thEarnings:'RESULT.',
     thShort:'VOL/CORTOS', thFlags:'⚠ ALERTAS', thPrice:'PRECIO', thUpside:'POTENCIAL',
     // empty / stats
     emptyState:'LISTO PARA CAZAR · 200 ACCIONES · ~25 MIN',
