@@ -319,15 +319,19 @@ async function loadPicks() {
 }
 
 // ── GENERATE MISSING AI SUMMARIES ON-THE-FLY ──────────────
+// Summaries are generated ONCE and saved to Supabase permanently.
+// All subsequent users get them from cache — no extra API cost.
 async function generateMissingSummaries(picks) {
   const missing = picks.filter(p => !p.aiSummary);
   if (missing.length === 0) return;
+
+  console.log(`[AI] Generating ${missing.length} missing summaries...`);
 
   for (let i = 0; i < missing.length; i++) {
     const p = missing[i];
     const idx = picks.indexOf(p);
 
-    // Show loading state
+    // Show loading state in card
     const container = document.getElementById(`ai-text-${idx}`);
     if (container) container.innerHTML = '<div class="pick-ai-loading">Generating analysis...</div>';
 
@@ -340,8 +344,10 @@ async function generateMissingSummaries(picks) {
       if (p.upside > 20)       signals.push(`analyst target ${p.upside}% above price`);
       if ((p.revenueGrowth ?? p.revGrowth) > 15) signals.push(`revenue +${p.revenueGrowth ?? p.revGrowth}% YoY`);
 
-      const prompt = `You are a concise financial analyst. Write a 2-sentence analysis of why ${p.sym} (${p.companyName}, ${p.sector}) is an interesting setup today.\nKey data: price $${p.price}, score ${p.total}/100, setup: ${p.pickType}, signals: ${signals.length ? signals.join(', ') : 'strong fundamentals and momentum'}.\nBe specific, factual and direct. No disclaimers. Max 40 words.`;
+      const prompt = `You are a concise financial analyst. Write a 2-sentence analysis of why ${p.sym} (${p.companyName}, ${p.sector}) is an interesting setup today.\nKey data: price $${p.price}, score ${p.total}/100, setup type: ${p.pickType}, key signals: ${signals.length ? signals.join(', ') : 'strong fundamentals and momentum'}.\nBe specific, factual and direct. No disclaimers. Max 40 words.`;
 
+      // The Netlify function generates the summary AND saves it to Supabase picks_cache
+      // so it's permanently cached for all users — no repeat API calls
       const res = await fetch('/.netlify/functions/ai-summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -350,18 +356,25 @@ async function generateMissingSummaries(picks) {
 
       if (res.ok) {
         const data = await res.json();
-        if (data.summary && container) {
+        if (data.summary) {
           p.aiSummary = data.summary;
-          container.innerHTML = `<div class="pick-ai-text">${data.summary}</div>`;
+          if (container) container.innerHTML = `<div class="pick-ai-text">${data.summary}</div>`;
+          console.log(`[AI] ✅ ${p.sym} saved to cache`);
+        } else {
+          if (container) container.innerHTML = '<div class="pick-ai-text" style="color:var(--txt);font-style:italic">Analysis unavailable</div>';
         }
+      } else {
+        if (container) container.innerHTML = '<div class="pick-ai-text" style="color:var(--txt);font-style:italic">Analysis unavailable</div>';
       }
     } catch(e) {
       if (container) container.innerHTML = '<div class="pick-ai-text" style="color:var(--txt);font-style:italic">Analysis unavailable</div>';
     }
 
-    // Small delay between calls
-    if (i < missing.length - 1) await new Promise(r => setTimeout(r, 300));
+    // Small delay between calls to avoid rate limits
+    if (i < missing.length - 1) await new Promise(r => setTimeout(r, 400));
   }
+
+  console.log('[AI] All summaries generated and saved to Supabase.');
 }
 
 // ── GENERATE PICKS FROM SCAN CACHE (fallback) ─────────────
