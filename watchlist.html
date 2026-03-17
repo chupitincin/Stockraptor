@@ -182,7 +182,6 @@ const CONFIG = {
 <div class="spage">
   <div class="wl-header">
     <div class="wl-title">⭐ Watchlist <span class="wl-count" id="wlCount">0 companies</span></div>
-    <a href="/scanner.html" class="wl-empty-btn">+ Add from Scanner</a>
   </div>
 
   <div id="wlContent">
@@ -385,7 +384,13 @@ function toggleDet(sym) {
   const dt = document.getElementById('dt-'+sym), ar = document.getElementById('ar-'+sym), was = dt.classList.contains('open');
   document.querySelectorAll('.dr.open').forEach(r=>r.classList.remove('open'));
   document.querySelectorAll('.arr.op').forEach(a=>a.classList.remove('op'));
-  if (!was) { dt.classList.add('open'); ar.classList.add('op'); }
+  if (_wlDetInterval) { clearInterval(_wlDetInterval); _wlDetInterval = null; _wlDetSym = null; }
+  if (!was) {
+    dt.classList.add('open'); ar.classList.add('op');
+    _wlDetSym = sym;
+    setTimeout(() => wlPollDet(), 200);
+    _wlDetInterval = setInterval(wlPollDet, 15000);
+  }
 }
 
 function sbr(val,max,color,label){return`<div class="subbar-row"><div class="subbar-lbl">${label}</div><div class="subbar-bg"><div class="subbar-fill" style="width:${Math.min(100,Math.max(0,val/max*100))}%;background:${color}"></div></div><div class="subbar-val" style="color:${color}">${val}</div></div>`;}
@@ -460,6 +465,125 @@ function renderDet(d) {
 })();
 
 window.addEventListener('load', init);
+</script>
+<script>
+// ══════════════════════════════════════════
+// LIVE PRICES — watchlist
+// ══════════════════════════════════════════
+let _wlPriceInterval = null;
+let _wlDetInterval   = null;
+let _wlDetSym        = null;
+
+async function fetchLivePrices(symbols) {
+  if (!symbols || symbols.length === 0) return {};
+  try {
+    const res = await fetch(`/.netlify/functions/quote?symbols=${symbols.join(',')}`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return {};
+    return await res.json();
+  } catch { return {}; }
+}
+
+function applyLivePriceToRow(sym, q) {
+  const arEl = document.getElementById('ar-' + sym);
+  if (!arEl) return;
+  const row = arEl.closest('tr.mr');
+  if (!row) return;
+  const tds = row.querySelectorAll('td');
+  // Cols: ▶[0] TICKER[1] RANK[2] SIGNAL[3] SCORE[4] FUND[5] SENT[6] ANALY[7] MOME[8] EARNINGS[9] VOL/SHORT[10] FLAGS[11] PRICE[12] UPSIDE[13] ★[14]
+  const priceTd  = tds[tds.length - 3]; // PRICE
+  const upsideTd = tds[tds.length - 2]; // UPSIDE
+  if (!priceTd) return;
+
+  const price = q.price;
+  const pct   = q.changePct !== null ? Math.round(q.changePct * 10) / 10 : null;
+  if (price === null) return;
+
+  const prevText  = priceTd.textContent;
+  const prevPrice = parseFloat(prevText.replace('$','')) || 0;
+  const dir = price > prevPrice ? 'up' : price < prevPrice ? 'down' : '';
+  const color = pct > 0 ? 'var(--green)' : pct < 0 ? 'var(--red)' : 'var(--txt)';
+  const sign  = pct !== null ? (pct > 0 ? '+' : '') : '';
+
+  priceTd.innerHTML = `$${price.toFixed(2)}<span style="font-size:8px;color:${color};margin-left:3px">${pct !== null ? sign + pct + '%' : ''}</span>`;
+
+  if (dir) {
+    priceTd.style.transition = 'background .15s';
+    priceTd.style.background = dir === 'up' ? '#00ff9418' : '#ff2d5518';
+    setTimeout(() => { priceTd.style.background = ''; }, 600);
+  }
+
+  // Update in-memory data + recalculate upside
+  const d = allData.find(x => x.sym === sym);
+  if (d) {
+    d.price         = price;
+    d.priceChange1D = pct;
+    if (d.targetPrice != null && price > 0) {
+      d.upside = Math.round(((d.targetPrice - price) / price) * 100);
+      if (upsideTd) {
+        const uc = d.upside > 20 ? 'var(--green)' : d.upside < 0 ? 'var(--red)' : '#808080';
+        upsideTd.innerHTML = `<span style="color:${uc}">${d.upside > 0 ? '+' : ''}${d.upside}%</span>`;
+      }
+    }
+  }
+}
+
+function applyLivePriceToDet(sym, q) {
+  const det = document.getElementById('dt-' + sym);
+  if (!det || !det.classList.contains('open')) return;
+  const priceEl    = det.querySelector('[data-live="price"]');
+  const change1dEl = det.querySelector('[data-live="change1d"]');
+  const highEl     = det.querySelector('[data-live="high"]');
+  const lowEl      = det.querySelector('[data-live="low"]');
+  const volEl      = det.querySelector('[data-live="volume"]');
+  const tsEl       = det.querySelector('[data-live="ts"]');
+  if (priceEl    && q.price !== null)     priceEl.textContent    = '$' + q.price.toFixed(2);
+  if (change1dEl && q.changePct !== null) {
+    const pct = Math.round(q.changePct * 10) / 10;
+    change1dEl.textContent = (pct > 0 ? '+' : '') + pct + '%';
+    change1dEl.style.color = pct > 0 ? 'var(--green)' : pct < 0 ? 'var(--red)' : 'var(--txt)';
+  }
+  if (highEl && q.high !== null) highEl.textContent = '$' + q.high.toFixed(2);
+  if (lowEl  && q.low  !== null) lowEl.textContent  = '$' + q.low.toFixed(2);
+  if (volEl  && q.volume && q.avgVolume) {
+    const ratio = Math.round(q.volume / q.avgVolume * 10) / 10;
+    volEl.textContent = ratio + 'x';
+    volEl.style.color = ratio > 2.5 ? 'var(--pink)' : ratio > 1.5 ? 'var(--gold)' : 'var(--txt)';
+  }
+  if (tsEl) tsEl.textContent = 'Live · ' + new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+
+async function wlPollPrices() {
+  const syms = Array.from(document.querySelectorAll('tbody tr.mr .arr'))
+    .map(el => el.id.replace('ar-', '')).filter(Boolean);
+  if (syms.length === 0) return;
+  const CHUNK = 10;
+  for (let i = 0; i < syms.length; i += CHUNK) {
+    const prices = await fetchLivePrices(syms.slice(i, i + CHUNK));
+    if (prices && Object.keys(prices).length > 0)
+      Object.entries(prices).forEach(([sym, q]) => applyLivePriceToRow(sym, q));
+    await new Promise(r => setTimeout(r, 150));
+  }
+}
+
+async function wlPollDet() {
+  if (!_wlDetSym) return;
+  const prices = await fetchLivePrices([_wlDetSym]);
+  const q = prices[_wlDetSym];
+  if (q) { applyLivePriceToRow(_wlDetSym, q); applyLivePriceToDet(_wlDetSym, q); }
+}
+
+function startWlLivePrices() {
+  if (_wlPriceInterval) clearInterval(_wlPriceInterval);
+  wlPollPrices();
+  _wlPriceInterval = setInterval(wlPollPrices, 30000);
+}
+
+// Start live prices after watchlist renders
+const _origRender = render;
+window.render = function() {
+  _origRender();
+  setTimeout(startWlLivePrices, 500);
+};
 </script>
 </body>
 </html>
