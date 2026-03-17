@@ -140,6 +140,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 
 /* DISCLAIMER */
 .disclaimer{margin-top:40px;padding:14px 18px;background:var(--s1);border:1px solid var(--bord2);border-radius:6px;font-size:10px;color:var(--txt);line-height:1.8;font-family:var(--font);}
+
+/* Scroll to top button */
+#scrollTopBtn{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:300;width:36px;height:36px;border-radius:50%;background:rgba(6,6,15,.9);border:1px solid #00ff94;color:#00ff94;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s,background .15s;}
+#scrollTopBtn.visible{opacity:1;pointer-events:auto;}
+#scrollTopBtn:hover{background:rgba(0,255,148,.12);}
 </style>
 </head>
 <body>
@@ -652,8 +657,32 @@ function startPicksLivePrices() {
   _picksPriceInterval = setInterval(pollPicksPrices, 30000);
 }
 
+
+// Scroll to top button — show below 400px, hide above 100px
+(function(){
+  const btn = document.getElementById('scrollTopBtn');
+  if (!btn) return;
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    if (y > 400) btn.classList.add('visible');
+    else if (y < 100) btn.classList.remove('visible');
+  }, { passive: true });
+})();
+// Scroll to top button
+(function(){
+  const btn = document.getElementById('scrollTopBtn');
+  if (!btn) return;
+  window.addEventListener('scroll', function() {
+    var y = window.scrollY;
+    if (y > 400) btn.classList.add('visible');
+    else if (y < 100) btn.classList.remove('visible');
+  }, { passive: true });
+})();
+
 window.addEventListener('load', init);
 </script>
 <div id="sr-tooltip"></div>
+
+<button id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
 </body>
 </html>
