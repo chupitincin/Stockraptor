@@ -1035,7 +1035,7 @@ function renderTable(){
     const _maxes=[25,20,15,17,15,13];
     const bkd=`<div class="bkd">${vals.map((v,j)=>`<div class="bseg" style="width:${Math.max(2,Math.min(28,v/_maxes[j]*28))}px;background:${_cols[j]}"></div>`).join('')}</div>`;
     const ef=fmtD(d.earningsDate);
-    const edHtml=d.earningsDays!==null?`<span style="font-size:10px;color:${d.earningsDays<=20?'var(--gold)':d.earningsDays<=45?'var(--orange)':'var(--txt)'}">${ef} <span style="opacity:.5;font-size:8px">${d.earningsDays}d</span></span>`:'<span class="cd">—</span>';
+    const edHtml=d.earningsDays!==null?`<span style="font-size:10px;font-family:var(--sans);color:${d.earningsDays<=20?'var(--gold)':d.earningsDays<=45?'var(--orange)':'#a0a0a0'}">${ef} <span style="font-size:9px;color:#686868">${d.earningsDays}d</span></span>`:'<span class="cd">—</span>';
     const vsHtml=`${d.volRatio?`<span class="${d.volRatio>2?'vol-spike':'cd'}">${d.volRatio>2?'⚡':''}${d.volRatio}x</span>`:''} ${d.shortPct?`<span class="${d.shortPct>15?'ct':'cd'}" style="margin-left:3px">${d.shortPct>15?'🎯':''}${d.shortPct}%</span>`:''}${!d.volRatio&&!d.shortPct?'<span class="cd">—</span>':''}`;
     const ch=d.priceChange1D;
     const prHtml=d.price?`$${d.price.toFixed(2)}<span style="font-size:10px;font-family:var(--sans);color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!==null?sgn(ch)+ch+'%':''}</span>`:'—';
@@ -1064,9 +1064,9 @@ function renderTable(){
       <td style="text-align:center"><span style="font-size:13px;font-weight:700;font-family:var(--sans);font-variant-numeric:tabular-nums;color:var(--green)">${d.analyst??'—'}</span></td>
       <td style="text-align:center"><span style="font-size:13px;font-weight:700;font-family:var(--sans);font-variant-numeric:tabular-nums;color:var(--gold)">${d.momentum??'—'}</span></td>
       <td>${edHtml}</td>
-      <td style="font-family:var(--sans);font-size:13px;font-weight:600;">${vsHtml}</td>
+      <td style="font-family:var(--sans);font-size:13px;font-weight:600;color:#a0a0a0">${vsHtml}</td>
       <td>${flagsHtml}</td>
-      <td style="font-family:var(--sans);font-size:13px;font-weight:600;color:var(--txb)">${prHtml}</td>
+      <td style="font-family:var(--sans);font-size:13px;font-weight:600;color:#a0a0a0">${prHtml}</td>
       <td style="font-family:var(--sans);font-size:14px;font-weight:700;">${upHtml}</td>
       <td style="text-align:center"><button onclick="event.stopPropagation();toggleWatch('${d.sym}')" id="star-${d.sym}" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;transition:all .15s;color:${isWatched?'var(--gold)':'#888899'};line-height:1;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='${isWatched?'var(--gold)':'#888899'}'" title="${isWatched?'Remove from watchlist':'Add to watchlist'}">${isWatched?'★':'☆'}</button></td>
     </tr><tr class="dr" id="dt-${d.sym}"><td colspan="15" style="padding:0;width:100%;">${renderDet(d)}</td></tr>`;
