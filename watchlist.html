@@ -345,6 +345,7 @@ function renderRow(d) {
   const upHtml = d.upside!=null ? `<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>` : '<span class="cd">—</span>';
   const deltaHtml = d.rankNew
     ? `<span style="font-size:9px;font-family:var(--font);color:var(--blue);background:#00b4ff15;border:1px solid #00b4ff33;padding:2px 6px;border-radius:4px;">NEW</span>`
+    : d.rankDelta==null && d.rankToday!=null ? `<span style="font-size:11px;font-weight:600;font-family:var(--sans);color:#505070">#${d.rankToday}</span>`
     : d.rankDelta==null ? `<span style="color:var(--txt);font-size:10px;">—</span>`
     : d.rankDelta>0 ? `<span style="font-size:11px;font-weight:700;font-family:var(--font);color:var(--green)">▲${d.rankDelta}</span>`
     : d.rankDelta<0 ? `<span style="font-size:11px;font-weight:700;font-family:var(--font);color:var(--red)">▼${Math.abs(d.rankDelta)}</span>`
