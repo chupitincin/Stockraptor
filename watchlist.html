@@ -124,6 +124,11 @@ tbody tr.dr{background:#0f0f0f!important;}
 .gate-btn{display:block;width:100%;padding:13px;border:none;border-radius:6px;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;transition:all .2s;margin-bottom:10px;text-decoration:none;text-align:center;}
 .gate-btn-green{background:linear-gradient(135deg,var(--green),#00cc78);color:#000;}
 .gate-btn-outline{background:transparent;color:var(--txb);border:1px solid var(--bord2);}
+
+/* Scroll to top button */
+#scrollTopBtn{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:300;width:36px;height:36px;border-radius:50%;background:rgba(6,6,15,.9);border:1px solid #00ff94;color:#00ff94;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s,background .15s;}
+#scrollTopBtn.visible{opacity:1;pointer-events:auto;}
+#scrollTopBtn:hover{background:rgba(0,255,148,.12);}
 </style>
 </head>
 <body>
@@ -467,6 +472,19 @@ function renderDet(d) {
   });
 })();
 
+
+// Scroll to top button — show only when scrolling down past 400px
+(function(){
+  const btn = document.getElementById('scrollTopBtn');
+  if (!btn) return;
+  let lastY = 0;
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    const scrollingDown = y > lastY;
+    btn.classList.toggle('visible', y > 400 && scrollingDown);
+    lastY = y;
+  }, { passive: true });
+})();
 window.addEventListener('load', init);
 </script>
 <script>
@@ -588,5 +606,7 @@ window.render = function() {
   setTimeout(startWlLivePrices, 500);
 };
 </script>
+
+<button id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
 </body>
 </html>
