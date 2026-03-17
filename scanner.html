@@ -1130,7 +1130,7 @@ function renderDet(d){
     <div class="stkbar">${(d.recBuy+d.recHold+d.recSell)>0?`<div style="width:${d.recBuy/(d.recBuy+d.recHold+d.recSell)*100}%;background:var(--green)"></div><div style="width:${d.recHold/(d.recBuy+d.recHold+d.recSell)*100}%;background:#1e1e35"></div><div style="width:${d.recSell/(d.recBuy+d.recHold+d.recSell)*100}%;background:var(--red)"></div>`:''}</div>
     <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipPriceTarget)||'Analyst price target.'}">Price Target</span><span class="dv ${d.upside>20?'cg':'cd'}">${d.targetPrice?'$'+d.targetPrice.toFixed(2):'—'} ${d.upside!==null?'('+sgn(d.upside)+d.upside+'%)':''}</span></div>
     <div class="hr-mini"></div>
-    <div class="det-r"><span class="dk">Net Insider Activity (90d)</span><span class="dv ${d.insiderChange>0?'cg':d.insiderChange<0?'cr':'cd'}">${d.insiderChange!==null?(d.insiderChange>0?'↑ Net buying ('+d.insiderChange+' more buys)':'↓ Net selling ('+Math.abs(d.insiderChange)+' more sells)'):'—'}</span></div>
+    <div class="det-r"><span class="dk">Net Insider Activity</span><span class="dv ${d.insiderChange>0?'cg':d.insiderChange<0?'cr':'cd'}">${d.insiderChange!==null?(d.insiderChange>0?'↑ Net buying ('+d.insiderChange+' more buys)':'↓ Net selling ('+Math.abs(d.insiderChange)+' more sells)'):'—'}</span></div>
     ${d.insiderData?.transactions?.length ? `
     <div style="margin-top:8px;">
       <div style="font-size:7px;letter-spacing:2px;color:var(--txt);margin-bottom:6px;">RECENT TRANSACTIONS</div>
@@ -1144,6 +1144,7 @@ function renderDet(d){
             <span style="color:var(--txt);margin-left:4px;font-size:9px;">${t.title.substring(0,12)}</span>
           </div>
           <div style="text-align:right;flex-shrink:0;white-space:nowrap;">
+            ${t.date ? `<span style="color:${(()=>{const days=Math.floor((Date.now()-new Date(t.date))/(1000*86400));return days<=7?'var(--green)':days<=30?'var(--gold)':'var(--txt)'})()};margin-right:6px;font-size:9px;">${(()=>{const days=Math.floor((Date.now()-new Date(t.date))/(1000*86400));return days===0?'today':days===1?'1d ago':days+'d ago'})()}</span>` : ''}
             <span style="color:var(--txb)">${t.shares.toLocaleString()}</span>
             ${t.value ? `<span style="color:var(--txt);margin-left:4px;font-size:9px;">$${(t.value/1000).toFixed(0)}K</span>` : ''}
           </div>
@@ -1151,6 +1152,7 @@ function renderDet(d){
       `).join('')}
       ${d.insiderData.totalBuyValue > 0 ? `<div style="margin-top:6px;font-size:10px;color:var(--green);">Total bought: $${(d.insiderData.totalBuyValue/1000).toFixed(0)}K</div>` : ''}
       ${d.insiderData.totalSellValue > 0 ? `<div style="font-size:10px;color:var(--red);">Total sold: $${(d.insiderData.totalSellValue/1000).toFixed(0)}K</div>` : ''}
+      ${(()=>{const dates=d.insiderData.transactions.map(t=>t.date).filter(Boolean).sort().reverse();if(!dates.length)return'';const days=Math.floor((Date.now()-new Date(dates[0]))/(1000*86400));const col=days<=7?'var(--green)':days<=30?'var(--gold)':'var(--txt)';return `<div style="font-size:9px;color:${col};margin-top:4px;">Last activity: ${days===0?'today':days===1?'yesterday':days+'d ago'} (${dates[0]})</div>`;})()}
     </div>` : '<div style="font-size:10px;color:var(--txt);margin-top:4px;">No insider transactions in last 90 days</div>'}
     ${d.flags && d.flags.length > 0 ? `
     <div class="hr-mini"></div>
