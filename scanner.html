@@ -323,12 +323,10 @@ tbody tr.mr td {
 tbody tr.mr td:first-child {
   border-left: 1px solid rgba(255,255,255,.07);
   border-radius: 8px 0 0 8px;
-  padding-left: 12px;
 }
 tbody tr.mr td:last-child {
   border-right: 1px solid rgba(255,255,255,.07);
   border-radius: 0 8px 8px 0;
-  padding-right: 12px;
 }
 tbody tr.mr:hover td { background: #1e1e1e; }
 tbody tr.mr { border-bottom: none; }
@@ -338,6 +336,8 @@ tbody tr.dr { background: #0f0f0f; }
 .scard:hover { background: #1e1e1e; transform: none; }
 .badge { border-radius: 6px; }
 .bf { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); border-radius: 6px; }
+/* Cap FLAGS column to match watchlist width */
+tbody tr.mr td:nth-child(12), thead th:nth-child(12) { max-width: 240px; overflow: hidden; }
 .bf:hover, .bf.on { background: rgba(0,255,148,.08); border-color: var(--green); }
 #scannerNav { background: rgba(10,10,10,.95); border-bottom: 1px solid rgba(255,255,255,.07); }
 #cacheBanner { background: #0d0d0d; border-bottom: 1px solid rgba(255,255,255,.06); }
@@ -727,7 +727,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
           <th onclick="thSort('ticker')">TICKER / SECTOR <span class="th-arrow" id="th-ticker"></span></th>
           <th onclick="thSort('delta')" style="text-align:center">RANK <span class="th-arrow" id="th-delta"></span></th>
           <th onclick="thSort('signal')">SIGNAL <span class="th-arrow" id="th-signal"></span></th>
-          <th onclick="thSort('score')">SCORE <span class="th-arrow" id="th-score">▾</span></th>
+          <th onclick="thSort('score')">TOTAL SCORE <span class="th-arrow" id="th-score">▾</span></th>
           <th onclick="thSort('fund')" style="text-align:center">FUND. <span class="th-arrow" id="th-fund"></span></th>
           <th onclick="thSort('sent')" style="text-align:center">SENT. <span class="th-arrow" id="th-sent"></span></th>
           <th onclick="thSort('analyst')" style="text-align:center">ANALY. <span class="th-arrow" id="th-analyst"></span></th>
@@ -1381,21 +1381,22 @@ function applyLivePriceToDet(sym, q) {
   }
 }
 
-// Polling global de la tabla (solo tickers visibles en pantalla, cada 30s)
+// Polling global de la tabla — solo los primeros 50 tickers del filtro actual
 async function pollTablePrices() {
   if (!allData || allData.length === 0) return;
 
-  // Solo los símbolos con fila renderizada en el DOM — no los 1640 completos
-  const visibleSyms = Array.from(document.querySelectorAll('tbody tr.mr .arr'))
+  // Tomar solo los primeros 50 símbolos del array filtrado/ordenado actual
+  // (son los únicos visibles en pantalla sin scroll infinito)
+  const syms = Array.from(document.querySelectorAll('tbody tr.mr .arr'))
+    .slice(0, 50)
     .map(el => el.id.replace('ar-', ''))
     .filter(Boolean);
 
-  if (visibleSyms.length === 0) return;
+  if (syms.length === 0) return;
 
-  // Batches de 10 con pequeño delay para no saturar Yahoo Finance
   const CHUNK = 10;
   const chunks = [];
-  for (let i = 0; i < visibleSyms.length; i += CHUNK) chunks.push(visibleSyms.slice(i, i + CHUNK));
+  for (let i = 0; i < syms.length; i += CHUNK) chunks.push(syms.slice(i, i + CHUNK));
 
   for (const chunk of chunks) {
     const prices = await fetchLivePrices(chunk);
@@ -1862,7 +1863,7 @@ const SCANNER_LANG = {
     fWatch:'🟠 WATCH', fWeak:'🔴 WEAK', fVolSpike:'⚡ VOL SPIKE', fShortSq:'🎯 SHORT SQUEEZE', fInsider:'👤 INSIDER BUY', fEps:'📈 EPS STREAK', fFcf:'💰 FCF+', fUpside:'🎯 HIGH UPSIDE',
     ssScore:'SCORE', ssFund:'FUND.', ssSent:'SENTIMENT', ssMomentum:'MOMENTUM', ssEarnings:'EARNINGS',
     // table headers
-    thTicker:'TICKER / SECTOR', thSignal:'SIGNAL', thScore:'SCORE', thFund:'FUND.',
+    thTicker:'TICKER / SECTOR', thSignal:'SIGNAL', thScore:'TOTAL SCORE', thFund:'FUND.',
     thSent:'SENT.', thAnalyst:'ANALY.', thMomentum:'MOME.', thEarnings:'EARNINGS',
     thShort:'VOL/SHORT', thFlags:'⚠ FLAGS', thPrice:'PRICE', thUpside:'UPSIDE',
     // empty / stats
@@ -1931,7 +1932,7 @@ const SCANNER_LANG = {
     fWatch:'🟠 VIGILAR', fWeak:'🔴 DÉBIL', fVolSpike:'⚡ PICO VOLUMEN', fShortSq:'🎯 SHORT SQUEEZE', fInsider:'👤 INSIDER COMPRA', fEps:'📈 RACHA EPS', fFcf:'💰 FCF+', fUpside:'🎯 ALTO POTENCIAL',
     ssScore:'SCORE', ssFund:'FUND.', ssSent:'SENTIMIENTO', ssMomentum:'MOMENTUM', ssEarnings:'RESULTADOS',
     // table headers
-    thTicker:'TICKER / SECTOR', thSignal:'SEÑAL', thScore:'SCORE', thFund:'FUND.',
+    thTicker:'TICKER / SECTOR', thSignal:'SEÑAL', thScore:'TOTAL SCORE', thFund:'FUND.',
     thSent:'SENT.', thAnalyst:'ANALY.', thMomentum:'MOME.', thEarnings:'RESULT.',
     thShort:'VOL/CORTOS', thFlags:'⚠ ALERTAS', thPrice:'PRECIO', thUpside:'POTENCIAL',
     // empty / stats
