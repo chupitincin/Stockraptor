@@ -1,7 +1,7 @@
 // netlify/functions/ai-summary.js
 // Genera resúmenes de picks usando Claude
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -29,7 +29,7 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 120,
+        max_tokens: 150,
         messages: [{ role: 'user', content: prompt }],
       }),
       signal: AbortSignal.timeout(10000),
