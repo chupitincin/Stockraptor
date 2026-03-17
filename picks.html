@@ -84,6 +84,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 /* SIGNALS */
 .pick-signals{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;}
 .signal-tag{font-size:9px;font-family:var(--font);letter-spacing:.5px;padding:4px 9px;border-radius:5px;border:1px solid;font-weight:600;white-space:nowrap;}
+.tt{cursor:help;border-bottom:1px dashed #3a3a60;}
+#sr-tooltip{position:fixed;z-index:9999;pointer-events:none;background:#1a1a1a;border:1px solid rgba(255,255,255,.10);color:#a0a0a0;font-size:12px;font-family:'Inter',sans-serif;line-height:1.65;padding:10px 14px;border-radius:7px;width:240px;text-align:left;box-shadow:0 6px 28px #00000090;opacity:0;transition:opacity .15s;white-space:normal;}
+#sr-tooltip.visible{opacity:1;}
 
 /* AI SUMMARY */
 .pick-ai{padding:14px 20px 16px;border-top:1px solid var(--bord2);background:var(--bg);}
@@ -233,20 +236,20 @@ let sb, currentUser, currentProfile;
 
 // ── TYPE CONFIG ───────────────────────────────────────────
 const PICK_TYPES = {
-  squeeze:  { label: '🎯 SHORT SQUEEZE',   color: 'var(--teal)',   bg: '#00e5cc15', cardClass: 'type-squeeze' },
-  catalyst: { label: '📅 EARNINGS CATALYST', color: 'var(--gold)', bg: '#ffcc0015', cardClass: 'type-catalyst' },
-  volume:   { label: '⚡ VOLUME ANOMALY',  color: 'var(--pink)',   bg: '#ff4fa015', cardClass: 'type-volume' },
-  insider:  { label: '👤 INSIDER BUYING',  color: 'var(--green)',  bg: '#00ff9415', cardClass: 'type-insider' },
-  momentum: { label: '🚀 MOMENTUM BREAKOUT', color: 'var(--blue)', bg: '#00b4ff15', cardClass: 'type-momentum' },
+  squeeze:  { label: '🎯 SHORT SQUEEZE',    tip: 'A high % of shares are sold short. If price rises, short sellers must buy back — triggering a rapid price spike.', color: 'var(--teal)',   bg: '#00e5cc15', cardClass: 'type-squeeze' },
+  catalyst: { label: '📅 EARNINGS CATALYST', tip: 'Earnings report due in under 14 days, with a history of beating estimates. These events can move a stock 10-30% overnight.', color: 'var(--gold)', bg: '#ffcc0015', cardClass: 'type-catalyst' },
+  volume:   { label: '⚡ VOLUME ANOMALY',   tip: 'Trading volume is 3x or more above the 10-day average. Unusual volume often signals institutional buying or a major news event.', color: 'var(--pink)',   bg: '#ff4fa015', cardClass: 'type-volume' },
+  insider:  { label: '👤 INSIDER BUYING',   tip: 'Company executives or directors bought shares with their own money. Insiders rarely buy unless they believe the stock is undervalued.', color: 'var(--green)',  bg: '#00ff9415', cardClass: 'type-insider' },
+  momentum: { label: '🚀 MOMENTUM BREAKOUT', tip: 'Strong upward price trend over 52 weeks combined with solid fundamentals. The stock is breaking out of a base and trending higher.', color: 'var(--blue)', bg: '#00b4ff15', cardClass: 'type-momentum' },
 };
 
 const SCORE_COLS = [
-  { key: 'fund',     label: 'FUND',  color: 'var(--blue)',   max: 32 },
-  { key: 'sent',     label: 'SENT',  color: 'var(--purple)', max: 8  },
-  { key: 'analyst',  label: 'ANALY', color: 'var(--green)',  max: 15 },
-  { key: 'momentum', label: 'MOME',  color: 'var(--gold)',   max: 17 },
-  { key: 'earPts',   label: 'EARN',  color: 'var(--orange)', max: 15 },
-  { key: 'volShort', label: 'VOL',   color: 'var(--teal)',   max: 11 },
+  { key: 'fund',     label: 'FUND',  tip: 'Financial health: P/E ratio, revenue growth, margins, debt and cash flow.', color: 'var(--blue)',   max: 32 },
+  { key: 'sent',     label: 'SENT',  tip: 'News sentiment: how positive or negative recent headlines are.', color: 'var(--purple)', max: 8  },
+  { key: 'analyst',  label: 'ANALY', tip: 'Analyst ratings: Wall Street consensus and price target upside.', color: 'var(--green)',  max: 15 },
+  { key: 'momentum', label: 'MOME',  tip: 'Price momentum: how strongly the stock has been trending upward over 52 weeks.', color: 'var(--gold)',   max: 17 },
+  { key: 'earPts',   label: 'EARN',  tip: 'Earnings score: rewards upcoming reports and companies that beat estimates consistently.', color: 'var(--orange)', max: 15 },
+  { key: 'volShort', label: 'VOL',   tip: 'Volume & short interest: detects unusual volume spikes and high short float setups.', color: 'var(--teal)',   max: 11 },
 ];
 
 // ── SIGN OUT ─────────────────────────────────────────────
@@ -457,6 +460,8 @@ function renderPicks(picks, generatedAt, aiLoading = false) {
 
   const html = picks.map((p, i) => renderPickCard(p, i, false)).join('');
   document.getElementById('picksContent').innerHTML = `<div class="picks-grid">${html}</div>`;
+  // Start live price updates
+  setTimeout(startPicksLivePrices, 500);
 }
 
 // ── RENDER SINGLE PICK CARD ───────────────────────────────
@@ -471,7 +476,7 @@ function renderPickCard(p, idx, aiLoading) {
     const val = p[col.key] ?? 0;
     const pct = Math.min(100, Math.round(val / col.max * 100));
     return `<div class="pick-bar-row">
-      <div class="pick-bar-lbl">${col.label}</div>
+      <div class="pick-bar-lbl tt" data-tip="${col.tip}">${col.label}</div>
       <div class="pick-bar-bg"><div class="pick-bar-fill" style="width:${pct}%;background:${col.color}"></div></div>
       <div class="pick-bar-val" style="color:${col.color}">${val}</div>
     </div>`;
@@ -480,7 +485,7 @@ function renderPickCard(p, idx, aiLoading) {
   // Key signals to highlight
   const keySignals = buildSignals(p);
   const signalsHtml = keySignals.map(s =>
-    `<span class="signal-tag" style="color:${s.color};border-color:${s.color}44;background:${s.color}10">${s.label}</span>`
+    `<span class="signal-tag tt" data-tip="${s.tip || s.label}" style="color:${s.color};border-color:${s.color}44;background:${s.color}10">${s.label}</span>`
   ).join('');
 
   // AI summary section
@@ -490,10 +495,10 @@ function renderPickCard(p, idx, aiLoading) {
     ? `<div class="pick-ai-loading" id="ai-loading-${idx}">Generating analysis...</div>`
     : `<div class="pick-ai-text" style="color:var(--txt);font-style:italic">Analysis unavailable</div>`;
 
-  return `<div class="pick-card ${type.cardClass}" onclick="goToScanner('${p.sym}')">
+  return `<div class="pick-card ${type.cardClass}" data-sym="${p.sym}" onclick="goToScanner('${p.sym}')">
     <div class="pick-top">
       <div class="pick-meta">
-        <span class="pick-type" style="color:${type.color};background:${type.bg}">${type.label}</span>
+        <span class="pick-type tt" data-tip="${type.tip}" style="color:${type.color};background:${type.bg}">${type.label}</span>
         <span class="pick-score" style="color:${p.total >= 65 ? 'var(--green)' : p.total >= 50 ? 'var(--gold)' : 'var(--orange)'}">
           ${p.total}/100
         </span>
@@ -520,16 +525,16 @@ function renderPickCard(p, idx, aiLoading) {
 // ── BUILD SIGNAL TAGS ─────────────────────────────────────
 function buildSignals(p) {
   const signals = [];
-  if (p.volRatio > 2.5)  signals.push({ label: `VOL ${p.volRatio}x avg`, color: 'var(--pink)' });
-  if (p.shortPct > 15)   signals.push({ label: `${p.shortPct}% short float`, color: 'var(--teal)' });
+  if (p.volRatio > 2.5)  signals.push({ label: `VOL ${p.volRatio}x avg`, tip: `Volume is ${p.volRatio}x the 10-day average. Unusual volume signals institutional buying or major news.`, color: 'var(--pink)' });
+  if (p.shortPct > 15)   signals.push({ label: `${p.shortPct}% short float`, tip: `${p.shortPct}% of tradeable shares are sold short. High short float + rising price = potential short squeeze.`, color: 'var(--teal)' });
   if (p.earningsDays != null && p.earningsDays <= 20)
-    signals.push({ label: `Earnings in ${p.earningsDays}d`, color: 'var(--gold)' });
-  if (p.streak >= 2)     signals.push({ label: `${p.streak}/4 EPS beats`, color: 'var(--orange)' });
-  if (p.upside > 25)     signals.push({ label: `+${p.upside}% analyst upside`, color: 'var(--green)' });
-  if (p.revenueGrowth > 20) signals.push({ label: `Rev +${p.revenueGrowth}% YoY`, color: 'var(--blue)' });
+    signals.push({ label: `Earnings in ${p.earningsDays}d`, tip: `Earnings report in ${p.earningsDays} days. Stocks can move 10–30% on earnings — this is the catalyst window.`, color: 'var(--gold)' });
+  if (p.streak >= 2)     signals.push({ label: `${p.streak}/4 EPS beats`, tip: `Beat analyst EPS estimates ${p.streak} out of the last 4 quarters. Consistent beats signal strong execution.`, color: 'var(--orange)' });
+  if (p.upside > 25)     signals.push({ label: `+${p.upside}% analyst upside`, tip: `Wall Street analysts have a price target ${p.upside}% above current price. Significant room to grow if correct.`, color: 'var(--green)' });
+  if (p.revenueGrowth > 20) signals.push({ label: `Rev +${p.revenueGrowth}% YoY`, tip: `Revenue grew ${p.revenueGrowth}% year-over-year. Strong top-line growth signals business momentum.`, color: 'var(--blue)' });
   const insiderFlag = p.flags?.find(f => f.label?.includes('INSIDER') || f.label?.includes('BIG'));
-  if (insiderFlag) signals.push({ label: insiderFlag.label, color: 'var(--green)' });
-  if (p.shortPct > 15 && p.priceChange1D > 0) signals.push({ label: 'Squeeze setup', color: 'var(--teal)' });
+  if (insiderFlag) signals.push({ label: insiderFlag.label, tip: 'Company insiders bought shares with their own money — a strong signal they believe the stock is undervalued.', color: 'var(--green)' });
+  if (p.shortPct > 15 && p.priceChange1D > 0) signals.push({ label: 'Squeeze setup', tip: 'High short interest + price already rising = short sellers being forced to cover, accelerating the move up.', color: 'var(--teal)' });
   return signals.slice(0, 4);
 }
 
@@ -558,7 +563,95 @@ function renderEmpty() {
     </div>`;
 }
 
+
+// ══════════════════════════════════════════
+// TOOLTIP SYSTEM
+// ══════════════════════════════════════════
+(function(){
+  const tip = document.getElementById('sr-tooltip');
+  if (!tip) return;
+  let hideTimer;
+  document.addEventListener('mouseover', function(e){
+    const el = e.target.closest('.tt');
+    if (!el) return;
+    clearTimeout(hideTimer);
+    const t = el.getAttribute('data-tip');
+    if (!t) return;
+    tip.textContent = t;
+    tip.classList.add('visible');
+  });
+  document.addEventListener('mousemove', function(e){
+    tip.style.left = (e.clientX + 14) + 'px';
+    tip.style.top  = (e.clientY - 10) + 'px';
+  });
+  document.addEventListener('mouseout', function(e){
+    if (!e.target.closest('.tt')) return;
+    hideTimer = setTimeout(() => tip.classList.remove('visible'), 100);
+  });
+})();
+
+// ══════════════════════════════════════════
+// LIVE PRICES — picks
+// ══════════════════════════════════════════
+let _picksPriceInterval = null;
+
+async function fetchPicksPrices(symbols) {
+  if (!symbols || symbols.length === 0) return {};
+  try {
+    const res = await fetch(`/.netlify/functions/quote?symbols=${symbols.join(',')}`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return {};
+    return await res.json();
+  } catch { return {}; }
+}
+
+async function pollPicksPrices() {
+  // Get all pick cards currently rendered
+  const cards = document.querySelectorAll('.pick-card[data-sym]');
+  if (cards.length === 0) return;
+  const syms = [...cards].map(c => c.getAttribute('data-sym')).filter(Boolean);
+  if (syms.length === 0) return;
+
+  const prices = await fetchPicksPrices(syms);
+  if (!prices || Object.keys(prices).length === 0) return;
+
+  Object.entries(prices).forEach(([sym, q]) => {
+    const card = document.querySelector(`.pick-card[data-sym="${sym}"]`);
+    if (!card) return;
+    const priceEl = card.querySelector('.pick-price-n');
+    const chgEl   = card.querySelector('.pick-price-chg');
+    if (!priceEl || q.price === null) return;
+
+    const price = q.price;
+    const pct   = q.changePct !== null ? Math.round(q.changePct * 10) / 10 : null;
+    const prevPrice = parseFloat(priceEl.textContent.replace('$','')) || 0;
+    const dir = price > prevPrice ? 'up' : price < prevPrice ? 'down' : '';
+
+    priceEl.textContent = '$' + price.toFixed(2);
+
+    if (chgEl && pct !== null) {
+      const color = pct > 0 ? 'var(--green)' : pct < 0 ? 'var(--red)' : 'var(--txt)';
+      const sign  = pct > 0 ? '+' : '';
+      chgEl.textContent = sign + pct + '% today';
+      chgEl.style.color = color;
+    }
+
+    // Flash
+    if (dir) {
+      priceEl.style.transition = 'color .15s';
+      priceEl.style.color = dir === 'up' ? 'var(--green)' : 'var(--red)';
+      setTimeout(() => { priceEl.style.color = 'var(--white)'; }, 700);
+    }
+  });
+}
+
+function startPicksLivePrices() {
+  if (_picksPriceInterval) clearInterval(_picksPriceInterval);
+  pollPicksPrices();
+  _picksPriceInterval = setInterval(pollPicksPrices, 30000);
+}
+
 window.addEventListener('load', init);
 </script>
+<div id="sr-tooltip"></div>
 </body>
 </html>
