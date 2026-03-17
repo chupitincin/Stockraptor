@@ -215,13 +215,13 @@ tbody tr.mr{border-bottom:1px solid #0d0d1e;cursor:pointer;height:64px;transitio
 tbody tr.dr{display:none;background:#07071a;border-bottom:1px solid var(--bord2);}
 tbody tr.dr.open{display:table-row;}
 @keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-td{padding:8px 6px;white-space:nowrap;vertical-align:middle;}
+td{padding:8px 6px;white-space:nowrap;vertical-align:middle;font-variant-numeric:tabular-nums;}
 .tsym{font-family:'Syne',sans-serif;font-size:14px;color:var(--white);letter-spacing:.5px;}
 .tsec{font-size:10px;color:#666666;margin-top:2px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tname{font-size:10px;color:#888888;margin-top:1px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .badge{font-size:10px;letter-spacing:.8px;padding:4px 8px;border-radius:2px;border:1px solid;white-space:nowrap;font-weight:600;}
 .sw{display:flex;align-items:center;gap:6px;}
-.sv{font-family:'Syne',sans-serif;font-size:17px;}
+.sv{font-family:'Inter',sans-serif;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;}
 .bkd{display:flex;gap:2px;margin-top:3px;}
 .bseg{height:4px;border-radius:1px;min-width:1px;}
 .subbar-row{display:flex;align-items:center;gap:3px;margin-bottom:4px;}
@@ -1059,10 +1059,10 @@ function renderTable(){
       <td style="text-align:center">${deltaHtml}</td>
       <td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return s;})(d.signal)}</span></td>
       <td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td>
-      <td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--blue)">${d.fund??'—'}</span></td>
-      <td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--purple)">${d.sent??'—'}</span></td>
-      <td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--green)">${d.analyst??'—'}</span></td>
-      <td style="text-align:center"><span style="font-size:13px;font-weight:700;color:var(--gold)">${d.momentum??'—'}</span></td>
+      <td style="text-align:center"><span style="font-size:13px;font-weight:700;font-family:var(--sans);font-variant-numeric:tabular-nums;color:var(--blue)">${d.fund??'—'}</span></td>
+      <td style="text-align:center"><span style="font-size:13px;font-weight:700;font-family:var(--sans);font-variant-numeric:tabular-nums;color:var(--purple)">${d.sent??'—'}</span></td>
+      <td style="text-align:center"><span style="font-size:13px;font-weight:700;font-family:var(--sans);font-variant-numeric:tabular-nums;color:var(--green)">${d.analyst??'—'}</span></td>
+      <td style="text-align:center"><span style="font-size:13px;font-weight:700;font-family:var(--sans);font-variant-numeric:tabular-nums;color:var(--gold)">${d.momentum??'—'}</span></td>
       <td>${edHtml}</td>
       <td>${vsHtml}</td>
       <td>${flagsHtml}</td>
