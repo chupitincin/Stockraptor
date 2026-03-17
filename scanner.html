@@ -1381,24 +1381,28 @@ function applyLivePriceToDet(sym, q) {
   }
 }
 
-// Polling global de la tabla (todos los tickers visibles, cada 30s)
+// Polling global de la tabla (solo tickers visibles en pantalla, cada 30s)
 async function pollTablePrices() {
   if (!allData || allData.length === 0) return;
-  const syms = allData.map(d => d.sym);
 
-  // FMP en la práctica solo devuelve bien batches pequeños
-  // Usamos chunks de 10 con pequeño delay entre cada uno para no saturar
+  // Solo los símbolos con fila renderizada en el DOM — no los 1640 completos
+  const visibleSyms = Array.from(document.querySelectorAll('tbody tr.mr .arr'))
+    .map(el => el.id.replace('ar-', ''))
+    .filter(Boolean);
+
+  if (visibleSyms.length === 0) return;
+
+  // Batches de 10 con pequeño delay para no saturar Yahoo Finance
   const CHUNK = 10;
   const chunks = [];
-  for (let i = 0; i < syms.length; i += CHUNK) chunks.push(syms.slice(i, i + CHUNK));
+  for (let i = 0; i < visibleSyms.length; i += CHUNK) chunks.push(visibleSyms.slice(i, i + CHUNK));
 
   for (const chunk of chunks) {
     const prices = await fetchLivePrices(chunk);
     if (prices && Object.keys(prices).length > 0) {
       Object.entries(prices).forEach(([sym, q]) => applyLivePriceToRow(sym, q));
     }
-    // Pequeña pausa para no saturar el rate limit de FMP (300 req/min en Starter)
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 150));
   }
 }
 
