@@ -125,11 +125,26 @@ async function parseForm4(filename, companyCik) {
 }
 
 function extractTransactions(xml, date) {
-  const name  = (xml.match(/<rptOwnerName>(.*?)<\/rptOwnerName>/) || [])[1]?.trim() || '';
-  const title = (xml.match(/<officerTitle>(.*?)<\/officerTitle>/) || [])[1]?.trim() || '';
+  // Extract reporter name — try multiple fields, pick the most complete
+  const allOwnerNames = [...xml.matchAll(/<rptOwnerName>(.*?)<\/rptOwnerName>/g)]
+    .map(m => m[1]?.trim()).filter(Boolean);
+  // Prefer names that look like real person names (contain space or >4 chars, not "See Remarks")
+  const realName = allOwnerNames.find(n =>
+    n.length > 4 && !n.toLowerCase().includes('see remark') && !n.match(/^[A-Z]$/)
+  ) || allOwnerNames[0] || '';
+  const name = realName;
+
+  // Extract title — try officer title first, then director/officer flags
+  const rawTitle = (xml.match(/<officerTitle>(.*?)<\/officerTitle>/) || [])[1]?.trim() || '';
   const isDir = xml.includes('<isDirector>1</isDirector>');
   const isOff = xml.includes('<isOfficer>1</isOfficer>');
-  const role  = title || (isDir ? 'Director' : isOff ? 'Officer' : 'Insider');
+  const isTen = xml.includes('<isTenPercentOwner>1</isTenPercentOwner>');
+  // Clean up common bad titles
+  const cleanTitle = rawTitle.toLowerCase().includes('see remark') || rawTitle.length <= 1
+    ? (isDir ? 'Director' : isOff ? 'Officer' : isTen ? '10% Owner' : 'Insider')
+    : rawTitle;
+  const title = cleanTitle;
+  const role  = title;
 
   const codes  = [...xml.matchAll(/<transactionCode>(.*?)<\/transactionCode>/g)];
   const shares = [...xml.matchAll(/<transactionShares>\s*<value>(.*?)<\/value>/g)];
