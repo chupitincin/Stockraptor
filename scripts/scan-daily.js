@@ -433,11 +433,16 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     // ── TOTAL & SIGNAL ────────────────────────────────────────
     // FIX: normalizado a 0-100 para consistencia con umbrales
     const rawTotal = fund + sent + analyst + momentum + earPts + volShort + insiderScore;
-    const total = Math.max(0, Math.min(100, Math.round((rawTotal / MAX_TOTAL) * 100)));
+    // Dynamic normalization: if shortPct is null, volShort only reflects volume (no short bonus)
+    // Remove the short squeeze pts (max 5) from denominator so scores aren't artificially depressed
+    const effectiveMax = shortPct == null
+      ? MAX_TOTAL - 5   // subtract short squeeze bonus pts (not volume pts)
+      : MAX_TOTAL;
+    const total = Math.max(0, Math.min(100, Math.round((rawTotal / effectiveMax) * 100)));
 
-    const signal = total >= 70 ? 'STRONG BUY'
-                 : total >= 55 ? 'INTERESTING'
-                 : total >= 35 ? 'WATCH' : 'WEAK';
+    const signal = total >= 68 ? 'STRONG BUY'
+                 : total >= 52 ? 'INTERESTING'
+                 : total >= 33 ? 'WATCH' : 'WEAK';
 
     return {
       sym, sector, signal, total,
