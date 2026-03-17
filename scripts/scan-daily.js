@@ -347,7 +347,18 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     // ── 6. VOL/SHORT (0-11 pts) ───────────────────────────────
     let volShort = 0;
     if (volRatio) volShort += volRatio > 5 ? 5 : volRatio > 3 ? 4 : volRatio > 2 ? 3 : 0;
-    const shortPct = null;
+
+    // Short % float from key-metrics or profile
+    const shortInterest = km?.shortInterest ?? p?.shortInterest ?? null;
+    const floatShares   = km?.floatShares   ?? p?.floatShares   ?? null;
+    let shortPct = null;
+    if (shortInterest && floatShares && floatShares > 0) {
+      shortPct = Math.round((shortInterest / floatShares) * 1000) / 10;
+    } else if (p?.shortRatio != null) {
+      // fallback: shortRatio is days-to-cover, not %, but better than null
+      shortPct = null; // keep null if no float data
+    }
+    if (shortPct != null) volShort += shortPct > 20 ? 5 : shortPct > 15 ? 4 : shortPct > 10 ? 2 : 0;
     volShort = Math.min(11, volShort);
 
     // ── 7. INSIDER (0-8 pts) ──────────────────────────────────
@@ -511,12 +522,13 @@ async function main() {
 
   // Calculate delta for each result and find top movers
   const todayRankings = results.map(r => r.sym);
+  const hasPrevHistory = Object.keys(prevRanks).length > 0;
   results.forEach((r, idx) => {
     const todayRank = idx + 1;
     const prevRank  = prevRanks[r.sym];
     r.rankToday = todayRank;
     r.rankDelta = prevRank != null ? prevRank - todayRank : null; // positive = moved up
-    r.rankNew   = prevRank == null;
+    r.rankNew   = hasPrevHistory && prevRank == null; // only mark NEW if we have history but sym is absent
   });
 
   // Save today's ranking to scan_history
