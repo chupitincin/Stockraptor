@@ -1,8 +1,6 @@
 // netlify/functions/quote.js
-// Proxy para precios en tiempo real de FMP
+// Proxy para precios en tiempo real via Yahoo Finance (gratis, sin API key)
 // Uso: /.netlify/functions/quote?symbols=AAPL,TSLA,MSFT
-
-const FMP_BASE = 'https://financialmodelingprep.com/stable';
 
 exports.handler = async (event) => {
   const headers = {
@@ -21,41 +19,51 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing symbols param' }) };
   }
 
-  const FMP_KEY = process.env.FMP_KEY;
-  if (!FMP_KEY) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: 'FMP_KEY not configured' }) };
-  }
-
   try {
-    const symList = symbols.split(',').map(s => s.trim()).filter(Boolean).slice(0, 10);
+    const symList = symbols.split(',').map(s => s.trim().toUpperCase()).filter(Boolean).slice(0, 10);
 
-    // Llamadas individuales en paralelo — más fiable que batch en plan Starter
+    // Yahoo Finance v8 quote endpoint — gratis, no requiere API key
     const results = await Promise.allSettled(
       symList.map(sym =>
-        fetch(`${FMP_BASE}/quote?symbol=${sym}&apikey=${FMP_KEY}`, {
-          signal: AbortSignal.timeout(8000)
-        }).then(r => r.ok ? r.json() : null).catch(() => null)
+        fetch(
+          `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`,
+          {
+            headers: {
+              'User-Agent': 'Mozilla/5.0',
+              'Accept': 'application/json',
+            },
+            signal: AbortSignal.timeout(8000),
+          }
+        ).then(r => r.ok ? r.json() : null).catch(() => null)
       )
     );
 
     const prices = {};
     results.forEach((result, i) => {
       if (result.status !== 'fulfilled' || !result.value) return;
-      const data = result.value;
-      const q = Array.isArray(data) ? data[0] : data;
-      if (!q?.symbol) return;
-      prices[q.symbol] = {
-        price:     q.price      ?? null,
-        change:    q.change     ?? null,
-        changePct: q.changesPercentage ?? (q.change && q.previousClose ? Math.round((q.change / q.previousClose) * 1000) / 10 : null),
-        open:      q.open       ?? null,
-        high:      q.high       ?? null,
-        low:       q.low        ?? null,
-        volume:    q.volume     ?? null,
-        avgVolume: q.avgVolume  ?? null,
-        prevClose: q.previousClose ?? null,
-        timestamp: q.timestamp  ?? null,
-      };
+      const sym = symList[i];
+      try {
+        const meta = result.value?.chart?.result?.[0]?.meta;
+        if (!meta?.regularMarketPrice) return;
+
+        const price     = meta.regularMarketPrice;
+        const prevClose = meta.previousClose ?? meta.chartPreviousClose;
+        const change    = prevClose ? Math.round((price - prevClose) * 100) / 100 : null;
+        const changePct = prevClose ? Math.round(((price - prevClose) / prevClose) * 1000) / 10 : null;
+
+        prices[sym] = {
+          price,
+          change,
+          changePct,
+          open:      meta.regularMarketOpen       ?? null,
+          high:      meta.regularMarketDayHigh    ?? null,
+          low:       meta.regularMarketDayLow     ?? null,
+          volume:    meta.regularMarketVolume     ?? null,
+          avgVolume: meta.averageDailyVolume10Day ?? meta.averageDailyVolume3Month ?? null,
+          prevClose: prevClose ?? null,
+          timestamp: meta.regularMarketTime       ?? null,
+        };
+      } catch (_) {}
     });
 
     return { statusCode: 200, headers, body: JSON.stringify(prices) };
