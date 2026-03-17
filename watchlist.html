@@ -196,22 +196,7 @@ const CONFIG = {
   </div>
 </div>
 <script>
-// Show watchlist count instantly from localStorage — no flash
-(function(){
-  try {
-    const saved = localStorage.getItem('sr_watchlist');
-    if (!saved) return;
-    const syms = JSON.parse(saved);
-    if (syms.length > 0) {
-      document.getElementById('wlCount').textContent = syms.length + ' compan' + (syms.length === 1 ? 'y' : 'ies');
-      // Show loading placeholder rows while Supabase loads
-      document.getElementById('wlContent').innerHTML = `
-        <div style="padding:20px 0;font-size:11px;color:var(--txt);font-family:var(--font);letter-spacing:1px;">
-          Loading ${syms.length} watched compan${syms.length===1?'y':'ies'}...
-        </div>`;
-    }
-  } catch(e) {}
-})();
+// watchlist pre-render disabled — per-user localStorage loaded after auth
 </script>
 
 <div id="sr-tooltip"></div>
@@ -228,11 +213,7 @@ const fmtD = s => { if (!s) return null; return new Date(s).toLocaleDateString('
 const fmtCap = v => { if (!v) return '—'; if (v >= 1e9) return `$${(v/1e9).toFixed(1)}B`; return `$${(v/1e6).toFixed(0)}M`; };
 
 async function init() {
-  // Pre-load watchlist from localStorage for instant render
-  try {
-    const cached = localStorage.getItem('sr_watchlist');
-    if (cached) watchlist = new Set(JSON.parse(cached));
-  } catch(e) {}
+  // localStorage pre-load disabled — watchlist loaded per-user from Supabase after auth
 
   sb = createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
   const { data: { session } } = await sb.auth.getSession();
@@ -258,13 +239,27 @@ async function init() {
 async function loadWatchlist() {
   try {
     const { data } = await sb.from('watchlists').select('symbols').eq('user_id', wlUser.id).single();
-    if (data?.symbols) watchlist = new Set(data.symbols);
-  } catch(e) { watchlist = new Set(); }
+    if (data?.symbols) {
+      watchlist = new Set(data.symbols);
+      // Cache per-user
+      try { localStorage.setItem('sr_watchlist_' + wlUser.id, JSON.stringify([...watchlist])); } catch(e) {}
+    } else {
+      watchlist = new Set();
+    }
+  } catch(e) {
+    // No row yet — try per-user localStorage as fallback
+    try {
+      const cached = localStorage.getItem('sr_watchlist_' + wlUser.id);
+      if (cached) watchlist = new Set(JSON.parse(cached));
+      else watchlist = new Set();
+    } catch(e2) { watchlist = new Set(); }
+  }
 }
 
 async function saveWatchlist() {
   try {
     await sb.from('watchlists').upsert({ user_id: wlUser.id, symbols: [...watchlist], updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+    try { localStorage.setItem('sr_watchlist_' + wlUser.id, JSON.stringify([...watchlist])); } catch(e) {}
   } catch(e) {}
 }
 
