@@ -106,6 +106,28 @@ async function getUniverse() {
 }
 
 // ── ANALYZE SINGLE TICKER ─────────────────────────────────────
+
+// ── SHORT FLOAT SCRAPER (Finviz — free, updates bi-monthly) ──────────────
+// Returns shortPct as a number (e.g. 24.3 for 24.3%) or null
+async function getShortFloat(sym) {
+  try {
+    const res = await fetch(`https://finviz.com/quote.ashx?t=${sym}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html',
+      },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    // Finviz table cell: "Short Float" label followed by the % value
+    const match = html.match(/Short Float[^<]*<\/td><td[^>]*>([0-9.]+)%/i)
+                || html.match(/Short Float.*?([0-9]+\.[0-9]+)%/i);
+    if (match) return parseFloat(match[1]);
+    return null;
+  } catch { return null; }
+}
+
 async function analyzeTicker(sym, baseData, insiderCache = {}) {
   try {
     const profile     = await fmp(`/profile?symbol=${sym}`);
@@ -358,15 +380,17 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     let volShort = 0;
     if (volRatio) volShort += volRatio > 5 ? 5 : volRatio > 3 ? 4 : volRatio > 2 ? 3 : 0;
 
-    // Short % float from key-metrics or profile
+    // Short % float — try key-metrics first, then Finviz scraper
     const shortInterest = km?.shortInterest ?? p?.shortInterest ?? null;
     const floatShares   = km?.floatShares   ?? p?.floatShares   ?? null;
     let shortPct = null;
     if (shortInterest && floatShares && floatShares > 0) {
       shortPct = Math.round((shortInterest / floatShares) * 1000) / 10;
-    } else if (p?.shortRatio != null) {
-      // fallback: shortRatio is days-to-cover, not %, but better than null
-      shortPct = null; // keep null if no float data
+    }
+    // Fallback: scrape Finviz (free, updates bi-monthly)
+    // Only fetch for high-potential squeeze candidates to avoid rate limits
+    if (shortPct == null && volRatio > 2 && priceChange1D > 0) {
+      shortPct = await getShortFloat(sym);
     }
     if (shortPct != null) volShort += shortPct > 20 ? 5 : shortPct > 15 ? 4 : shortPct > 10 ? 2 : 0;
     volShort = Math.min(11, volShort);
