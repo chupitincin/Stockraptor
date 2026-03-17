@@ -311,8 +311,56 @@ async function loadPicks() {
     }
 
     renderPicks(data.picks, data.generated_at);
+    // Generate AI summaries on-the-fly for any picks missing them
+    generateMissingSummaries(data.picks);
   } catch(e) {
     await generatePicksFromCache();
+  }
+}
+
+// ── GENERATE MISSING AI SUMMARIES ON-THE-FLY ──────────────
+async function generateMissingSummaries(picks) {
+  const missing = picks.filter(p => !p.aiSummary);
+  if (missing.length === 0) return;
+
+  for (let i = 0; i < missing.length; i++) {
+    const p = missing[i];
+    const idx = picks.indexOf(p);
+
+    // Show loading state
+    const container = document.getElementById(`ai-text-${idx}`);
+    if (container) container.innerHTML = '<div class="pick-ai-loading">Generating analysis...</div>';
+
+    try {
+      const signals = [];
+      if (p.volRatio > 2.5)    signals.push(`volume ${p.volRatio}x average`);
+      if (p.shortPct > 15)     signals.push(`${p.shortPct}% short float`);
+      if (p.earningsDays != null && p.earningsDays <= 20) signals.push(`earnings in ${p.earningsDays} days`);
+      if ((p.streak ?? p.epsStreak) >= 2) signals.push(`${p.streak ?? p.epsStreak} consecutive EPS beats`);
+      if (p.upside > 20)       signals.push(`analyst target ${p.upside}% above price`);
+      if ((p.revenueGrowth ?? p.revGrowth) > 15) signals.push(`revenue +${p.revenueGrowth ?? p.revGrowth}% YoY`);
+
+      const prompt = `You are a concise financial analyst. Write a 2-sentence analysis of why ${p.sym} (${p.companyName}, ${p.sector}) is an interesting setup today.\nKey data: price $${p.price}, score ${p.total}/100, setup: ${p.pickType}, signals: ${signals.length ? signals.join(', ') : 'strong fundamentals and momentum'}.\nBe specific, factual and direct. No disclaimers. Max 40 words.`;
+
+      const res = await fetch('/.netlify/functions/ai-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, sym: p.sym }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.summary && container) {
+          p.aiSummary = data.summary;
+          container.innerHTML = `<div class="pick-ai-text">${data.summary}</div>`;
+        }
+      }
+    } catch(e) {
+      if (container) container.innerHTML = '<div class="pick-ai-text" style="color:var(--txt);font-style:italic">Analysis unavailable</div>';
+    }
+
+    // Small delay between calls
+    if (i < missing.length - 1) await new Promise(r => setTimeout(r, 300));
   }
 }
 
