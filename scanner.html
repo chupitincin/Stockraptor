@@ -887,7 +887,7 @@ function computeScores(d){
   const total=Math.max(0,Math.min(100,fund+revQ+fcfBonus+dilPenalty+debtPenalty+sent+insider+analyst+upsideScore+momentum+trend+betaB+momentumTrap+earPts+epsStreak+volScore+shortSq));
   return{total,fund:Math.max(0,fund+revQ+fcfBonus+dilPenalty+debtPenalty),sent:Math.max(0,sent),insider:Math.max(0,insider),analyst:Math.max(0,analyst+upsideScore),momentum:Math.max(0,momentum+trend+betaB+momentumTrap),earPts:Math.max(0,earPts+epsStreak),volShort:Math.max(0,volScore+shortSq),dilPenalty,debtPenalty,fcfBonus,epsStreak,streak,momentumTrap};
 }
-function toSig(s){return s>=70?'STRONG BUY':s>=55?'INTERESTING':s>=35?'WATCH':'WEAK';}
+function toSig(s){return s>=68?'STRONG BUY':s>=52?'INTERESTING':s>=33?'WATCH':'WEAK';}
 
 async function apiFetch(url,tries=3){
   for(let i=0;i<tries;i++){
