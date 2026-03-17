@@ -1009,7 +1009,7 @@ function renderTable(){
   const maxes=[25,20,15,17,15,13],cols=['var(--blue)','var(--purple)','var(--green)','var(--gold)','var(--orange)','var(--teal)'];
   document.getElementById('tbody').innerHTML=rows.map((d,idx)=>{
     // Free users: show first 20 normally, rest locked
-    const isLocked = plan === 'free' && idx >= freeLimit;
+    const isLocked = plan === 'free' && idx < freeLimit;
     if (isLocked) {
       return `<tr class="mr locked-row" onclick="showUpgradeModal()" style="cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#0d0d2a'" onmouseout="this.style.background=''">
         <td style="filter:blur(3px);user-select:none;pointer-events:none"><span style="color:#3a3a60">▶</span></td>
