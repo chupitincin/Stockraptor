@@ -631,8 +631,8 @@ function selectPicks(results) {
     .sort((a,b) => (b.streak * 10 + b.total) - (a.streak * 10 + a.total))
     .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'catalyst' }); used.add(r.sym); });
 
-  // 3. VOLUME ANOMALY (volRatio > 3 + good score)
-  norm.filter(r => r.volRatio > 3 && r.total >= 40 && !used.has(r.sym))
+  // 3. VOLUME ANOMALY (volRatio > 3 + good score + price must be positive or neutral)
+  norm.filter(r => r.volRatio > 3 && r.total >= 40 && r.priceChange1D >= 0 && !used.has(r.sym))
     .sort((a,b) => b.volRatio - a.volRatio)
     .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'volume' }); used.add(r.sym); });
 
