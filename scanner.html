@@ -1042,13 +1042,15 @@ function renderTable(){
     const upHtml=d.upside!==null?`<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>`:'<span class="cd">—</span>';
     const deltaHtml = d.rankNew
       ? `<span style="font-size:9px;font-family:var(--font);color:var(--blue);background:#00b4ff15;border:1px solid #00b4ff33;padding:2px 6px;border-radius:4px;">NEW</span>`
+      : d.rankDelta == null && d.rankToday != null
+      ? `<span style="font-size:11px;font-weight:600;font-family:var(--sans);color:#505070">#${d.rankToday}</span>`
       : d.rankDelta == null
-      ? `<span style="color:var(--txt);font-size:10px;">—</span>`
+      ? `<span style="color:#505060;font-size:10px;">—</span>`
       : d.rankDelta > 0
       ? `<span style="font-size:11px;font-weight:700;font-family:var(--font);color:var(--green)">▲${d.rankDelta}</span>`
       : d.rankDelta < 0
       ? `<span style="font-size:11px;font-weight:700;font-family:var(--font);color:var(--red)">▼${Math.abs(d.rankDelta)}</span>`
-      : `<span style="font-size:10px;color:var(--txt);">—</span>`;
+      : `<span style="font-size:10px;color:#505060;">—</span>`;
     const isWatched = watchlist.has(d.sym);
     const flagsHtml = d.flags.length
       ? `<div style="display:flex;gap:3px;flex-wrap:nowrap;align-items:center;">${d.flags.slice(0,3).map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('')}${d.flags.length>3?`<span style="font-size:9px;color:#686868;font-family:var(--font);">+${d.flags.length-3}</span>`:''}</div>`
