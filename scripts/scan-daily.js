@@ -271,7 +271,9 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       targetPrice = pt.targetConsensus ? Math.round(pt.targetConsensus * 100) / 100 : null;
       if (targetPrice && price) {
         upside = Math.round(((targetPrice - price) / price) * 100);
-        analyst += upside > 40 ? 8 : upside > 25 ? 6 : upside > 15 ? 4 : upside > 5 ? 2 : upside < -10 ? -2 : 0;
+        // Cap analyst scoring at 100% upside — beyond that targets are often stale
+        const cappedUpside = Math.min(upside, 100);
+        analyst += cappedUpside > 40 ? 8 : cappedUpside > 25 ? 6 : cappedUpside > 15 ? 4 : cappedUpside > 5 ? 2 : cappedUpside < -10 ? -2 : 0;
       }
       if (pt.targetHigh && pt.targetLow && price &&
           (pt.targetHigh - pt.targetLow) > 0 &&
@@ -317,6 +319,13 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       pct52High = Math.round(((price - yearHigh) / yearHigh) * 100);
       const pos = (price - yearLow) / (yearHigh - yearLow);
       momentum += pos > 0.85 ? 8 : pos > 0.65 ? 6 : pos > 0.45 ? 4 : pos > 0.25 ? 2 : 0;
+    }
+
+    // Stale target detection: if stock is >50% below 52w high AND upside >150%
+    // the analyst target was almost certainly set at a much higher price and never updated
+    if (upside !== null && pct52High !== null && pct52High < -50 && upside > 150) {
+      upside = null;      // null out — unreliable
+      targetPrice = null; // null out price target too
     }
 
     // FIX: máximo 2 pts por movimiento diario (era 4 — demasiado ruidoso)
