@@ -610,43 +610,134 @@ async function main() {
 }
 
 // ── SELECT TOP PICKS ──────────────────────────────────────
+// Logic: quality-first with multi-signal confluence scoring.
+// Each pick category has strict quality floors + a confluence
+// bonus to reward stocks where multiple signals align.
 function selectPicks(results) {
   const picks = [];
-  const used = new Set();
+  const used  = new Set();
 
-  const norm = results.map(r => ({
-    ...r,
-    revenueGrowth: r.revenueGrowth ?? r.revGrowth ?? null,
-    epsHistory: Array.isArray(r.epsHistory) ? r.epsHistory : [],
-    flags: Array.isArray(r.flags) ? r.flags : [],
-  }));
+  const norm = results.map(r => {
+    const revGrowth = r.revenueGrowth ?? r.revGrowth ?? null;
 
-  // 1. SHORT SQUEEZE setups
-  norm.filter(r => r.shortPct > 15 && r.priceChange1D > 0 && r.total >= 45 && !used.has(r.sym))
-    .sort((a,b) => (b.shortPct * b.total) - (a.shortPct * a.total))
-    .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'squeeze' }); used.add(r.sym); });
+    // ── Confluence score: count how many strong signals fire ──
+    let confluence = 0;
+    if (r.priceChange1D > 2)                           confluence++; // price up today
+    if (r.volRatio > 2)                                confluence++; // unusual volume
+    if (r.upside > 25)                                 confluence++; // analyst upside
+    if (r.streak >= 3)                                 confluence++; // EPS beat streak
+    if (r.earningsDays != null && r.earningsDays <= 20) confluence++; // earnings soon
+    if (r.fund >= 20)                                  confluence++; // strong fundamentals
+    if (r.momentum >= 12)                              confluence++; // strong momentum
+    if (r.flags?.some(f => f.label?.includes('INSIDER'))) confluence++; // insider buy
+    if (revGrowth > 15)                                confluence++; // revenue growing
 
-  // 2. EARNINGS CATALYST (≤14 days + EPS streak)
-  norm.filter(r => r.earningsDays != null && r.earningsDays <= 14 && r.streak >= 2 && !used.has(r.sym))
-    .sort((a,b) => (b.streak * 10 + b.total) - (a.streak * 10 + a.total))
-    .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'catalyst' }); used.add(r.sym); });
+    // ── Trend health: penalise broken charts ──
+    // pct52High = % below 52-week high. If stock is down >40% from high
+    // AND negative today, it's in a downtrend — discard as a pick
+    const brokenTrend = (r.pct52High != null && r.pct52High < -40 && r.priceChange1D < 0);
 
-  // 3. VOLUME ANOMALY (volRatio > 3 + good score + price must be positive or neutral)
-  norm.filter(r => r.volRatio > 3 && r.total >= 40 && r.priceChange1D >= 0 && !used.has(r.sym))
-    .sort((a,b) => b.volRatio - a.volRatio)
-    .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'volume' }); used.add(r.sym); });
+    return {
+      ...r,
+      revGrowth,
+      revenueGrowth: revGrowth,
+      epsHistory: Array.isArray(r.epsHistory) ? r.epsHistory : [],
+      flags: Array.isArray(r.flags) ? r.flags : [],
+      confluence,
+      brokenTrend,
+    };
+  }).filter(r => !r.brokenTrend); // drop broken-trend stocks globally
 
-  // 4. INSIDER BUYING
-  norm.filter(r => r.flags?.some(f => f.label?.includes('INSIDER') || f.label?.includes('BIG')) && r.total >= 40 && !used.has(r.sym))
-    .sort((a,b) => b.total - a.total)
-    .slice(0, 1).forEach(r => { picks.push({ ...r, pickType: 'insider' }); used.add(r.sym); });
+  // ── Helper: fill remaining slots with best multi-signal stocks ──
+  function fillSlots(filterFn, sortFn, limit) {
+    norm.filter(r => filterFn(r) && !used.has(r.sym))
+        .sort(sortFn)
+        .slice(0, limit)
+        .forEach(r => { picks.push(r); used.add(r.sym); });
+  }
 
-  // 5. MOMENTUM BREAKOUT
-  norm.filter(r => r.momentum >= 12 && r.fund >= 14 && r.total >= 55 && !used.has(r.sym))
-    .sort((a,b) => (b.momentum + b.fund) - (a.momentum + a.fund))
-    .slice(0, 1).forEach(r => { picks.push({ ...r, pickType: 'momentum' }); used.add(r.sym); });
+  // ── 1. EARNINGS CATALYST ─────────────────────────────────
+  // Tight window (≤ 14 days) + beat streak + decent score
+  fillSlots(
+    r => r.earningsDays != null && r.earningsDays <= 14
+      && r.streak >= 2 && r.total >= 48 && r.fund >= 12,
+    (a, b) => (b.streak * 8 + b.total + b.confluence * 4)
+            - (a.streak * 8 + a.total + a.confluence * 4),
+    2
+  );
+  // Fallback: looser window (≤ 30 days) if not enough candidates
+  if (picks.filter(p => p.pickType === undefined).length < 2) {
+    fillSlots(
+      r => r.earningsDays != null && r.earningsDays <= 30
+        && r.streak >= 1 && r.total >= 50 && r.fund >= 14,
+      (a, b) => (b.total + b.confluence * 3) - (a.total + a.confluence * 3),
+      2 - picks.length
+    );
+  }
+  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'catalyst'; });
 
-  return picks.slice(0, 8);
+  // ── 2. VOLUME ANOMALY ────────────────────────────────────
+  // Volume spike + price MUST be positive + solid score
+  fillSlots(
+    r => r.volRatio > 2.5 && r.priceChange1D > 0
+      && r.total >= 48 && r.fund >= 12,
+    (a, b) => (b.volRatio * 2 + b.total + b.confluence * 5)
+            - (a.volRatio * 2 + a.total + a.confluence * 5),
+    2
+  );
+  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'volume'; });
+
+  // ── 3. SHORT SQUEEZE ─────────────────────────────────────
+  // Real squeeze: shortPct data when available, OR use proxy
+  // (high volRatio + strong upward price + bearish sentiment divergence)
+  fillSlots(
+    r => ((r.shortPct > 15) || (r.volRatio > 3 && r.priceChange1D > 3 && r.sent < 8))
+      && r.priceChange1D > 0 && r.total >= 48 && !r.pickType,
+    (a, b) => {
+      const scoreA = (a.shortPct || 0) * 1.5 + a.volRatio * 2 + a.total + a.confluence * 4;
+      const scoreB = (b.shortPct || 0) * 1.5 + b.volRatio * 2 + b.total + b.confluence * 4;
+      return scoreB - scoreA;
+    },
+    1
+  );
+  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'squeeze'; });
+
+  // ── 4. INSIDER BUYING ────────────────────────────────────
+  fillSlots(
+    r => r.flags?.some(f => f.label?.includes('INSIDER') || f.label?.includes('BIG'))
+      && r.total >= 45 && r.fund >= 12,
+    (a, b) => (b.total + b.confluence * 5) - (a.total + a.confluence * 5),
+    1
+  );
+  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'insider'; });
+
+  // ── 5. MOMENTUM BREAKOUT ─────────────────────────────────
+  // Strong trend + strong fundamentals + not already picked
+  fillSlots(
+    r => r.momentum >= 11 && r.fund >= 14 && r.total >= 55
+      && r.priceChange1D >= 0,
+    (a, b) => (b.momentum + b.fund + b.confluence * 4)
+            - (a.momentum + a.fund + a.confluence * 4),
+    1
+  );
+  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'momentum'; });
+
+  // ── 6. FILL remaining slots with best confluence stocks ──
+  // If we still have < 6 picks, fill with top multi-signal stocks
+  const target = 6;
+  if (picks.length < target) {
+    fillSlots(
+      r => r.total >= 52 && r.confluence >= 3 && r.priceChange1D >= 0,
+      (a, b) => (b.total + b.confluence * 6) - (a.total + a.confluence * 6),
+      target - picks.length
+    );
+    picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'momentum'; });
+  }
+
+  // Final quality check: remove any that snuck through with bad price action
+  return picks
+    .filter(p => p.priceChange1D === null || p.priceChange1D > -5)
+    .slice(0, 8);
 }
 
 // ── GENERATE MOVER SUMMARY ────────────────────────────────
