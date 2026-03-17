@@ -68,6 +68,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .pick-card.type-volume{border-color:#ff4fa033;}
 .pick-card.type-insider{border-color:#00ff9433;}
 .pick-card.type-momentum{border-color:#00b4ff33;}
+.pick-card.type-breakout{border-color:#bf5fff33;}
 
 .pick-top{padding:20px 20px 16px;}
 .pick-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
@@ -241,6 +242,7 @@ const PICK_TYPES = {
   volume:   { label: '⚡ VOLUME ANOMALY',   tip: 'Trading volume is 3x or more above the 10-day average. Unusual volume often signals institutional buying or a major news event.', color: 'var(--pink)',   bg: '#ff4fa015', cardClass: 'type-volume' },
   insider:  { label: '👤 INSIDER BUYING',   tip: 'Company executives or directors bought shares with their own money. Insiders rarely buy unless they believe the stock is undervalued.', color: 'var(--green)',  bg: '#00ff9415', cardClass: 'type-insider' },
   momentum: { label: '🚀 MOMENTUM BREAKOUT', tip: 'Strong upward price trend over 52 weeks combined with solid fundamentals. The stock is breaking out of a base and trending higher.', color: 'var(--blue)', bg: '#00b4ff15', cardClass: 'type-momentum' },
+  breakout:  { label: '📈 TECHNICAL BREAKOUT', tip: 'Golden cross (MA50 above MA200) confirmed. Price has recovered 25%+ from its 52-week low and both moving averages are trending up — a classic bullish structure.', color: 'var(--purple)', bg: '#bf5fff15', cardClass: 'type-breakout' },
 };
 
 const SCORE_COLS = [
