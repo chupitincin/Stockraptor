@@ -1300,7 +1300,9 @@ function applyLivePriceToRow(sym, q) {
   const row = arEl.closest('tr.mr');
   if (!row) return;
   const tds = row.querySelectorAll('td');
-  const priceTd = tds[tds.length - 2]; // columna PRICE
+  // Cols: ▶[0] TICKER[1] RANK[2] SIGNAL[3] SCORE[4] FUND[5] SENT[6] ANALY[7] MOME[8] EARNINGS[9] VOL/SHORT[10] FLAGS[11] PRICE[12] UPSIDE[13] ★[14]
+  const priceTd  = tds[tds.length - 3]; // PRICE  (index 12)
+  const upsideTd = tds[tds.length - 2]; // UPSIDE (index 13)
   if (!priceTd) return;
 
   const price = q.price;
@@ -1326,8 +1328,16 @@ function applyLivePriceToRow(sym, q) {
   // Actualiza también el objeto en memoria para consistencia al re-render
   const d = allData.find(x => x.sym === sym);
   if (d) {
-    d.price        = price;
+    d.price         = price;
     d.priceChange1D = pct;
+    // Recalcula upside con el precio actualizado
+    if (d.targetPrice != null && price > 0) {
+      d.upside = Math.round(((d.targetPrice - price) / price) * 100);
+      if (upsideTd) {
+        const uc = d.upside > 20 ? 'var(--green)' : d.upside < 0 ? 'var(--red)' : '#808080';
+        upsideTd.innerHTML = `<span style="color:${uc}">${d.upside > 0 ? '+' : ''}${d.upside}%</span>`;
+      }
+    }
   }
 }
 
