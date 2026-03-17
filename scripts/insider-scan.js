@@ -134,12 +134,16 @@ function extractTransactions(xml, date) {
   const codes  = [...xml.matchAll(/<transactionCode>(.*?)<\/transactionCode>/g)];
   const shares = [...xml.matchAll(/<transactionShares>\s*<value>(.*?)<\/value>/g)];
   const prices = [...xml.matchAll(/<transactionPricePerShare>\s*<value>(.*?)<\/value>/g)];
+  // Extract exact transaction dates from XML (YYYY-MM-DD)
+  const dates  = [...xml.matchAll(/<transactionDate>\s*<value>(.*?)<\/value>/g)];
 
   const txs = [];
   for (let i = 0; i < codes.length; i++) {
     const txCode = codes[i]?.[1]?.trim();
     const sh     = parseFloat(shares[i]?.[1] || '0');
     const pr     = parseFloat(prices[i]?.[1] || '0') || null;
+    // Use exact transaction date from XML; fall back to filing date
+    const txDate = dates[i]?.[1]?.trim() || date;
     if (!txCode || sh <= 0 || !['P','S','A','M'].includes(txCode)) continue;
     txs.push({
       name, title: role, txCode,
@@ -147,6 +151,7 @@ function extractTransactions(xml, date) {
       shares: Math.round(sh),
       price:  pr ? Math.round(pr*100)/100 : null,
       value:  pr ? Math.round(sh*pr) : null,
+      date:   txDate,
     });
   }
   return txs.length > 0 ? { name, role, txs } : null;
