@@ -50,6 +50,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .cg{color:var(--green);}.cau{color:var(--gold);}.cr{color:var(--red);}.cb{color:var(--blue);}.cp{color:var(--purple);}.co{color:var(--orange);}.ct{color:var(--teal);}.ck{color:var(--pink);}.cd{color:#808080;}
 .tbl-outer{overflow-x:clip;}
 table{width:100%;border-collapse:separate;border-spacing:0 6px;}
+table{width:100%;border-collapse:separate;border-spacing:0 6px;font-family:var(--sans);}
 thead tr{border-bottom:1px solid var(--bord2);}
 thead{position:sticky;top:52px;z-index:50;background:rgba(6,6,15,.97);backdrop-filter:blur(12px);}
 th{padding:8px 6px;text-align:left;font-size:9px;color:#888888;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;}
@@ -60,7 +61,7 @@ tbody tr.mr:hover td{background:#1e1e1e!important;}
 tbody tr.dr{display:none;background:#07071a;border-bottom:1px solid var(--bord2);}
 tbody tr.dr.open{display:table-row;}
 @keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-td{padding:8px 6px;white-space:nowrap;vertical-align:middle;font-variant-numeric:tabular-nums;}
+td{padding:8px 6px;white-space:nowrap;vertical-align:middle;font-family:var(--sans);font-variant-numeric:tabular-nums;}
 tbody tr.mr td{background:#161616;border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07);}
 tbody tr.mr td:first-child{border-left:1px solid rgba(255,255,255,.07);border-radius:8px 0 0 8px;}
 tbody tr.mr td:last-child{border-right:1px solid rgba(255,255,255,.07);border-radius:0 8px 8px 0;}
@@ -340,7 +341,7 @@ function renderRow(d) {
   const edHtml = d.earningsDays!=null ? `<span style="font-size:10px;color:${d.earningsDays<=20?'var(--gold)':d.earningsDays<=45?'var(--orange)':'var(--txt)'}">${ef} <span style="opacity:.5;font-size:8px">${d.earningsDays}d</span></span>` : '<span class="cd">—</span>';
   const vsHtml = `${d.volRatio?`<span class="${d.volRatio>2?'vol-spike':'cd'}">${d.volRatio>2?'⚡':''}${d.volRatio}x</span>`:''} ${d.shortPct?`<span class="${d.shortPct>15?'ct':'cd'}" style="margin-left:3px">${d.shortPct>15?'🎯':''}${d.shortPct}%</span>`:''}${!d.volRatio&&!d.shortPct?'<span class="cd">—</span>':''}`;
   const ch = d.priceChange1D;
-  const prHtml = d.price ? `$${d.price.toFixed(2)}<span style="font-size:8px;color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!=null?sgn(ch)+ch+'%':''}</span>` : '—';
+  const prHtml = d.price ? `$${d.price.toFixed(2)}<span style="font-size:10px;font-family:var(--sans);color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!=null?sgn(ch)+ch+'%':''}</span>` : '—';
   const upHtml = d.upside!=null ? `<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>` : '<span class="cd">—</span>';
   const deltaHtml = d.rankNew
     ? `<span style="font-size:9px;font-family:var(--font);color:var(--blue);background:#00b4ff15;border:1px solid #00b4ff33;padding:2px 6px;border-radius:4px;">NEW</span>`
@@ -364,10 +365,10 @@ function renderRow(d) {
     <td style="text-align:center"><span style="font-size:13px;font-weight:700;font-family:var(--sans);font-variant-numeric:tabular-nums;color:var(--green)">${d.analyst??'—'}</span></td>
     <td style="text-align:center"><span style="font-size:13px;font-weight:700;font-family:var(--sans);font-variant-numeric:tabular-nums;color:var(--gold)">${d.momentum??'—'}</span></td>
     <td>${edHtml}</td>
-    <td>${vsHtml}</td>
+    <td style="font-family:var(--sans);font-size:13px;font-weight:600;">${vsHtml}</td>
     <td>${flagsHtml}</td>
-    <td style="font-size:11px;color:var(--txb)">${prHtml}</td>
-    <td>${upHtml}</td>
+    <td style="font-family:var(--sans);font-size:13px;font-weight:600;color:var(--txb)">${prHtml}</td>
+    <td style="font-family:var(--sans);font-size:14px;font-weight:700;">${upHtml}</td>
     <td style="text-align:center">
       <button onclick="event.stopPropagation();removeWatch('${d.sym}')" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--gold);transition:all .15s;" title="Remove from watchlist">★</button>
     </td>
