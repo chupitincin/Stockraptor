@@ -483,17 +483,6 @@ function renderDet(d) {
     else if (y < 100) btn.classList.remove('visible');
   }, { passive: true });
 })();
-// Scroll to top button
-(function(){
-  const btn = document.getElementById('scrollTopBtn');
-  if (!btn) return;
-  window.addEventListener('scroll', function() {
-    var y = window.scrollY;
-    if (y > 400) btn.classList.add('visible');
-    else if (y < 100) btn.classList.remove('visible');
-  }, { passive: true });
-})();
-
 window.addEventListener('load', init);
 </script>
 <script>
@@ -615,7 +604,15 @@ window.render = function() {
   setTimeout(startWlLivePrices, 500);
 };
 </script>
-
 <button id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
+<script>
+(function(){
+  var btn = document.getElementById('scrollTopBtn');
+  window.addEventListener('scroll', function(){
+    if(window.scrollY > 400) btn.classList.add('visible');
+    else if(window.scrollY < 100) btn.classList.remove('visible');
+  }, {passive:true});
+})();
+</script>
 </body>
 </html>
