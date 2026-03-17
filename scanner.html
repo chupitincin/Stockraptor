@@ -1633,6 +1633,17 @@ function showUpgradeSuccess(plan) {
   setTimeout(() => t.remove(), 4500);
 }
 
+// Scroll to top button
+(function(){
+  const btn = document.getElementById('scrollTopBtn');
+  if (!btn) return;
+  window.addEventListener('scroll', function() {
+    var y = window.scrollY;
+    if (y > 400) btn.classList.add('visible');
+    else if (y < 100) btn.classList.remove('visible');
+  }, { passive: true });
+})();
+
 window.addEventListener('load', initScannerAuth);
 
 // ══════════════════════════════════════════
