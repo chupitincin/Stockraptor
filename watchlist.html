@@ -264,7 +264,7 @@ async function loadWatchlist() {
 
 async function saveWatchlist() {
   try {
-    await sb.from('watchlists').upsert({ user_id: wlUser.id, symbols: [...watchlist], updated_at: new Date().toISOString() });
+    await sb.from('watchlists').upsert({ user_id: wlUser.id, symbols: [...watchlist], updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
   } catch(e) {}
 }
 
