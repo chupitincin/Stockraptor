@@ -1840,6 +1840,27 @@ async function loadDailyCache() {
     renderTable();
     if (typeof applyScannerLang === 'function') applyScannerLang();
 
+    // Highlight stock from ?highlight=SYM param (e.g. coming from Daily Picks)
+    const _hlSym = new URLSearchParams(window.location.search).get('highlight');
+    if (_hlSym) {
+      setTimeout(() => {
+        const arEl = document.getElementById('ar-' + _hlSym);
+        const row  = arEl?.closest('tr.mr');
+        if (row) {
+          // Scroll into view
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Flash highlight
+          row.style.transition = 'background .2s';
+          row.style.background = '#00ff9420';
+          setTimeout(() => { row.style.background = ''; }, 1800);
+          // Auto-open detail panel
+          if (typeof toggleDet === 'function') toggleDet(_hlSym);
+        }
+        // Clean URL without reloading
+        window.history.replaceState({}, '', '/scanner.html');
+      }, 600);
+    }
+
     // Arrancar precios en tiempo real tras cargar la tabla
     setTimeout(() => {
       if (typeof startLivePrices === 'function') startLivePrices();
