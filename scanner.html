@@ -1140,7 +1140,7 @@ function renderDet(d){
             <span style="color:${t.txCode==='P'?'var(--green)':t.txCode==='S'?'var(--red)':'var(--txt)'}">
               ${t.txCode==='P'?'▲':t.txCode==='S'?'▼':'●'}
             </span>
-            <span style="color:var(--txb);margin-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.name.split(' ').slice(-1)[0]}</span>
+            <span style="color:var(--txb);margin-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(t.name && !t.name.toLowerCase().includes('see remark') && t.name.length > 1) ? t.name.split(' ').slice(0,2).join(' ') : 'Insider'}</span>
             <span style="color:var(--txt);margin-left:4px;font-size:9px;">${t.title.substring(0,12)}</span>
           </div>
           <div style="text-align:right;flex-shrink:0;white-space:nowrap;">
