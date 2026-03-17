@@ -203,7 +203,7 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .flag.tt{cursor:help;border-bottom:none;}
 .flag.tt::after{width:200px;font-size:11px;font-weight:400;letter-spacing:0;text-transform:none;bottom:calc(100% + 8px);white-space:normal;}
 .tbl-outer{overflow-x: clip;}
-thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8){text-align:center;color:var(--txt);}
+thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8),thead th:nth-child(9){text-align:center;}
 .dr td{padding:0 !important;} .dr > td{max-width:100%;}
 table{width:100%;border-collapse:separate;border-spacing:0 6px;display:none;}
 thead tr{border-bottom:1px solid var(--bord2);}
@@ -724,20 +724,20 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
         
 <thead><tr id="theadRow">
           <th></th>
-          <th onclick="thSort('ticker')">TICKER / SECTOR <span class="th-arrow" id="th-ticker"></span></th>
-          <th onclick="thSort('delta')" style="text-align:center">RANK <span class="th-arrow" id="th-delta"></span></th>
-          <th onclick="thSort('signal')">SIGNAL <span class="th-arrow" id="th-signal"></span></th>
-          <th onclick="thSort('score')">TOTAL SCORE <span class="th-arrow" id="th-score">▾</span></th>
-          <th onclick="thSort('fund')" style="text-align:center">FUND. <span class="th-arrow" id="th-fund"></span></th>
-          <th onclick="thSort('sent')" style="text-align:center">SENT. <span class="th-arrow" id="th-sent"></span></th>
-          <th onclick="thSort('analyst')" style="text-align:center">ANALY. <span class="th-arrow" id="th-analyst"></span></th>
-          <th onclick="thSort('momentum')" style="text-align:center">MOME. <span class="th-arrow" id="th-momentum"></span></th>
-          <th onclick="thSort('earnings')">EARNINGS <span class="th-arrow" id="th-earnings"></span></th>
-          <th onclick="thSort('short')">VOL/SHORT <span class="th-arrow" id="th-short"></span></th>
-          <th>⚠ FLAGS</th>
-          <th onclick="thSort('price')">PRICE <span class="th-arrow" id="th-price"></span></th>
-          <th onclick="thSort('upside')">UPSIDE <span class="th-arrow" id="th-upside"></span></th>
-          <th style="text-align:center">★</th>
+          <th onclick="thSort('ticker')"><span class="tt" data-tip="Company ticker symbol, full name and market sector.">TICKER / SECTOR <span class="th-arrow" id="th-ticker"></span></span></th>
+          <th onclick="thSort('delta')" style="text-align:center"><span class="tt" data-tip="Daily rank change vs yesterday. ▲ = moved up in ranking, ▼ = moved down. NEW = first time appearing.">RANK <span class="th-arrow" id="th-delta"></span></span></th>
+          <th onclick="thSort('signal')"><span class="tt" data-tip="Overall verdict: STRONG BUY (score ≥70) · INTERESTING (≥55) · WATCH (≥35) · WEAK (<35). Based on the total score.">SIGNAL <span class="th-arrow" id="th-signal"></span></span></th>
+          <th onclick="thSort('score')"><span class="tt" data-tip="Composite score from 0–100. Combines fundamentals, news sentiment, analyst ratings, price momentum, earnings history, and volume. Higher = stronger setup.">TOTAL SCORE <span class="th-arrow" id="th-score">▾</span></span></th>
+          <th onclick="thSort('fund')" style="text-align:center"><span class="tt" data-tip="Fundamental score (0–25 pts). Measures financial health: P/E ratio, revenue growth, profit margins, debt levels and cash flow. Higher = stronger financials.">FUND. <span class="th-arrow" id="th-fund"></span></span></th>
+          <th onclick="thSort('sent')" style="text-align:center"><span class="tt" data-tip="Sentiment score (0–8 pts). Analyzes the tone of recent news headlines. Positive press coverage = higher score. Requires at least 4 recent articles.">SENT. <span class="th-arrow" id="th-sent"></span></span></th>
+          <th onclick="thSort('analyst')" style="text-align:center"><span class="tt" data-tip="Analyst score (0–15 pts). Based on Wall Street Buy/Hold/Sell ratings and how far the current price is below the average analyst price target.">ANALY. <span class="th-arrow" id="th-analyst"></span></span></th>
+          <th onclick="thSort('momentum')" style="text-align:center"><span class="tt" data-tip="Momentum score (0–17 pts). Measures price trend over 52 weeks and recent weeks. High score = stock is trending strongly upward. Low score = stock in downtrend.">MOME. <span class="th-arrow" id="th-momentum"></span></span></th>
+          <th onclick="thSort('earnings')"><span class="tt" data-tip="Earnings score (0–15 pts). Rewards companies reporting soon and those with a streak of beating analyst EPS estimates. Earnings surprises often drive big price moves.">EARNINGS <span class="th-arrow" id="th-earnings"></span></span></th>
+          <th onclick="thSort('short')"><span class="tt" data-tip="Volume & short interest. ⚡ = unusual trading volume spike (>2x average). 🎯 = high short float (>15%) which can lead to a short squeeze if price rises.">VOL/SHORT <span class="th-arrow" id="th-short"></span></span></th>
+          <th><span class="tt" data-tip="Special alerts: ⚡ Volume spike · 👤 Insider buying · 💰 Positive cash flow · 📈 EPS beat streak · 🎯 High analyst upside · 📊 Above 50-day MA">⚠ FLAGS</span></th>
+          <th onclick="thSort('price')"><span class="tt" data-tip="Current stock price with today's % change. Green = up today, Red = down today. Updated live every 30 seconds during market hours.">PRICE <span class="th-arrow" id="th-price"></span></span></th>
+          <th onclick="thSort('upside')"><span class="tt" data-tip="Analyst price target upside. How much % the stock could gain to reach the average Wall Street 12-month price target. +20% or more = analysts see significant room to grow.">UPSIDE <span class="th-arrow" id="th-upside"></span></span></th>
+          <th style="text-align:center"><span class="tt" data-tip="Add to your Watchlist to track this stock. Click ★ to save.">★</span></th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
