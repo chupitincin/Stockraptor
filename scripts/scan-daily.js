@@ -269,6 +269,9 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       if (total > 0) {
         recMean = Math.round(((recBuy * 1 + recHold * 3 + recSell * 5) / total) * 10) / 10;
         analyst += recMean <= 1.5 ? 5 : recMean <= 2.2 ? 3 : recMean <= 2.8 ? 1 : 0;
+        // Buy ratio: % of analysts with Buy/Strong Buy — more direct than recMean
+        const buyRatio = total > 3 ? recBuy / total : 0;
+        analyst += buyRatio > 0.75 ? 3 : buyRatio > 0.55 ? 2 : buyRatio > 0.40 ? 1 : 0;
       }
     }
 
@@ -302,9 +305,16 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     const beta = p?.beta;
     if (beta) momentum += beta > 1.8 ? 3 : beta > 1.3 ? 2 : beta > 0.9 ? 1 : 0;
 
-    const ma50 = q?.priceAvg50;
+    const ma50  = q?.priceAvg50;
+    const ma200 = q?.priceAvg200;
+    // MA50 vs price
     if (ma50 && price > ma50 * 1.05) momentum += 2;
     else if (ma50 && price > ma50) momentum += 1;
+    // MA200 — longer-term trend confirmation
+    if (ma200 && price > ma200 * 1.05) momentum += 2;
+    else if (ma200 && price > ma200) momentum += 1;
+    // Golden cross: MA50 above MA200 — strong bull signal
+    if (ma50 && ma200 && ma50 > ma200 * 1.02) momentum += 2;
 
     const volRatio = volume && avgVol && avgVol > 0 ? Math.round((volume / avgVol) * 10) / 10 : null;
     if (volRatio) momentum += volRatio > 3 ? 2 : volRatio > 2 ? 1 : 0;
@@ -427,6 +437,11 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       fcf: fcf || null, revGrowth, epsGrowth,
       sharesDilution, dilPenalty, debtPenalty,
       targetPrice, upside, recMean, recBuy, recHold, recSell,
+      buyRatio: (recBuy + recHold + recSell) > 3
+        ? Math.round((recBuy / (recBuy + recHold + recSell)) * 100) : null,
+      ma50: ma50 ? Math.round(ma50 * 100) / 100 : null,
+      ma200: ma200 ? Math.round(ma200 * 100) / 100 : null,
+      goldenCross: (ma50 && ma200 && ma50 > ma200) ? true : false,
       shortPct, mspr, insiderChange,
       insiderData: insider ? {
         buys: insider.buys, sells: insider.sells, netChange: insider.netChange,
@@ -711,8 +726,18 @@ function selectPicks(results) {
   );
   picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'insider'; });
 
-  // ── 5. MOMENTUM BREAKOUT ─────────────────────────────────
-  // Strong trend + strong fundamentals + not already picked
+  // ── 5. TECHNICAL BREAKOUT ───────────────────────────────
+  // Price above both MAs + recovering from 52w low + volume confirmation
+  fillSlots(
+    r => r.goldenCross && r.pct52Low > 25 && r.priceChange1D >= 0
+      && r.total >= 50 && r.fund >= 12,
+    (a, b) => (b.pct52Low + b.total + b.confluence * 5)
+            - (a.pct52Low + a.total + a.confluence * 5),
+    1
+  );
+  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'breakout'; });
+
+  // ── 6. MOMENTUM BREAKOUT ─────────────────────────────────
   fillSlots(
     r => r.momentum >= 11 && r.fund >= 14 && r.total >= 55
       && r.priceChange1D >= 0,
@@ -722,7 +747,7 @@ function selectPicks(results) {
   );
   picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'momentum'; });
 
-  // ── 6. FILL remaining slots with best confluence stocks ──
+  // ── 7. FILL remaining slots with best confluence stocks ──
   // If we still have < 6 picks, fill with top multi-signal stocks
   const target = 6;
   if (picks.length < target) {
@@ -787,9 +812,18 @@ async function generateAISummary(p) {
     if (p.upside > 20)       signals.push(`analyst price target ${p.upside}% above current price`);
     if (p.revenueGrowth > 15) signals.push(`revenue growing ${p.revenueGrowth}% YoY`);
 
-    const prompt = `You are a concise financial analyst. Write a 2-sentence analysis of why ${p.sym} (${p.companyName}, ${p.sector}) is an interesting setup today.
-Key data: price $${p.price}, score ${p.total}/100, signals: ${signals.join(', ')}.
-Be specific, factual and direct. Do NOT use disclaimers. Max 40 words total.`;
+    // Build rich context for the AI
+    const analystCtx = p.buyRatio != null ? `${p.buyRatio}% of analysts rate Buy` : '';
+    const maCtx      = p.goldenCross ? 'golden cross (MA50>MA200)' : '';
+    const fundCtx    = p.roe > 15 ? `ROE ${p.roe}%` : p.grossMargin > 40 ? `gross margin ${p.grossMargin}%` : '';
+    const peCtx      = p.pe && p.pe > 0 ? `P/E ${p.pe}` : '';
+    const extras     = [analystCtx, maCtx, fundCtx, peCtx].filter(Boolean).join(', ');
+
+    const prompt = `You are a sharp financial analyst writing for active traders. In 2 sentences (max 45 words), explain why ${p.sym} (${p.companyName}, ${p.sector}) is the top ${p.pickType} setup today.
+Context: price $${p.price}, score ${p.total}/100, setup: ${p.pickType}.
+Key signals: ${signals.length ? signals.join('; ') : 'strong multi-factor confluence'}.
+${extras ? 'Additional: ' + extras + '.' : ''}
+Be specific and quantitative. No generic phrases. No disclaimers.`;
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
