@@ -205,7 +205,7 @@ footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-
 .tbl-outer{overflow-x: clip;}
 thead th:nth-child(6),thead th:nth-child(7),thead th:nth-child(8),thead th:nth-child(9){text-align:center;}
 .dr td{padding:0 !important;} .dr > td{max-width:100%;}
-table{width:100%;border-collapse:separate;border-spacing:0 6px;display:none;}
+table{width:100%;border-collapse:separate;border-spacing:0 6px;display:none;font-family:var(--sans);}
 thead tr{border-bottom:1px solid var(--bord2);}
 thead{position:sticky;top:var(--thead-top,52px);z-index:50;background:rgba(6,6,15,.97);backdrop-filter:blur(12px);}
 th{padding:8px 6px;text-align:left;font-size:9px;color:#888888;letter-spacing:1px;font-weight:600;white-space:nowrap;cursor:pointer;transition:color .2s;user-select:none;}
@@ -215,7 +215,7 @@ tbody tr.mr{border-bottom:1px solid #0d0d1e;cursor:pointer;height:64px;transitio
 tbody tr.dr{display:none;background:#07071a;border-bottom:1px solid var(--bord2);}
 tbody tr.dr.open{display:table-row;}
 @keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-td{padding:8px 6px;white-space:nowrap;vertical-align:middle;font-variant-numeric:tabular-nums;}
+td{padding:8px 6px;white-space:nowrap;vertical-align:middle;font-family:var(--sans);font-variant-numeric:tabular-nums;}
 .tsym{font-family:'Syne',sans-serif;font-size:14px;color:var(--white);letter-spacing:.5px;}
 .tsec{font-size:10px;color:#666666;margin-top:2px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tname{font-size:10px;color:#888888;margin-top:1px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -1038,7 +1038,7 @@ function renderTable(){
     const edHtml=d.earningsDays!==null?`<span style="font-size:10px;color:${d.earningsDays<=20?'var(--gold)':d.earningsDays<=45?'var(--orange)':'var(--txt)'}">${ef} <span style="opacity:.5;font-size:8px">${d.earningsDays}d</span></span>`:'<span class="cd">—</span>';
     const vsHtml=`${d.volRatio?`<span class="${d.volRatio>2?'vol-spike':'cd'}">${d.volRatio>2?'⚡':''}${d.volRatio}x</span>`:''} ${d.shortPct?`<span class="${d.shortPct>15?'ct':'cd'}" style="margin-left:3px">${d.shortPct>15?'🎯':''}${d.shortPct}%</span>`:''}${!d.volRatio&&!d.shortPct?'<span class="cd">—</span>':''}`;
     const ch=d.priceChange1D;
-    const prHtml=d.price?`$${d.price.toFixed(2)}<span style="font-size:8px;color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!==null?sgn(ch)+ch+'%':''}</span>`:'—';
+    const prHtml=d.price?`$${d.price.toFixed(2)}<span style="font-size:10px;font-family:var(--sans);color:${ch>0?'var(--green)':ch<0?'var(--red)':'var(--txt)'};margin-left:3px">${ch!==null?sgn(ch)+ch+'%':''}</span>`:'—';
     const upHtml=d.upside!==null?`<span class="${d.upside>20?'cg':d.upside<0?'cr':'cd'}">${sgn(d.upside)}${d.upside}%</span>`:'<span class="cd">—</span>';
     const deltaHtml = d.rankNew
       ? `<span style="font-size:9px;font-family:var(--font);color:var(--blue);background:#00b4ff15;border:1px solid #00b4ff33;padding:2px 6px;border-radius:4px;">NEW</span>`
@@ -1064,10 +1064,10 @@ function renderTable(){
       <td style="text-align:center"><span style="font-size:13px;font-weight:700;font-family:var(--sans);font-variant-numeric:tabular-nums;color:var(--green)">${d.analyst??'—'}</span></td>
       <td style="text-align:center"><span style="font-size:13px;font-weight:700;font-family:var(--sans);font-variant-numeric:tabular-nums;color:var(--gold)">${d.momentum??'—'}</span></td>
       <td>${edHtml}</td>
-      <td>${vsHtml}</td>
+      <td style="font-family:var(--sans);font-size:13px;font-weight:600;">${vsHtml}</td>
       <td>${flagsHtml}</td>
-      <td style="font-size:11px;color:var(--txb)">${prHtml}</td>
-      <td>${upHtml}</td>
+      <td style="font-family:var(--sans);font-size:13px;font-weight:600;color:var(--txb)">${prHtml}</td>
+      <td style="font-family:var(--sans);font-size:14px;font-weight:700;">${upHtml}</td>
       <td style="text-align:center"><button onclick="event.stopPropagation();toggleWatch('${d.sym}')" id="star-${d.sym}" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 5px;transition:all .15s;color:${isWatched?'var(--gold)':'#888899'};line-height:1;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='${isWatched?'var(--gold)':'#888899'}'" title="${isWatched?'Remove from watchlist':'Add to watchlist'}">${isWatched?'★':'☆'}</button></td>
     </tr><tr class="dr" id="dt-${d.sym}"><td colspan="15" style="padding:0;width:100%;">${renderDet(d)}</td></tr>`;
   }).join('');
