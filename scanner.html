@@ -344,6 +344,11 @@ tbody tr.mr td:nth-child(12), thead th:nth-child(12) { max-width: 240px; overflo
 #sr-tooltip { background: #1a1a1a; border: 1px solid rgba(255,255,255,.10); }
 body { background: #0a0a0a; }
 
+
+/* Scroll to top button */
+#scrollTopBtn{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:300;width:36px;height:36px;border-radius:50%;background:rgba(6,6,15,.9);border:1px solid #00ff94;color:#00ff94;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s,background .15s;}
+#scrollTopBtn.visible{opacity:1;pointer-events:auto;}
+#scrollTopBtn:hover{background:rgba(0,255,148,.12);}
 </style>
 </head>
 <body>
@@ -2232,5 +2237,7 @@ window.addEventListener('load', () => {
 });
 </script>
 
+
+<button id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Back to top">↑</button>
 </body>
 </html>
