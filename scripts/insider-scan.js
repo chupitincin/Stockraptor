@@ -1,3 +1,4 @@
+
 // ══════════════════════════════════════════════════════════════
 // StockRaptor · Weekly Insider Scan — SEC EDGAR Master Index
 // Uses quarterly full-index to get ALL Form 4s efficiently
@@ -101,24 +102,35 @@ async function getQuarterlyForm4s(year, qtr) {
 // ── PARSE FORM 4 XML ──────────────────────────────────────────
 async function parseForm4(filename, companyCik) {
   try {
-    // filename from form.idx: edgar/data/FILER_CIK/ACCESSION.txt
-    // But XML is always at: data/COMPANY_CIK/ACCESSION_NO_DASHES/ownership.xml
     const accWithDashes = filename.split('/').pop().replace('.txt', '');
     const accNoDashes   = accWithDashes.replace(/-/g, '');
-    // Use company CIK (not filer CIK) for the path
     const xmlUrl = `${SEC}/Archives/edgar/data/${parseInt(companyCik)}/${accNoDashes}/ownership.xml`;
 
-    await sleep(110); // SEC rate limit
-    const res = await fetch(xmlUrl, { headers: HEADERS });
-    if (!res.ok) {
-      // Fallback: try with the filer CIK from filename
+    await sleep(80);
+
+    // Always timeout — SEC sometimes hangs indefinitely
+    const fetchWithTimeout = async (url) => {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const r = await fetch(url, { headers: HEADERS, signal: ctrl.signal });
+        clearTimeout(t);
+        return r;
+      } catch(e) { clearTimeout(t); return null; }
+    };
+
+    let res = await fetchWithTimeout(xmlUrl);
+
+    // Fallback: try filer CIK if company CIK failed
+    if (!res || !res.ok) {
       const filerCik = filename.split('/')[2];
-      const xmlUrl2  = `${SEC}/Archives/edgar/data/${parseInt(filerCik)}/${accNoDashes}/ownership.xml`;
-      const res2 = await fetch(xmlUrl2, { headers: HEADERS });
-      if (!res2.ok) return null;
-      const xml2 = await res2.text();
-      return extractTransactions(xml2, accWithDashes);
+      if (filerCik && filerCik !== String(companyCik)) {
+        const xmlUrl2 = `${SEC}/Archives/edgar/data/${parseInt(filerCik)}/${accNoDashes}/ownership.xml`;
+        res = await fetchWithTimeout(xmlUrl2);
+      }
     }
+
+    if (!res || !res.ok) return null;
     const xml = await res.text();
     return extractTransactions(xml, accWithDashes);
   } catch(e) { return null; }
@@ -182,10 +194,10 @@ async function main() {
     loadActiveSymbols(),
   ]);
 
-  // Get relevant quarters (last 90 days = current + maybe previous quarter)
+  // Get relevant quarters (last 30 days = usually just current quarter)
   const now    = new Date();
   const q1     = getQuarterInfo(now);
-  const q2     = getQuarterInfo(new Date(Date.now() - 90*86400000));
+  const q2     = getQuarterInfo(new Date(Date.now() - 35*86400000));
   const quarters = [q1];
   if (q2.year !== q1.year || q2.quarter !== q1.quarter) quarters.push(q2);
 
@@ -200,7 +212,7 @@ async function main() {
   }
 
   // Filter to last 90 days and our universe
-  const cutoff = new Date(Date.now() - 90*86400000).toISOString().substring(0,10);
+  const cutoff = new Date(Date.now() - 30*86400000).toISOString().substring(0,10);
   const relevant = allFilings.filter(f => {
     if (f.dateFiled < cutoff) return false;
     const ticker = cikToTicker[f.cik];
@@ -215,7 +227,7 @@ async function main() {
   }
 
   const uniqueCompanies = Object.keys(byCik).length;
-  console.log(`\n🔍 ${relevant.length} Form 4s for ${uniqueCompanies} companies in our universe (last 90d)`);
+  console.log(`\n🔍 ${relevant.length} Form 4s for ${uniqueCompanies} companies in our universe (last 30d)`);
   console.log('   Parsing XML filings...\n');
 
   // Parse each filing
@@ -227,13 +239,13 @@ async function main() {
     const allTx = [];
     const insiderNames = new Set();
 
-    for (const f of filings.slice(0, 8)) {
+    for (const f of filings.slice(0, 4)) {
       const parsed = await parseForm4(f.filename, cik);
       if (parsed) {
         allTx.push(...parsed.txs.map(t => ({ ...t, date: f.dateFiled })));
         insiderNames.add(parsed.name);
       }
-      await sleep(110);
+      await sleep(80);
     }
 
     if (allTx.length > 0) {
