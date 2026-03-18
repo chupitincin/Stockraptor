@@ -228,7 +228,7 @@ async function main() {
     for (const f of filings.slice(0, 8)) {
       const parsed = await parseForm4(f.filename, cik);
       if (parsed) {
-        allTx.push(...parsed.txs.map(t => ({ ...t, date: f.dateFiled })));
+        allTx.push(...parsed.txs.map(t => ({ ...t, date: t.date || f.dateFiled })));
         insiderNames.add(parsed.name);
       }
       await sleep(80);
