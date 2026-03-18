@@ -128,6 +128,44 @@ async function getShortFloat(sym) {
   } catch { return null; }
 }
 
+
+// ── SEC 8-K REAL-TIME SIGNAL ──────────────────────────────────────────────────
+// Checks SEC EDGAR for recent 8-K filings (material events) in the last 7 days
+// 8-Ks include: earnings, FDA approvals, acquisitions, guidance changes
+const _8kCache = {};  // in-memory cache per run
+
+async function getRecent8K(cik, sym) {
+  if (!cik || _8kCache[sym] !== undefined) return _8kCache[sym] || null;
+  try {
+    const padded = String(cik).padStart(10, '0');
+    const url = `https://data.sec.gov/submissions/CIK${padded}.json`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'StockRaptor research@stockraptor.com' },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) { _8kCache[sym] = null; return null; }
+    const data = await res.json();
+    const filings = data?.filings?.recent;
+    if (!filings?.form) { _8kCache[sym] = null; return null; }
+
+    const cutoff = new Date(Date.now() - 7 * 86400000).toISOString().substring(0,10);
+    const idx = filings.form.findIndex((f, i) =>
+      (f === '8-K' || f === '8-K/A') && filings.filingDate[i] >= cutoff
+    );
+
+    if (idx === -1) { _8kCache[sym] = null; return null; }
+
+    // Return most recent 8-K
+    const result = {
+      date: filings.filingDate[idx],
+      description: (filings.primaryDocument[idx] || '').toLowerCase(),
+      daysAgo: Math.floor((Date.now() - new Date(filings.filingDate[idx])) / 86400000),
+    };
+    _8kCache[sym] = result;
+    return result;
+  } catch { _8kCache[sym] = null; return null; }
+}
+
 async function analyzeTicker(sym, baseData, insiderCache = {}) {
   try {
     const profile     = await fmp(`/profile?symbol=${sym}`);
@@ -260,6 +298,18 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       const total = recent.length;
       newsSent = total > 0 ? (posCount - negCount) / total : 0;
       sent = Math.min(8, Math.round(((newsSent + 1) / 2) * 8));
+    }
+
+    // ── SEC 8-K BONUS ──────────────────────────────────────────────────────────
+    // Recent 8-K filing = material corporate event → boost sentiment score
+    let recent8K = null;
+    const profileCik = p?.cik;
+    if (profileCik) {
+      recent8K = await getRecent8K(profileCik, sym);
+      if (recent8K) {
+        const boost = recent8K.daysAgo <= 2 ? 3 : recent8K.daysAgo <= 5 ? 2 : 1;
+        sent = Math.min(8, sent + boost);
+      }
     }
 
     // ── 3. ANALYST (0-15 pts) ─────────────────────────────────
@@ -451,6 +501,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     if (insider?.buys > 0 && insider?.netChange > 0)          flags.push({ label: '👤 INSIDER BUY', color: '#00ff94' });
     if (insider?.totalBuyValue > 1000000)                     flags.push({ label: '💼 BIG INSIDER',  color: '#00ff94' });
     if (freshInsiderDays !== null && freshInsiderDays <= 7 && freshInsiderValue > 50000) flags.push({ label: '🔥 FRESH INSIDER', color: '#ff7040' });
+    if (recent8K && recent8K.daysAgo <= 3)                                                flags.push({ label: '📋 8-K EVENT',     color: '#bf5fff' });
     if (streak >= 3)                                          flags.push({ label: '📈 EPS STREAK',  color: '#ffcc00' });
     if (fcf != null && fcf > 0 && fcf1 != null && fcf1 > 0)  flags.push({ label: '💰 FCF+',        color: '#00e5cc' });
     if (ebitdaMargin != null && ebitdaMargin > 25)            flags.push({ label: '💎 EBITDA+',     color: '#bf5fff' });
@@ -503,6 +554,8 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       shortPct, mspr, insiderChange,
       freshInsiderDays: freshInsiderDays,
       freshInsiderValue: freshInsiderValue > 0 ? Math.round(freshInsiderValue) : null,
+      relStrength: null, // filled after sector median calculation
+      recent8K: recent8K ? { date: recent8K.date, daysAgo: recent8K.daysAgo } : null,
       insiderData: insider ? {
         buys: insider.buys, sells: insider.sells, netChange: insider.netChange,
         totalBuyValue: insider.totalBuyValue, totalSellValue: insider.totalSellValue,
@@ -730,6 +783,28 @@ async function main() {
     console.log(`   ${i+1}. ${r.sym.padEnd(6)} ▲${r.rankDelta} (now #${r.rankToday})`)
   );
 
+  // ── RELATIVE STRENGTH vs SECTOR ───────────────────────────────────────────
+  // Compare each stock's 1D return to its sector median — stocks beating their
+  // sector are more interesting picks regardless of absolute price movement
+  const sectorReturns = {};
+  results.forEach(r => {
+    if (r.priceChange1D === null) return;
+    if (!sectorReturns[r.sector]) sectorReturns[r.sector] = [];
+    sectorReturns[r.sector].push(r.priceChange1D);
+  });
+  const sectorMedians = {};
+  Object.entries(sectorReturns).forEach(([sec, vals]) => {
+    const sorted = [...vals].sort((a, b) => a - b);
+    sectorMedians[sec] = sorted[Math.floor(sorted.length / 2)];
+  });
+  results.forEach(r => {
+    const median = sectorMedians[r.sector] ?? 0;
+    r.relStrength = r.priceChange1D !== null
+      ? Math.round((r.priceChange1D - median) * 10) / 10
+      : null;
+  });
+  console.log(`   ✅ Sector medians: ${Object.entries(sectorMedians).map(([s,v])=>`${s}:${v>0?'+':''}${v}%`).join(' | ')}`);
+
   // ── PHASE 3: GENERATE DAILY PICKS + AI SUMMARIES ─────────
   console.log('\n🎯 Phase 3: Generating daily picks...');
   const picks = selectPicks(results);
@@ -775,6 +850,7 @@ function selectPicks(results) {
     // ── Confluence score: count how many strong signals fire ──
     let confluence = 0;
     if (r.priceChange1D > 2)                           confluence++; // price up today
+    if (r.relStrength > 2)                             confluence++; // beating sector by 2%+
     if (r.volRatio > 2)                                confluence++; // unusual volume
     if (r.upside > 25)                                 confluence++; // analyst upside
     if (r.streak >= 3)                                 confluence++; // EPS beat streak
@@ -787,7 +863,9 @@ function selectPicks(results) {
     // ── Trend health: penalise broken charts ──
     // pct52High = % below 52-week high. If stock is down >40% from high
     // AND negative today, it's in a downtrend — discard as a pick
-    const brokenTrend = (r.pct52High != null && r.pct52High < -40 && r.priceChange1D < 0);
+    // brokenTrend: down a lot from 52w high AND negative today AND underperforming sector
+    const brokenTrend = (r.pct52High != null && r.pct52High < -40 && r.priceChange1D < 0
+      && (r.relStrength === null || r.relStrength < 0));
 
     return {
       ...r,
@@ -833,8 +911,8 @@ function selectPicks(results) {
   fillSlots(
     r => r.volRatio > 2.5 && r.priceChange1D > 0
       && r.total >= 48 && r.fund >= 12,
-    (a, b) => (b.volRatio * 2 + b.total + b.confluence * 5)
-            - (a.volRatio * 2 + a.total + a.confluence * 5),
+    (a, b) => (b.volRatio * 2 + b.total + b.confluence * 5 + (b.relStrength||0))
+            - (a.volRatio * 2 + a.total + a.confluence * 5 + (a.relStrength||0)),
     2
   );
   picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'volume'; });
