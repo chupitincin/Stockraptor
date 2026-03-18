@@ -307,13 +307,37 @@ a:hover{text-decoration:underline;}
 </div>
 
 <script>
-function showSection(id) {
+function showSection(id, fromHash) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('section-' + id).classList.add('active');
-  event.target.classList.add('active');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Activate matching tab
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.getAttribute('onclick')?.includes("'" + id + "'")) t.classList.add('active');
+  });
+  if (!fromHash) window.scrollTo({ top: 0, behavior: 'smooth' });
+  location.hash = id;
 }
+// Load correct tab from URL hash
+(function() {
+  const hash = location.hash.replace('#','');
+  if (['disclaimer','terms','privacy','cookies'].includes(hash)) showSection(hash, true);
+})();
 </script>
+
+<!-- FOOTER -->
+<footer style="position:relative;z-index:1;border-top:1px solid #0f0f20;padding:20px 24px;text-align:center;">
+  <div style="font-size:10px;color:#3a3a55;font-family:'Geist Mono',monospace;letter-spacing:.5px;line-height:2;">
+    <span style="color:#5050a0;">🦅 StockRaptor</span> &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; Not financial advice
+    <br>
+    <a href="/legal.html" style="color:#4a4a70;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#7070a0'" onmouseout="this.style.color='#4a4a70'">Terms of Service</a>
+    &nbsp;·&nbsp;
+    <a href="/legal.html#privacy" style="color:#4a4a70;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#7070a0'" onmouseout="this.style.color='#4a4a70'">Privacy Policy</a>
+    &nbsp;·&nbsp;
+    <a href="/legal.html#disclaimer" style="color:#4a4a70;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#7070a0'" onmouseout="this.style.color='#4a4a70'">Disclaimer</a>
+    &nbsp;·&nbsp;
+    <a href="/legal.html#cookies" style="color:#4a4a70;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#7070a0'" onmouseout="this.style.color='#4a4a70'">Cookies</a>
+  </div>
+</footer>
 </body>
 </html>
