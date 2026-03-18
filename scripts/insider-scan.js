@@ -107,12 +107,19 @@ async function parseForm4(filename, companyCik) {
 
     await sleep(110); // SEC rate limit
 
-    const res = await fetch(xmlUrl, { headers: HEADERS });
+    // Use Promise.race to enforce 10s timeout — SEC sometimes hangs indefinitely
+    const fetchOrTimeout = (url) => Promise.race([
+      fetch(url, { headers: HEADERS }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+    ]);
+
+    let res;
+    try { res = await fetchOrTimeout(xmlUrl); } catch(e) { return null; }
     if (!res.ok) {
-      // Fallback: try with the filer CIK from filename
       const filerCik = filename.split('/')[2];
       const xmlUrl2  = `${SEC}/Archives/edgar/data/${parseInt(filerCik)}/${accNoDashes}/ownership.xml`;
-      const res2 = await fetch(xmlUrl2, { headers: HEADERS });
+      let res2;
+      try { res2 = await fetchOrTimeout(xmlUrl2); } catch(e) { return null; }
       if (!res2.ok) return null;
       const xml2 = await res2.text();
       return extractTransactions(xml2, accWithDashes);
