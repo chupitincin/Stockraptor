@@ -101,25 +101,20 @@ async function getQuarterlyForm4s(year, qtr) {
 // ── PARSE FORM 4 XML ──────────────────────────────────────────
 async function parseForm4(filename, companyCik) {
   try {
+    // filename from form.idx: edgar/data/FILER_CIK/ACCESSION.txt
+    // But XML is always at: data/COMPANY_CIK/ACCESSION_NO_DASHES/ownership.xml
     const accWithDashes = filename.split('/').pop().replace('.txt', '');
     const accNoDashes   = accWithDashes.replace(/-/g, '');
+    // Use company CIK (not filer CIK) for the path
     const xmlUrl = `${SEC}/Archives/edgar/data/${parseInt(companyCik)}/${accNoDashes}/ownership.xml`;
 
     await sleep(110); // SEC rate limit
-
-    // Use Promise.race to enforce 10s timeout — SEC sometimes hangs indefinitely
-    const fetchOrTimeout = (url) => Promise.race([
-      fetch(url, { headers: HEADERS }),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
-    ]);
-
-    let res;
-    try { res = await fetchOrTimeout(xmlUrl); } catch(e) { return null; }
+    const res = await fetch(xmlUrl, { headers: HEADERS });
     if (!res.ok) {
+      // Fallback: try with the filer CIK from filename
       const filerCik = filename.split('/')[2];
       const xmlUrl2  = `${SEC}/Archives/edgar/data/${parseInt(filerCik)}/${accNoDashes}/ownership.xml`;
-      let res2;
-      try { res2 = await fetchOrTimeout(xmlUrl2); } catch(e) { return null; }
+      const res2 = await fetch(xmlUrl2, { headers: HEADERS });
       if (!res2.ok) return null;
       const xml2 = await res2.text();
       return extractTransactions(xml2, accWithDashes);
@@ -130,40 +125,21 @@ async function parseForm4(filename, companyCik) {
 }
 
 function extractTransactions(xml, date) {
-  // Extract reporter name — try multiple fields, pick the most complete
-  const allOwnerNames = [...xml.matchAll(/<rptOwnerName>(.*?)<\/rptOwnerName>/g)]
-    .map(m => m[1]?.trim()).filter(Boolean);
-  // Prefer names that look like real person names (contain space or >4 chars, not "See Remarks")
-  const realName = allOwnerNames.find(n =>
-    n.length > 4 && !n.toLowerCase().includes('see remark') && !n.match(/^[A-Z]$/)
-  ) || allOwnerNames[0] || '';
-  const name = realName;
-
-  // Extract title — try officer title first, then director/officer flags
-  const rawTitle = (xml.match(/<officerTitle>(.*?)<\/officerTitle>/) || [])[1]?.trim() || '';
+  const name  = (xml.match(/<rptOwnerName>(.*?)<\/rptOwnerName>/) || [])[1]?.trim() || '';
+  const title = (xml.match(/<officerTitle>(.*?)<\/officerTitle>/) || [])[1]?.trim() || '';
   const isDir = xml.includes('<isDirector>1</isDirector>');
   const isOff = xml.includes('<isOfficer>1</isOfficer>');
-  const isTen = xml.includes('<isTenPercentOwner>1</isTenPercentOwner>');
-  // Clean up common bad titles
-  const cleanTitle = rawTitle.toLowerCase().includes('see remark') || rawTitle.length <= 1
-    ? (isDir ? 'Director' : isOff ? 'Officer' : isTen ? '10% Owner' : 'Insider')
-    : rawTitle;
-  const title = cleanTitle;
-  const role  = title;
+  const role  = title || (isDir ? 'Director' : isOff ? 'Officer' : 'Insider');
 
   const codes  = [...xml.matchAll(/<transactionCode>(.*?)<\/transactionCode>/g)];
   const shares = [...xml.matchAll(/<transactionShares>\s*<value>(.*?)<\/value>/g)];
   const prices = [...xml.matchAll(/<transactionPricePerShare>\s*<value>(.*?)<\/value>/g)];
-  // Extract exact transaction dates from XML (YYYY-MM-DD)
-  const dates  = [...xml.matchAll(/<transactionDate>\s*<value>(.*?)<\/value>/g)];
 
   const txs = [];
   for (let i = 0; i < codes.length; i++) {
     const txCode = codes[i]?.[1]?.trim();
     const sh     = parseFloat(shares[i]?.[1] || '0');
     const pr     = parseFloat(prices[i]?.[1] || '0') || null;
-    // Use exact transaction date from XML; fall back to filing date
-    const txDate = dates[i]?.[1]?.trim() || date;
     if (!txCode || sh <= 0 || !['P','S','A','M'].includes(txCode)) continue;
     txs.push({
       name, title: role, txCode,
@@ -171,7 +147,6 @@ function extractTransactions(xml, date) {
       shares: Math.round(sh),
       price:  pr ? Math.round(pr*100)/100 : null,
       value:  pr ? Math.round(sh*pr) : null,
-      date:   txDate,
     });
   }
   return txs.length > 0 ? { name, role, txs } : null;
@@ -187,7 +162,7 @@ async function main() {
     loadActiveSymbols(),
   ]);
 
-  // Get relevant quarters (last 90 days)
+  // Get relevant quarters (last 90 days = current + maybe previous quarter)
   const now    = new Date();
   const q1     = getQuarterInfo(now);
   const q2     = getQuarterInfo(new Date(Date.now() - 90*86400000));
@@ -235,10 +210,10 @@ async function main() {
     for (const f of filings.slice(0, 8)) {
       const parsed = await parseForm4(f.filename, cik);
       if (parsed) {
-        allTx.push(...parsed.txs.map(t => ({ ...t, date: t.date || f.dateFiled })));
+        allTx.push(...parsed.txs.map(t => ({ ...t, date: f.dateFiled })));
         insiderNames.add(parsed.name);
       }
-      await sleep(80);
+      await sleep(110);
     }
 
     if (allTx.length > 0) {
@@ -259,7 +234,7 @@ async function main() {
     parsed++;
     if (parsed % 25 === 0) {
       const elapsed = Math.round((Date.now()-t0)/1000);
-      console.log(`  [${parsed}/${uniqueCompanies}] ${elapsed}s | ${withActivity} with activity`);
+      process.stdout.write(`\r  [${parsed}/${uniqueCompanies}] ${elapsed}s | ${withActivity} with activity`);
     }
   }
 
