@@ -987,7 +987,7 @@ function renderSum(){
 
 function renderTable(){
   const plan = scanProfile?.plan || 'free';
-  const freeLimit = 20;
+  const freeLimit = 20; // kept for count display
   let rows=[...allData].filter(d=>{if(curF==='ALL')return true;if(curF==='VOL_SPIKE')return d.volRatio&&d.volRatio>2;
     if(curF==='SHORT_SQ')return d.shortPct&&d.shortPct>15;
     if(curF==='INSIDER_BUY')return d.insiderData?.buys > 0 || d.flags?.some(f=>f.label?.includes('INSIDER'));
@@ -1019,7 +1019,7 @@ function renderTable(){
   const maxes=[25,20,15,17,15,13],cols=['var(--blue)','var(--purple)','var(--green)','var(--gold)','var(--orange)','var(--teal)'];
   document.getElementById('tbody').innerHTML=rows.map((d,idx)=>{
     // Free users: show first 20 normally, rest locked
-    const isLocked = plan === 'free' && idx < freeLimit;
+    const isLocked = plan === 'free' && d.signal === 'STRONG BUY';
     if (isLocked) {
       return `<tr class="mr locked-row" onclick="showUpgradeModal()" style="cursor:pointer;transition:background .2s;" onmouseover="this.style.background='#0d0d2a'" onmouseout="this.style.background=''">
         <td style="user-select:none;pointer-events:none"><span style="color:#3a3a60">▶</span></td>
@@ -1087,10 +1087,11 @@ function renderTable(){
   }).join('');
 
   // Add upgrade banner after free rows if user is free
-  if (plan === 'free' && rows.length > freeLimit) {
+  const sbLocked = allData.filter(d => d.signal === 'STRONG BUY').length;
+  if (plan === 'free') {
     const banner = document.getElementById('freeLockBanner');
     const countEl = document.getElementById('lockedCount');
-    if (countEl) countEl.textContent = freeLimit;
+    if (countEl) countEl.textContent = sbLocked;
     if (banner) banner.style.display = 'flex';
   } else {
     const banner = document.getElementById('freeLockBanner');
