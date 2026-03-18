@@ -70,6 +70,32 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .pick-card.type-momentum{border-color:#00b4ff33;}
 .pick-card.type-breakout{border-color:#bf5fff33;}
 .pick-card.type-fresh-insider{border-color:#ff704033;}
+/* ── TABS ─────────────────────────────────────────────── */
+.picks-tabs{display:flex;gap:4px;margin:0 0 24px;border-bottom:1px solid var(--bord2);padding-bottom:0;}
+.picks-tab{padding:10px 20px;font-size:11px;letter-spacing:1.5px;font-family:var(--font);font-weight:600;color:var(--txt);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;background:none;border-top:none;border-left:none;border-right:none;}
+.picks-tab.active{color:var(--green);border-bottom-color:var(--green);}
+.picks-tab:hover:not(.active){color:var(--txb);}
+
+/* ── TRACK RECORD ──────────────────────────────────────── */
+#trackContent{display:none;}
+#trackContent.visible{display:block;}
+#picksContent.hidden{display:none;}
+.tr-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+.tr-stat{background:var(--s1);border:1px solid var(--bord2);border-radius:10px;padding:16px;text-align:center;}
+.tr-stat-n{font-family:'Syne',sans-serif;font-size:24px;font-weight:700;margin-bottom:4px;}
+.tr-stat-l{font-size:9px;letter-spacing:1.5px;color:var(--txt);font-family:var(--font);}
+.tr-week{margin-bottom:32px;}
+.tr-week-title{font-size:9px;letter-spacing:2px;color:var(--txt);font-family:var(--font);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bord2);}
+.tr-row{display:grid;grid-template-columns:80px 1fr 90px 72px 72px 72px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord);font-size:12px;}
+.tr-row-head{font-size:9px;letter-spacing:1.2px;color:var(--txt);font-family:var(--font);}
+.tr-sym{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--white);}
+.tr-name{font-size:11px;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tr-type-badge{font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid;font-weight:600;white-space:nowrap;display:inline-block;}
+.tr-perf{font-family:'Geist Mono',monospace;font-size:12px;font-weight:600;text-align:right;}
+.tr-perf.pos{color:var(--green);}
+.tr-perf.neg{color:var(--red);}
+.tr-perf.pending{color:var(--txt);font-size:10px;}
+.tr-empty{text-align:center;padding:60px 20px;color:var(--txt);font-size:12px;letter-spacing:1px;}
 
 .pick-top{padding:20px 20px 16px;}
 .pick-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
@@ -225,7 +251,13 @@ const CONFIG = {
     <div class="stat-item"><div class="stat-n" id="statInsider" style="color:var(--green)">—</div><div class="stat-l">INSIDER BUYING</div></div>
   </div>
 
-  <!-- CONTENT -->
+  <!-- TABS -->
+  <div class="picks-tabs">
+    <button class="picks-tab active" id="tabToday" onclick="switchTab('today')">TODAY'S PICKS</button>
+    <button class="picks-tab" id="tabTrack" onclick="switchTab('track')">TRACK RECORD</button>
+  </div>
+
+  <!-- TODAY'S PICKS CONTENT -->
   <div id="picksContent">
     <div class="picks-loading">
       <div class="picks-loading-icon">🔍</div>
@@ -670,6 +702,116 @@ function startPicksLivePrices() {
     else if (y < 100) btn.classList.remove('visible');
   }, { passive: true });
 })();
+
+// ── TABS ──────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tabToday').classList.toggle('active', tab === 'today');
+  document.getElementById('tabTrack').classList.toggle('active', tab === 'track');
+  document.getElementById('picksContent').classList.toggle('hidden', tab === 'track');
+  document.getElementById('trackContent').classList.toggle('visible', tab === 'track');
+  if (tab === 'track' && !window._trackLoaded) loadTrackRecord();
+}
+
+// ── TRACK RECORD ───────────────────────────────────────────
+async function loadTrackRecord() {
+  window._trackLoaded = true;
+  const container = document.getElementById('trackRows');
+  container.innerHTML = '<div class="tr-empty">Loading track record...</div>';
+
+  try {
+    const { data, error } = await sb
+      .from('picks_history')
+      .select('*')
+      .order('scan_date', { ascending: false })
+      .limit(60);
+
+    if (error || !data?.length) {
+      container.innerHTML = '<div class="tr-empty">No track record yet — check back after the daily scan has run for a few days.</div>';
+      return;
+    }
+
+    // Calculate stats
+    const withPerf = data.filter(d => d.perf_1w !== null);
+    const winners  = withPerf.filter(d => d.perf_1w > 0);
+    const winRate  = withPerf.length > 0 ? Math.round((winners.length / withPerf.length) * 100) : null;
+    const avgReturn = withPerf.length > 0
+      ? Math.round(withPerf.reduce((s,d) => s + d.perf_1w, 0) / withPerf.length * 10) / 10
+      : null;
+    const bestPick = withPerf.length > 0
+      ? withPerf.reduce((best, d) => d.perf_1w > (best?.perf_1w || -Infinity) ? d : best, null)
+      : null;
+
+    // Update summary stats
+    document.getElementById('trWinRate').textContent   = winRate !== null ? winRate + '%' : '—';
+    document.getElementById('trAvgReturn').textContent = avgReturn !== null ? (avgReturn > 0 ? '+' : '') + avgReturn + '%' : '—';
+    document.getElementById('trAvgReturn').style.color = avgReturn > 0 ? 'var(--green)' : avgReturn < 0 ? 'var(--red)' : 'var(--txt)';
+    document.getElementById('trTotalPicks').textContent = data.length;
+    document.getElementById('trBestPick').textContent  = bestPick ? bestPick.sym + ' +' + bestPick.perf_1w + '%' : '—';
+
+    // Group by week
+    const byWeek = {};
+    for (const row of data) {
+      const d = new Date(row.scan_date);
+      // Week key = Monday of that week
+      const day = d.getDay();
+      const monday = new Date(d);
+      monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+      const wk = monday.toISOString().substring(0, 10);
+      if (!byWeek[wk]) byWeek[wk] = [];
+      byWeek[wk].push(row);
+    }
+
+    const PICK_COLORS = {
+      catalyst: 'var(--gold)', volume: 'var(--pink)', squeeze: 'var(--teal)',
+      insider: 'var(--green)', fresh_insider: 'var(--orange)', momentum: 'var(--blue)',
+      breakout: '#bf5fff',
+    };
+
+    let html = '';
+    for (const [wk, rows] of Object.entries(byWeek).sort((a,b) => b[0].localeCompare(a[0]))) {
+      const wkDate = new Date(wk);
+      const wkEnd  = new Date(wk); wkEnd.setDate(wkDate.getDate() + 4);
+      const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const wkWinners = rows.filter(r => r.perf_1w > 0).length;
+      const wkWith    = rows.filter(r => r.perf_1w !== null).length;
+
+      html += `<div class="tr-week">
+        <div class="tr-week-title">WEEK OF ${fmt(wkDate)} – ${fmt(wkEnd)} &nbsp;·&nbsp; ${rows.length} picks${wkWith > 0 ? ' &nbsp;·&nbsp; ' + wkWinners + '/' + wkWith + ' winners' : ''}</div>
+        <div class="tr-row tr-row-head" style="padding:4px 0;">
+          <div>DATE</div><div>STOCK</div><div>TYPE</div>
+          <div style="text-align:right">1D</div>
+          <div style="text-align:right">5D</div>
+          <div style="text-align:right">1W</div>
+        </div>`;
+
+      for (const r of rows) {
+        const color = PICK_COLORS[r.pick_type] || 'var(--txt)';
+        const fmtP = v => v !== null
+          ? `<span class="tr-perf ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${v > 0 ? '+' : ''}${v}%</span>`
+          : `<span class="tr-perf pending">—</span>`;
+        const scanDt = new Date(r.scan_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        html += `<div class="tr-row" onclick="goToScanner('${r.sym}')" style="cursor:pointer;transition:background .15s;" onmouseover="this.style.background='#0d0d2a'" onmouseout="this.style.background=''">
+          <div style="color:var(--txt);font-size:11px;">${scanDt}</div>
+          <div>
+            <div class="tr-sym">${r.sym}</div>
+            <div class="tr-name">${r.company_name || ''}</div>
+          </div>
+          <div><span class="tr-type-badge" style="color:${color};border-color:${color}44;background:${color}12">${r.pick_type?.replace('_',' ').toUpperCase() || '—'}</span></div>
+          ${fmtP(r.perf_1d)}
+          ${fmtP(r.perf_5d)}
+          ${fmtP(r.perf_1w)}
+        </div>`;
+      }
+      html += '</div>';
+    }
+
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = '<div class="tr-empty">Error loading track record.</div>';
+    console.warn('Track record error:', e);
+  }
+}
+
 window.addEventListener('load', init);
 </script>
 <div id="sr-tooltip"></div>
