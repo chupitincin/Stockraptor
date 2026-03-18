@@ -520,6 +520,79 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
 }
 
 // ── MAIN ──────────────────────────────────────────────────────
+
+// ── SAVE PICKS TO HISTORY ─────────────────────────────────────
+async function savePicksHistory(sb, picks, scanDate) {
+  try {
+    const rows = picks.map(p => ({
+      scan_date:    scanDate,
+      sym:          p.sym,
+      company_name: p.companyName || p.sym,
+      sector:       p.sector || null,
+      pick_type:    p.pickType || null,
+      score:        p.total || null,
+      entry_price:  p.price || null,
+      ai_summary:   p.aiSummary || null,
+      perf_1d:      null,
+      perf_5d:      null,
+      perf_1w:      null,
+    }));
+
+    const { error } = await sb
+      .from('picks_history')
+      .upsert(rows, { onConflict: 'scan_date,sym' });
+
+    if (error) console.warn('⚠ picks_history save error:', error.message);
+    else console.log(`✅ ${rows.length} picks saved to picks_history`);
+  } catch (e) {
+    console.warn('⚠ savePicksHistory failed:', e.message);
+  }
+}
+
+// ── UPDATE PAST PICKS PERFORMANCE ─────────────────────────────
+// Called each day to fill perf_1d/5d/1w for previous picks
+async function updatePicksPerformance(sb, currentPrices) {
+  try {
+    const today = new Date();
+
+    // Load all picks without complete performance data
+    const { data: rows, error } = await sb
+      .from('picks_history')
+      .select('id, sym, scan_date, entry_price, perf_1d, perf_5d, perf_1w')
+      .or('perf_1d.is.null,perf_5d.is.null,perf_1w.is.null')
+      .limit(100);
+
+    if (error || !rows?.length) return;
+
+    const updates = [];
+    for (const row of rows) {
+      const currentPrice = currentPrices[row.sym];
+      if (!currentPrice || !row.entry_price) continue;
+
+      const perf = Math.round(((currentPrice - row.entry_price) / row.entry_price) * 1000) / 10;
+      const scanDate = new Date(row.scan_date);
+      const daysAgo  = Math.floor((today - scanDate) / 86400000);
+
+      const update = { id: row.id };
+      if (row.perf_1d === null && daysAgo >= 1) update.perf_1d = perf;
+      if (row.perf_5d === null && daysAgo >= 5) update.perf_5d = perf;
+      if (row.perf_1w === null && daysAgo >= 7) update.perf_1w = perf;
+
+      if (Object.keys(update).length > 1) updates.push(update);
+    }
+
+    if (updates.length > 0) {
+      for (const upd of updates) {
+        const { id, ...fields } = upd;
+        await sb.from('picks_history').update(fields).eq('id', id);
+      }
+      console.log(`✅ Updated performance for ${updates.length} past picks`);
+    }
+  } catch (e) {
+    console.warn('⚠ updatePicksPerformance failed:', e.message);
+  }
+}
+
 async function main() {
   const t0 = Date.now();
   console.log('🦅 StockRaptor Daily Scan v3 starting...');
@@ -682,6 +755,10 @@ async function main() {
 
   if (picksError) console.warn('⚠ picks_cache save failed:', picksError.message);
   else console.log(`✅ ${picks.length} picks saved to picks_cache`);
+
+  // ── Save to picks_history for track record ──────────────
+  const scanDateStr = new Date().toISOString().substring(0, 10);
+  await savePicksHistory(sb, picks, scanDateStr);
 }
 
 // ── SELECT TOP PICKS ──────────────────────────────────────
