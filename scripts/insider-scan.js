@@ -252,7 +252,7 @@ async function main() {
     parsed++;
     if (parsed % 25 === 0) {
       const elapsed = Math.round((Date.now()-t0)/1000);
-      process.stdout.write(`\r  [${parsed}/${uniqueCompanies}] ${elapsed}s | ${withActivity} with activity`);
+      console.log(`  [${parsed}/${uniqueCompanies}] ${elapsed}s | ${withActivity} with activity`);
     }
   }
 
