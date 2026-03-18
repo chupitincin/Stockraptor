@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Legal — StockRaptor</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Geist+Mono:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#020209;--s1:#06060f;--s2:#09091a;--bord:#0f0f20;--bord2:#181828;
+  --green:#00ff94;--gold:#ffcc00;--red:#ff2d55;--blue:#00b4ff;
+  --purple:#bf5fff;--orange:#ff7040;--teal:#00e5cc;--pink:#ff4fa0;
+  --txt:#7070a0;--txb:#b0b0d0;--white:#e8e8f8;
+  --font:'Geist Mono',monospace;--sans:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;min-height:100vh;overflow-x:hidden;}
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% -5%,#0d0d3a55,transparent),linear-gradient(var(--bord) 1px,transparent 1px),linear-gradient(90deg,var(--bord) 1px,transparent 1px);background-size:auto,36px 36px,36px 36px;}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;background:rgba(6,6,15,.95);backdrop-filter:blur(12px);border-bottom:1px solid #181828;}
+.nav-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#e8e8f8;display:flex;align-items:center;gap:8px;cursor:pointer;text-decoration:none;}
+.nav-logo span{color:#00ff94;}
+.nav-logo-icon{width:28px;height:28px;background:linear-gradient(135deg,#00ff94,#00996a);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.nav-back{padding:6px 14px;background:transparent;border:1px solid #2a2a45;color:#b0b0d0;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;transition:all .15s;text-decoration:none;display:flex;align-items:center;gap:6px;}
+.nav-back:hover{border-color:#707090;color:#e8e8f8;}
+
+/* LAYOUT */
+.page{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:88px 24px 80px;}
+
+/* TABS */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--bord2);margin-bottom:40px;overflow-x:auto;padding-bottom:0;}
+.tab{padding:10px 18px;font-size:11px;letter-spacing:1.5px;font-family:var(--font);color:var(--txt);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;}
+.tab.active{color:var(--green);border-bottom-color:var(--green);}
+.tab:hover:not(.active){color:var(--txb);}
+
+/* SECTION */
+.section{display:none;}
+.section.active{display:block;}
+
+/* CONTENT */
+.doc-header{margin-bottom:32px;}
+.doc-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:var(--white);margin-bottom:8px;}
+.doc-meta{font-size:11px;font-family:var(--font);color:var(--txt);letter-spacing:.5px;}
+.doc-meta span{color:var(--green);}
+
+.warning-box{background:#ff2d5510;border:1px solid #ff2d5530;border-radius:8px;padding:16px 20px;margin-bottom:32px;}
+.warning-box p{color:#ff6080;font-size:13px;line-height:1.7;font-weight:500;}
+
+h2{font-size:14px;letter-spacing:2px;font-family:var(--font);color:var(--green);margin:36px 0 14px;text-transform:uppercase;}
+h2:first-of-type{margin-top:0;}
+p{color:var(--txb);font-size:14px;line-height:1.8;margin-bottom:14px;}
+p:last-child{margin-bottom:0;}
+ul{color:var(--txb);font-size:14px;line-height:1.8;margin-bottom:14px;padding-left:20px;}
+ul li{margin-bottom:6px;}
+strong{color:var(--white);font-weight:600;}
+a{color:var(--green);text-decoration:none;}
+a:hover{text-decoration:underline;}
+.divider{border:none;border-top:1px solid var(--bord2);margin:32px 0;}
+
+/* CONTACT BOX */
+.contact-box{background:var(--s1);border:1px solid var(--bord2);border-radius:10px;padding:20px 24px;margin-top:40px;}
+.contact-box p{margin-bottom:6px;}
+.contact-box a{color:var(--green);}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<nav>
+  <a class="nav-logo" href="/">
+    <div class="nav-logo-icon">🦅</div>
+    Stock<span>Raptor</span>
+  </a>
+  <a class="nav-back" href="/">← Back to StockRaptor</a>
+</nav>
+
+<div class="page">
+
+  <div class="tabs">
+    <button class="tab active" onclick="showSection('disclaimer')">Financial Disclaimer</button>
+    <button class="tab" onclick="showSection('terms')">Terms of Service</button>
+    <button class="tab" onclick="showSection('privacy')">Privacy Policy</button>
+    <button class="tab" onclick="showSection('cookies')">Cookie Policy</button>
+  </div>
+
+  <!-- ── FINANCIAL DISCLAIMER ───────────────────────────────── -->
+  <div class="section active" id="section-disclaimer">
+    <div class="doc-header">
+      <div class="doc-title">Financial Disclaimer</div>
+      <div class="doc-meta">Last updated: <span>March 2026</span></div>
+    </div>
+
+    <div class="warning-box">
+      <p>⚠ StockRaptor is not a licensed financial advisor. All content on this platform is for informational and educational purposes only. Nothing on this site constitutes financial, investment, legal, or tax advice.</p>
+    </div>
+
+    <h2>Not Investment Advice</h2>
+    <p>The information, data, scores, signals, picks, and analyses provided by StockRaptor are generated by automated algorithms and are intended solely as a starting point for your own research. They do not constitute a recommendation to buy, sell, or hold any security.</p>
+    <p>StockRaptor makes no representations or warranties that any information provided is accurate, complete, or current. Market data may be delayed, inaccurate, or subject to errors.</p>
+
+    <h2>No Licensed Advisor Relationship</h2>
+    <p>Use of StockRaptor does not create a financial advisor-client relationship between you and StockRaptor or its operators. We are not registered investment advisors, broker-dealers, or financial planners. We are not regulated by the SEC, FINRA, FCA, or any other financial authority.</p>
+
+    <h2>Past Performance</h2>
+    <p>Any track record, historical pick performance, or backtested results shown on this platform are <strong>not indicative of future results</strong>. Stock markets are inherently unpredictable. You can lose all of your invested capital.</p>
+
+    <h2>Your Responsibility</h2>
+    <p>You are solely responsible for your own investment decisions. Before making any investment, you should:</p>
+    <ul>
+      <li>Conduct your own due diligence and independent research</li>
+      <li>Consult with a licensed financial advisor if needed</li>
+      <li>Understand the risks involved in trading securities</li>
+      <li>Never invest money you cannot afford to lose</li>
+    </ul>
+
+    <h2>No Liability</h2>
+    <p>StockRaptor and its operators shall not be liable for any investment losses, trading losses, or any other financial damages arising directly or indirectly from the use of or reliance on information provided on this platform. Your use of StockRaptor is entirely at your own risk.</p>
+
+    <h2>Data Sources</h2>
+    <p>StockRaptor aggregates data from third-party providers including Financial Modeling Prep, Yahoo Finance, the U.S. Securities and Exchange Commission (SEC EDGAR), and others. We do not guarantee the accuracy of data from these sources and are not responsible for errors or omissions in third-party data.</p>
+  </div>
+
+  <!-- ── TERMS OF SERVICE ───────────────────────────────────── -->
+  <div class="section" id="section-terms">
+    <div class="doc-header">
+      <div class="doc-title">Terms of Service</div>
+      <div class="doc-meta">Last updated: <span>March 2026</span></div>
+    </div>
+
+    <h2>1. Acceptance of Terms</h2>
+    <p>By accessing or using StockRaptor ("the Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, do not use the Service. These terms apply to all users, including free and paid subscribers.</p>
+
+    <h2>2. Description of Service</h2>
+    <p>StockRaptor is a stock screening and data aggregation platform that provides automated analysis, scoring, and picks based on publicly available financial data. The Service is provided "as is" without any guarantee of accuracy, completeness, or fitness for any particular purpose.</p>
+
+    <h2>3. Eligibility</h2>
+    <p>You must be at least 18 years old to use StockRaptor. By using the Service, you represent that you are at least 18 years of age and have the legal capacity to enter into these Terms.</p>
+
+    <h2>4. User Accounts</h2>
+    <p>You are responsible for maintaining the security of your account and password. You agree to notify us immediately of any unauthorized use of your account. We are not liable for any losses resulting from unauthorized access to your account.</p>
+
+    <h2>5. Subscriptions and Billing</h2>
+    <p>StockRaptor offers Free, Pro, and Elite subscription plans. Paid plans are billed monthly in advance through Stripe. By subscribing, you authorize us to charge your payment method on a recurring basis.</p>
+    <ul>
+      <li><strong>Free Trial:</strong> A 7-day free trial is available for Pro and Elite plans. You will not be charged during the trial period. Your card will be charged at the end of the trial unless you cancel.</li>
+      <li><strong>Cancellation:</strong> You may cancel your subscription at any time from your account settings. Cancellation takes effect at the end of the current billing period. No refunds are provided for partial billing periods.</li>
+      <li><strong>Price Changes:</strong> We reserve the right to change subscription prices with 30 days' notice.</li>
+    </ul>
+
+    <h2>6. Acceptable Use</h2>
+    <p>You agree not to:</p>
+    <ul>
+      <li>Scrape, crawl, or systematically extract data from the platform</li>
+      <li>Redistribute, resell, or sublicense the data or analysis provided</li>
+      <li>Use the Service for any unlawful purpose or in violation of any regulations</li>
+      <li>Attempt to circumvent any access controls or security measures</li>
+      <li>Share your account credentials with others</li>
+      <li>Use automated tools to access the Service beyond normal use</li>
+    </ul>
+
+    <h2>7. Intellectual Property</h2>
+    <p>All content, algorithms, scoring models, design elements, and software on StockRaptor are the property of StockRaptor and are protected by applicable intellectual property laws. You are granted a limited, non-exclusive license to use the Service for personal, non-commercial purposes.</p>
+
+    <h2>8. Disclaimer of Warranties</h2>
+    <p>The Service is provided "as is" and "as available" without warranties of any kind, either express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement. We do not warrant that the Service will be uninterrupted, error-free, or free of viruses or other harmful components.</p>
+
+    <h2>9. Limitation of Liability</h2>
+    <p>To the maximum extent permitted by applicable law, StockRaptor and its operators shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, goodwill, or any investment losses, even if advised of the possibility of such damages.</p>
+    <p>Our total liability to you for any claims arising out of or relating to these Terms or the Service shall not exceed the amount you paid us in the 3 months preceding the claim.</p>
+
+    <h2>10. Indemnification</h2>
+    <p>You agree to indemnify and hold harmless StockRaptor and its operators from any claims, losses, liabilities, damages, costs, and expenses (including legal fees) arising out of your use of the Service, violation of these Terms, or infringement of any third-party rights.</p>
+
+    <h2>11. Termination</h2>
+    <p>We reserve the right to suspend or terminate your account at any time, with or without notice, for violation of these Terms or for any other reason at our sole discretion. Upon termination, your right to use the Service will immediately cease.</p>
+
+    <h2>12. Governing Law</h2>
+    <p>These Terms shall be governed by and construed in accordance with applicable law. Any disputes shall be resolved through binding arbitration rather than in court, except where prohibited by law.</p>
+
+    <h2>13. Changes to Terms</h2>
+    <p>We reserve the right to modify these Terms at any time. We will provide notice of significant changes by updating the "Last updated" date at the top of this page. Continued use of the Service after changes constitutes your acceptance of the new Terms.</p>
+
+    <h2>14. Contact</h2>
+    <p>For questions about these Terms, please contact us at the address below.</p>
+  </div>
+
+  <!-- ── PRIVACY POLICY ─────────────────────────────────────── -->
+  <div class="section" id="section-privacy">
+    <div class="doc-header">
+      <div class="doc-title">Privacy Policy</div>
+      <div class="doc-meta">Last updated: <span>March 2026</span></div>
+    </div>
+
+    <h2>1. Introduction</h2>
+    <p>StockRaptor ("we", "us", "our") is committed to protecting your privacy. This Privacy Policy explains what personal data we collect, how we use it, and your rights regarding that data. It applies to all users of StockRaptor, including residents of the European Union (GDPR) and California (CCPA).</p>
+
+    <h2>2. Data We Collect</h2>
+    <p><strong>Account data:</strong> When you register, we collect your email address and a hashed password. We do not store your password in plain text.</p>
+    <p><strong>Subscription data:</strong> If you subscribe to a paid plan, payment processing is handled by Stripe. We receive only your subscription status and plan type — we never see or store your full card details.</p>
+    <p><strong>Usage data:</strong> We collect information about how you use the platform, including pages visited, features used, and session duration, for the purpose of improving the Service.</p>
+    <p><strong>Watchlist and preferences:</strong> Your watchlist and scanner preferences are stored in our database to provide a personalized experience.</p>
+    <p><strong>Technical data:</strong> We may collect your IP address, browser type, and device information for security and analytics purposes.</p>
+
+    <h2>3. How We Use Your Data</h2>
+    <ul>
+      <li>To provide and maintain the Service</li>
+      <li>To process subscription payments via Stripe</li>
+      <li>To send service-related emails (account confirmation, billing receipts)</li>
+      <li>To improve and personalize the platform</li>
+      <li>To detect and prevent fraud or abuse</li>
+      <li>To comply with legal obligations</li>
+    </ul>
+    <p>We do <strong>not</strong> sell your personal data to third parties. We do not use your data for advertising profiling.</p>
+
+    <h2>4. Legal Basis for Processing (GDPR)</h2>
+    <p>For users in the European Union, our legal bases for processing your personal data are:</p>
+    <ul>
+      <li><strong>Contract performance:</strong> Processing necessary to provide the Service you requested</li>
+      <li><strong>Legitimate interests:</strong> Security, fraud prevention, and service improvement</li>
+      <li><strong>Legal obligation:</strong> Compliance with applicable laws</li>
+      <li><strong>Consent:</strong> Where you have given explicit consent (e.g. marketing emails)</li>
+    </ul>
+
+    <h2>5. Data Sharing</h2>
+    <p>We share your data only with the following third-party service providers, solely for the purpose of providing the Service:</p>
+    <ul>
+      <li><strong>Supabase</strong> — database and authentication (EU/US servers)</li>
+      <li><strong>Stripe</strong> — payment processing (PCI DSS compliant)</li>
+      <li><strong>Netlify</strong> — website hosting and serverless functions</li>
+      <li><strong>Anthropic</strong> — AI-generated content (no personal data is sent to Anthropic)</li>
+    </ul>
+    <p>All providers are contractually obligated to handle your data in accordance with applicable privacy laws.</p>
+
+    <h2>6. Data Retention</h2>
+    <p>We retain your account data for as long as your account is active, plus 90 days after deletion to allow for account recovery. Payment records may be retained longer to comply with tax and financial regulations. Usage logs are retained for 12 months.</p>
+
+    <h2>7. Your Rights</h2>
+    <p>Depending on your location, you may have the following rights:</p>
+    <ul>
+      <li><strong>Access:</strong> Request a copy of your personal data</li>
+      <li><strong>Rectification:</strong> Request correction of inaccurate data</li>
+      <li><strong>Erasure:</strong> Request deletion of your data ("right to be forgotten")</li>
+      <li><strong>Portability:</strong> Request your data in a machine-readable format</li>
+      <li><strong>Objection:</strong> Object to processing based on legitimate interests</li>
+      <li><strong>Restriction:</strong> Request restriction of processing in certain circumstances</li>
+    </ul>
+    <p>To exercise these rights, contact us at the address below. We will respond within 30 days.</p>
+
+    <h2>8. California Privacy Rights (CCPA)</h2>
+    <p>California residents have the right to know what personal information we collect, the right to delete that information, and the right to opt out of the sale of personal information. We do not sell personal information. To exercise your CCPA rights, contact us at the address below.</p>
+
+    <h2>9. Security</h2>
+    <p>We implement industry-standard security measures including encrypted connections (HTTPS/TLS), hashed passwords, and row-level security on our database. However, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
+
+    <h2>10. Children's Privacy</h2>
+    <p>StockRaptor is not directed at children under 18 years of age. We do not knowingly collect personal data from children. If we become aware that a child has provided us with personal data, we will delete it immediately.</p>
+
+    <h2>11. International Transfers</h2>
+    <p>Your data may be processed in countries outside your own, including the United States. Where we transfer data outside the EU/EEA, we ensure appropriate safeguards are in place, such as Standard Contractual Clauses.</p>
+
+    <h2>12. Changes to This Policy</h2>
+    <p>We may update this Privacy Policy from time to time. We will notify you of significant changes by email or by posting a notice on the platform. Continued use of the Service constitutes acceptance of the updated policy.</p>
+  </div>
+
+  <!-- ── COOKIE POLICY ──────────────────────────────────────── -->
+  <div class="section" id="section-cookies">
+    <div class="doc-header">
+      <div class="doc-title">Cookie Policy</div>
+      <div class="doc-meta">Last updated: <span>March 2026</span></div>
+    </div>
+
+    <h2>What We Use</h2>
+    <p>StockRaptor uses browser storage technologies (localStorage and sessionStorage) and cookies to provide essential platform functionality. We do not use third-party advertising cookies or tracking pixels.</p>
+
+    <h2>Essential Storage</h2>
+    <p>The following data is stored locally in your browser and is essential for the platform to function:</p>
+    <ul>
+      <li><strong>Authentication session</strong> — Stores your login session so you remain logged in between visits. Set by Supabase. Expires at session end or after 7 days.</li>
+      <li><strong>User preferences</strong> — Stores your scanner settings, language preference, and last-used filters. Stored in localStorage, persists until cleared.</li>
+      <li><strong>Watchlist cache</strong> — A local copy of your watchlist for faster loading. Synced with our database. Cleared on logout.</li>
+      <li><strong>Plan and username</strong> — Stores your subscription plan and display name to avoid repeated server requests. Cleared on logout.</li>
+    </ul>
+
+    <h2>Stripe Cookies</h2>
+    <p>If you subscribe to a paid plan, Stripe (our payment processor) may set cookies for fraud prevention and payment security purposes. These are governed by <a href="https://stripe.com/privacy" target="_blank">Stripe's Privacy Policy</a>.</p>
+
+    <h2>No Analytics or Advertising Cookies</h2>
+    <p>We do not use Google Analytics, Facebook Pixel, or any other advertising or behavioural tracking technologies. We do not build advertising profiles about you.</p>
+
+    <h2>Managing Storage</h2>
+    <p>You can clear all locally stored data by logging out of StockRaptor and clearing your browser's localStorage and cookies. Note that clearing essential storage will log you out and reset your preferences.</p>
+    <p>Most browsers allow you to control cookies and storage through their settings. Disabling essential storage may prevent the platform from functioning correctly.</p>
+
+    <h2>Contact</h2>
+    <p>If you have questions about our use of cookies or local storage, contact us using the details below.</p>
+  </div>
+
+  <hr class="divider">
+  <div class="contact-box">
+    <p style="font-size:11px;letter-spacing:1.5px;color:var(--txt);font-family:var(--font);margin-bottom:12px;">CONTACT</p>
+    <p>For legal or privacy enquiries, please email: <a href="mailto:legal@stockraptor.com">legal@stockraptor.com</a></p>
+    <p style="margin-top:8px;font-size:13px;">StockRaptor is an independent platform operated as a private project. These terms are effective as of March 2026.</p>
+  </div>
+
+</div>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
