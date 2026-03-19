@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StockRaptor — AI-Powered Small Cap Scanner</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Geist+Mono:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;700;800&family=Geist+Mono:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#020209;--s1:#06060f;--s2:#09091a;--bord:#0f0f20;--bord2:#181828;
@@ -353,6 +353,448 @@ body { background: #0a0a0a; }
 #scrollTopBtn{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:300;width:36px;height:36px;border-radius:50%;background:rgba(6,6,15,.9);border:1px solid #00ff94;color:#00ff94;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s,background .15s;}
 #scrollTopBtn.visible{opacity:1;pointer-events:auto;}
 #scrollTopBtn:hover{background:rgba(0,255,148,.12);}
+
+/* ════════════════════════════════════════════════════
+   STOCKRAPTOR SCANNER — DESIGN SYSTEM UPGRADE
+   Matches index-new.html aesthetic
+   ════════════════════════════════════════════════════ */
+
+/* ── DESIGN TOKENS ── */
+:root {
+  --bg: #020408;
+  --s1: #050a10;
+  --s2: #0a1020;
+  --bord: #0d1a28;
+  --bord2: #152030;
+  --green: #00e57a;
+  --green2: #00ff94;
+  --teal: #00c9b1;
+  --blue: #2563eb;
+  --blue2: #60a5fa;
+  --gold: #f59e0b;
+  --red: #ef4444;
+  --purple: #8b5cf6;
+  --txt: #4a6080;
+  --txb: #8aa0bc;
+  --txh: #c8dced;
+  --white: #eef4ff;
+  --mono: 'DM Mono', monospace;
+  --display: 'Bricolage Grotesque', sans-serif;
+}
+
+body {
+  background: var(--bg) !important;
+  font-family: var(--display) !important;
+}
+
+/* ── GRID BACKGROUND ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% -10%, #0d1a3a44, transparent),
+    linear-gradient(var(--bord) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bord) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+}
+
+/* ── NAV UPGRADE ── */
+#scannerNav {
+  height: 60px !important;
+  background: rgba(2, 4, 8, 0.92) !important;
+  border-bottom: 1px solid var(--bord2) !important;
+  backdrop-filter: blur(16px) !important;
+  padding: 0 32px !important;
+}
+.sn-logo {
+  font-family: var(--display) !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  color: var(--white) !important;
+  letter-spacing: -0.3px !important;
+}
+.sn-logo span { color: var(--green) !important; }
+.sn-logo-icon {
+  background: linear-gradient(135deg, var(--green), #0091ff) !important;
+  border-radius: 8px !important;
+}
+.sn-nav-item {
+  font-family: var(--mono) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.3px !important;
+  color: var(--txt) !important;
+  border-radius: 6px !important;
+  padding: 6px 14px !important;
+  transition: all .15s !important;
+}
+.sn-nav-item:hover { color: var(--txh) !important; background: var(--s2) !important; }
+.sn-nav-item.active { color: var(--white) !important; background: var(--s2) !important; border-color: var(--bord2) !important; }
+.sn-plan.free { background: rgba(255,255,255,.07) !important; color: var(--txb) !important; border-color: var(--bord2) !important; }
+.sn-plan.pro { background: rgba(0,229,122,.12) !important; color: var(--green) !important; border-color: rgba(0,229,122,.25) !important; }
+.sn-plan.elite { background: rgba(245,158,11,.12) !important; color: var(--gold) !important; border-color: rgba(245,158,11,.25) !important; }
+.sn-user-btn { border-color: var(--bord2) !important; border-radius: 20px !important; }
+.sn-user-btn:hover { border-color: #2a4a6a !important; background: var(--s2) !important; }
+.sn-user-avatar { background: rgba(0,229,122,.12) !important; border-color: rgba(0,229,122,.3) !important; color: var(--green) !important; font-family: var(--mono) !important; }
+.sn-user-name { color: var(--txb) !important; font-family: var(--mono) !important; }
+
+/* ── CACHE BANNER ── */
+#cacheBanner {
+  top: 60px !important;
+  background: var(--s1) !important;
+  border-bottom: 1px solid var(--bord2) !important;
+  padding: 7px 32px !important;
+}
+#cacheStamp { font-family: var(--mono) !important; font-size: 11px !important; color: var(--txt) !important; letter-spacing: 0.3px !important; }
+#cacheLoading { top: 60px !important; background: var(--s1) !important; }
+
+/* ── SCANNER PAGE ── */
+#scannerPage { position: relative; z-index: 1; }
+.spage {
+  padding-top: 100px !important;
+  max-width: 1300px !important;
+  margin: 0 auto !important;
+  padding-left: 24px !important;
+  padding-right: 24px !important;
+}
+
+/* ── HEADER ── */
+.hdr {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 20px !important;
+}
+.hbrand {
+  font-family: var(--display) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--txh) !important;
+  letter-spacing: -0.2px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+.livdot {
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 50% !important;
+}
+.livdot.done { background: var(--green) !important; box-shadow: 0 0 8px rgba(0,229,122,.5) !important; }
+.livdot.scan { background: var(--gold) !important; box-shadow: 0 0 8px rgba(245,158,11,.5) !important; }
+.hmeta {
+  font-family: var(--mono) !important;
+  font-size: 10px !important;
+  color: var(--txt) !important;
+  letter-spacing: 0.5px !important;
+  margin-top: 3px !important;
+}
+
+/* ── SUM GRID (stats) ── */
+.sum-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 1px !important;
+  background: var(--bord2) !important;
+  border: 1px solid var(--bord2) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  margin-bottom: 16px !important;
+}
+.scard {
+  background: var(--s1) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 16px 20px !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  transition: background .15s !important;
+}
+.scard:hover { background: var(--s2) !important; transform: none !important; }
+.scard .sc-n {
+  font-family: var(--display) !important;
+  font-size: 26px !important;
+  font-weight: 800 !important;
+  letter-spacing: -1px !important;
+  line-height: 1 !important;
+  margin-bottom: 4px !important;
+}
+.scard .sc-l {
+  font-family: var(--mono) !important;
+  font-size: 9px !important;
+  letter-spacing: 1.5px !important;
+  color: var(--txt) !important;
+  text-transform: uppercase !important;
+}
+
+/* ── FILTER BAR ── */
+.cbar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 12px 0 !important;
+  flex-wrap: wrap !important;
+  margin-bottom: 8px !important;
+}
+.bf {
+  padding: 6px 14px !important;
+  font-family: var(--mono) !important;
+  font-size: 10px !important;
+  letter-spacing: 1px !important;
+  font-weight: 500 !important;
+  color: var(--txt) !important;
+  background: transparent !important;
+  border: 1px solid var(--bord2) !important;
+  border-radius: 7px !important;
+  cursor: pointer !important;
+  transition: all .15s !important;
+  white-space: nowrap !important;
+}
+.bf:hover { color: var(--txh) !important; border-color: #2a4a6a !important; background: var(--s2) !important; }
+.bf.on { color: var(--green) !important; border-color: rgba(0,229,122,.3) !important; background: rgba(0,229,122,.07) !important; }
+.vd {
+  width: 1px !important;
+  height: 20px !important;
+  background: var(--bord2) !important;
+  margin: 0 4px !important;
+}
+
+/* ── TABLE REDESIGN ── */
+table {
+  border-collapse: separate !important;
+  border-spacing: 0 4px !important;
+  font-family: var(--display) !important;
+}
+thead {
+  background: rgba(2, 4, 8, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+}
+th {
+  font-family: var(--mono) !important;
+  font-size: 9px !important;
+  letter-spacing: 1.5px !important;
+  color: var(--txt) !important;
+  padding: 10px 10px !important;
+  text-transform: uppercase !important;
+  font-weight: 400 !important;
+  border-bottom: 1px solid var(--bord2) !important;
+}
+th:hover { color: var(--txh) !important; }
+
+/* ── HIDE SUB-SCORE COLUMNS (6-11) from main view ── */
+thead th:nth-child(6),
+thead th:nth-child(7),
+thead th:nth-child(8),
+thead th:nth-child(9),
+thead th:nth-child(10),
+thead th:nth-child(11) {
+  display: none !important;
+}
+tbody tr.mr td:nth-child(6),
+tbody tr.mr td:nth-child(7),
+tbody tr.mr td:nth-child(8),
+tbody tr.mr td:nth-child(9),
+tbody tr.mr td:nth-child(10),
+tbody tr.mr td:nth-child(11) {
+  display: none !important;
+}
+
+/* ── MAIN ROWS ── */
+tbody tr.mr {
+  cursor: pointer !important;
+  animation: rowIn .3s ease both !important;
+}
+tbody tr.mr td {
+  background: var(--s1) !important;
+  border-top: 1px solid var(--bord2) !important;
+  border-bottom: 1px solid var(--bord2) !important;
+  padding: 12px 10px !important;
+  transition: background .15s !important;
+}
+tbody tr.mr td:first-child {
+  border-left: 1px solid var(--bord2) !important;
+  border-radius: 10px 0 0 10px !important;
+  padding-left: 14px !important;
+}
+tbody tr.mr td:last-child {
+  border-right: 1px solid var(--bord2) !important;
+  border-radius: 0 10px 10px 0 !important;
+  padding-right: 14px !important;
+}
+tbody tr.mr:hover td { background: var(--s2) !important; }
+
+/* ── DETAIL ROW ── */
+tbody tr.dr { background: transparent !important; }
+tbody tr.dr > td { padding: 0 !important; border: none !important; background: transparent !important; }
+.det-inner {
+  background: var(--s2) !important;
+  border: 1px solid var(--bord2) !important;
+  border-top: none !important;
+  border-radius: 0 0 10px 10px !important;
+  margin-bottom: 4px !important;
+}
+.det-card {
+  background: rgba(2,4,8,.6) !important;
+  border: 1px solid var(--bord2) !important;
+  border-radius: 8px !important;
+}
+.det-title {
+  font-family: var(--mono) !important;
+  font-size: 9px !important;
+  letter-spacing: 2px !important;
+  color: var(--txt) !important;
+  border-bottom: 1px solid var(--bord2) !important;
+  padding-bottom: 8px !important;
+  margin-bottom: 10px !important;
+}
+.dk { font-family: var(--mono) !important; font-size: 11px !important; color: var(--txt) !important; }
+.dv { font-family: var(--mono) !important; font-size: 11px !important; font-weight: 600 !important; }
+
+/* ── TICKER COLUMN ── */
+.tsym {
+  font-family: var(--mono) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: var(--white) !important;
+  letter-spacing: 0.5px !important;
+}
+.tname {
+  font-family: var(--display) !important;
+  font-size: 11px !important;
+  color: var(--txt) !important;
+  margin-top: 2px !important;
+}
+.tsec {
+  font-family: var(--mono) !important;
+  font-size: 9px !important;
+  color: #2a4a6a !important;
+  letter-spacing: 0.5px !important;
+  margin-top: 1px !important;
+}
+
+/* ── SIGNAL BADGE ── */
+.badge {
+  font-family: var(--mono) !important;
+  font-size: 9px !important;
+  letter-spacing: 1px !important;
+  padding: 4px 10px !important;
+  border-radius: 20px !important;
+  border: 1px solid !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+}
+
+/* ── SCORE COLUMN ── */
+.sv {
+  font-family: var(--mono) !important;
+  font-size: 18px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.5px !important;
+}
+.bseg { border-radius: 2px !important; }
+
+/* ── FLAGS ── */
+.flag {
+  font-family: var(--mono) !important;
+  font-size: 9px !important;
+  padding: 3px 7px !important;
+  border-radius: 5px !important;
+  letter-spacing: 0.3px !important;
+  font-weight: 500 !important;
+}
+
+/* ── ARROW ── */
+.arr {
+  font-size: 9px !important;
+  color: var(--bord2) !important;
+  transition: transform .2s, color .2s !important;
+}
+.arr.op { transform: rotate(90deg) !important; color: var(--green) !important; }
+
+/* ── CHART TABS ── */
+.chart-tab {
+  font-family: var(--mono) !important;
+  font-size: 9px !important;
+  border-radius: 5px !important;
+  border-color: var(--bord2) !important;
+  color: var(--txt) !important;
+}
+.chart-tab.active { border-color: var(--green) !important; color: var(--green) !important; background: rgba(0,229,122,.08) !important; }
+
+/* ── SCROLL TO TOP ── */
+#scrollTopBtn {
+  border-color: var(--green) !important;
+  color: var(--green) !important;
+  background: rgba(2,4,8,.9) !important;
+}
+
+/* ── TOOLTIP UPGRADE ── */
+#sr-tooltip {
+  font-family: var(--display) !important;
+  background: var(--s2) !important;
+  border: 1px solid var(--bord2) !important;
+  color: var(--txb) !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  line-height: 1.6 !important;
+}
+
+/* ── EMPTY STATE ── */
+.empty-t {
+  font-family: var(--mono) !important;
+  color: var(--bord2) !important;
+}
+
+/* ── PAYWALL BANNER ── */
+#freeLockBanner > div > div:first-child {
+  font-family: var(--display) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--white) !important;
+}
+
+/* ── UPGRADE GATE ── */
+.upgrade-card {
+  background: var(--s1) !important;
+  border: 1px solid rgba(0,229,122,.2) !important;
+  border-radius: 16px !important;
+}
+.upgrade-title {
+  font-family: var(--display) !important;
+  color: var(--white) !important;
+}
+
+/* ── AUTH GATE ── */
+.gate-card {
+  background: var(--s1) !important;
+  border-color: var(--bord2) !important;
+  border-radius: 16px !important;
+}
+.gate-logo { font-family: var(--display) !important; }
+.gate-logo span { color: var(--green) !important; }
+
+/* ── RE-SCAN BTN ── */
+#btnRescan {
+  font-family: var(--mono) !important;
+  font-size: 9px !important;
+  letter-spacing: 1px !important;
+  padding: 5px 12px !important;
+  border-radius: 6px !important;
+  border-color: var(--bord2) !important;
+  color: var(--txt) !important;
+  transition: all .15s !important;
+}
+#btnRescan:hover { border-color: var(--green) !important; color: var(--green) !important; }
+
+@media (max-width: 768px) {
+  .spage { padding-left: 12px !important; padding-right: 12px !important; }
+  .sum-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .cbar { gap: 3px !important; }
+  .bf { padding: 5px 10px !important; font-size: 9px !important; }
+  #scannerNav { padding: 0 16px !important; }
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
@@ -710,18 +1152,18 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
       <button class="btn-scan" id="btnScan" onclick="runScan()" style="display:none;">▶ ANALYZE NOW</button>
       <div class="vd"></div>
       <button class="bf on" onclick="setF('ALL',this)" id="fAll">ALL</button>
-      <button class="bf"    onclick="setF('STRONG BUY',this)" id="fStrongBuy">🟢 STRONG BUY</button>
-      <button class="bf"    onclick="setF('INTERESTING',this)" id="fInteresting">🟡 INTERESTING</button>
-      <button class="bf"    onclick="setF('WATCH',this)" id="fWatch">🟠 WATCH</button>
-      <button class="bf"    onclick="setF('WEAK',this)" id="fWeak">🔴 WEAK</button>
+      <button class="bf"    onclick="setF('STRONG BUY',this)" id="fStrongBuy" style="color:var(--green);border-color:rgba(0,229,122,.15);">● STRONG BUY</button>
+      <button class="bf"    onclick="setF('INTERESTING',this)" id="fInteresting" style="color:var(--gold);border-color:rgba(245,158,11,.15);">◐ INTERESTING</button>
+      <button class="bf"    onclick="setF('WATCH',this)" id="fWatch">◌ WATCH</button>
+      <button class="bf"    onclick="setF('WEAK',this)" id="fWeak" style="color:var(--red);border-color:rgba(239,68,68,.15);">○ WEAK</button>
       <div class="vd"></div>
-      <button class="bf"    onclick="setF('VOL_SPIKE',this)" id="fVolSpike">⚡ VOL SPIKE</button>
-      <button class="bf"    onclick="setF('SHORT_SQ',this)" id="fShortSq">🎯 SHORT SQUEEZE</button>
-      <button class="bf"    onclick="setF('INSIDER_BUY',this)" id="fInsider">👤 INSIDER BUY</button>
-      <button class="bf"    onclick="setF('EPS_STREAK',this)" id="fEps">📈 EPS STREAK</button>
-      <button class="bf"    onclick="setF('FCF_POS',this)" id="fFcf">💰 FCF+</button>
-      <button class="bf"    onclick="setF('HIGH_UPSIDE',this)" id="fUpside">🎯 HIGH UPSIDE</button>
-      <button class="bf"    onclick="setF('MOVERS',this)" id="fMovers">🔺 TOP MOVERS</button>
+      <button class="bf"    onclick="setF('VOL_SPIKE',this)" id="fVolSpike">↑ VOL SPIKE</button>
+      <button class="bf"    onclick="setF('SHORT_SQ',this)" id="fShortSq">⇡ SHORT SQUEEZE</button>
+      <button class="bf"    onclick="setF('INSIDER_BUY',this)" id="fInsider">◈ INSIDER BUY</button>
+      <button class="bf"    onclick="setF('EPS_STREAK',this)" id="fEps">▲ EPS STREAK</button>
+      <button class="bf"    onclick="setF('FCF_POS',this)" id="fFcf">✦ FCF+</button>
+      <button class="bf"    onclick="setF('HIGH_UPSIDE',this)" id="fUpside">◆ HIGH UPSIDE</button>
+      <button class="bf"    onclick="setF('MOVERS',this)" id="fMovers">▲ TOP MOVERS</button>
     </div>
     <div class="prog-wrap" id="progWrap">
       <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
