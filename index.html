@@ -1052,6 +1052,111 @@ footer {
 .nav-user-btn:hover{border-color:#2a4a6a;}
 .nav-avatar{width:24px;height:24px;border-radius:50%;background:rgba(0,229,122,.15);border:1px solid rgba(0,229,122,.3);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--green);font-family:var(--mono);font-weight:700;}
 .nav-username{font-size:12px;color:var(--txb);font-family:var(--mono);}
+
+/* ── ACCOUNT MODAL ─────────────────────────────────── */
+#accountModal{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(10px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+#accountModal.open{display:flex;}
+.acc-card{
+  background:#060d18;border:1px solid var(--bord2);border-radius:16px;
+  width:100%;max-width:520px;overflow:hidden;
+  animation:fadeUp .25s ease both;
+}
+.acc-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 24px;border-bottom:1px solid var(--bord2);
+}
+.acc-header-left{display:flex;align-items:center;gap:12px;}
+.acc-avatar-big{
+  width:40px;height:40px;border-radius:50%;
+  background:rgba(0,229,122,.12);border:1px solid rgba(0,229,122,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-family:var(--mono);font-weight:700;color:var(--green);
+}
+.acc-email{font-size:13px;color:var(--white);font-weight:500;}
+.acc-email-sub{font-size:11px;font-family:var(--mono);color:var(--txt);margin-top:2px;letter-spacing:.3px;}
+.acc-close{
+  width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.05);
+  border:1px solid var(--bord2);color:var(--txt);font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:1;
+}
+.acc-close:hover{background:rgba(255,255,255,.1);color:var(--white);}
+
+.acc-tabs{
+  display:flex;border-bottom:1px solid var(--bord2);
+}
+.acc-tab{
+  flex:1;padding:12px 16px;font-size:10px;font-family:var(--mono);
+  letter-spacing:1.5px;color:var(--txt);cursor:pointer;text-align:center;
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;
+  background:none;border-top:none;border-left:none;border-right:none;
+}
+.acc-tab.active{color:var(--green);border-bottom-color:var(--green);}
+.acc-tab:hover:not(.active){color:var(--txb);}
+
+.acc-section{display:none;padding:24px;}
+.acc-section.active{display:block;}
+
+/* Plan badge large */
+.acc-plan-box{
+  display:flex;align-items:center;gap:14px;
+  padding:16px 18px;background:rgba(0,229,122,.05);
+  border:1px solid rgba(0,229,122,.15);border-radius:10px;margin-bottom:20px;
+}
+.acc-plan-icon{font-size:24px;}
+.acc-plan-name{font-size:16px;font-weight:600;color:var(--white);font-family:var(--display);}
+.acc-plan-desc{font-size:11px;font-family:var(--mono);color:var(--txt);margin-top:2px;letter-spacing:.3px;}
+
+/* Stats mini */
+.acc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+.acc-stat{
+  background:rgba(255,255,255,.03);border:1px solid var(--bord2);
+  border-radius:8px;padding:12px;text-align:center;
+}
+.acc-stat-n{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--white);letter-spacing:-1px;}
+.acc-stat-l{font-size:9px;font-family:var(--mono);letter-spacing:1.5px;color:var(--txt);margin-top:3px;}
+
+.acc-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.acc-btn{
+  padding:10px 20px;border-radius:8px;font-family:var(--display);
+  font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;border:none;
+}
+.acc-btn-primary{background:var(--green);color:#010d08;}
+.acc-btn-primary:hover{background:var(--green2);transform:translateY(-1px);}
+.acc-btn-outline{background:transparent;border:1px solid var(--bord2);color:var(--txb);}
+.acc-btn-outline:hover{border-color:#2a4a6a;color:var(--white);}
+.acc-btn-danger{background:transparent;border:1px solid rgba(239,68,68,.3);color:#ef4444;}
+.acc-btn-danger:hover{background:rgba(239,68,68,.08);}
+
+/* Settings rows */
+.acc-group{margin-bottom:24px;}
+.acc-group-title{font-size:9px;font-family:var(--mono);letter-spacing:2px;color:var(--txt);text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bord2);}
+.acc-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04);gap:16px;}
+.acc-row:last-child{border-bottom:none;padding-bottom:0;}
+.acc-row-left{flex:1;}
+.acc-row-label{font-size:14px;color:var(--white);font-weight:500;font-family:var(--display);}
+.acc-row-desc{font-size:11px;font-family:var(--mono);color:var(--txt);margin-top:3px;letter-spacing:.2px;line-height:1.5;}
+
+.lang-selector{display:flex;gap:6px;}
+.lang-btn{
+  padding:7px 14px;border-radius:7px;border:1px solid var(--bord2);
+  background:transparent;color:var(--txb);font-family:var(--display);
+  font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;gap:6px;
+}
+.lang-btn.active{border-color:rgba(0,229,122,.3);color:var(--green);background:rgba(0,229,122,.07);}
+.lang-btn:hover:not(.active){border-color:#2a4a6a;color:var(--white);}
+
+.acc-save-row{display:flex;align-items:center;gap:12px;margin-top:4px;}
+.acc-saved{font-size:12px;font-family:var(--mono);color:var(--green);display:none;letter-spacing:.3px;}
+
+@media(max-width:480px){
+  .acc-card{border-radius:12px;}
+  .acc-stats{grid-template-columns:repeat(3,1fr);}
+}
 </style>
 </head>
 <body>
@@ -2143,11 +2248,10 @@ function showNavGuest() {
 function showNavLoggedIn(username, plan) {
   document.getElementById('navRight').innerHTML = `
     <span class="nav-plan-badge ${plan}">${plan.toUpperCase()}</span>
-    <a class="nav-user-btn" href="/scanner.html">
+    <button onclick="openAccountModal()" class="nav-user-btn" style="border:1px solid var(--bord2);border-radius:20px;background:transparent;cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 12px 4px 5px;transition:all .15s;" onmouseover="this.style.borderColor='#2a4a6a'" onmouseout="this.style.borderColor='var(--bord2)'">
       <div class="nav-avatar">${username.charAt(0).toUpperCase()}</div>
       <span class="nav-username">${username}</span>
-    </a>
-    <button onclick="doSignOut()" style="padding:6px 14px;background:transparent;border:1px solid var(--bord2);color:var(--txt);border-radius:7px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.3px;transition:all .15s;" onmouseover="this.style.borderColor='#2a4a6a';this.style.color='var(--txb)'" onmouseout="this.style.borderColor='var(--bord2)';this.style.color='var(--txt)'">Sign out</button>`;
+    </button>`;
 }
 
 async function doSignOut() {
@@ -2303,6 +2407,114 @@ function showToast(msg, type = 'success') {
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 </script>
+
+
+<!-- ACCOUNT MODAL -->
+<div id="accountModal">
+  <div class="acc-card">
+    <!-- HEADER -->
+    <div class="acc-header">
+      <div class="acc-header-left">
+        <div class="acc-avatar-big" id="accAvatarBig">B</div>
+        <div>
+          <div class="acc-email" id="accEmail">Loading...</div>
+          <div class="acc-email-sub" id="accPlanBadge">FREE PLAN</div>
+        </div>
+      </div>
+      <button class="acc-close" onclick="closeAccountModal()">×</button>
+    </div>
+
+    <!-- TABS -->
+    <div class="acc-tabs">
+      <button class="acc-tab active" id="accTabOverview" onclick="switchAccTab('overview')">OVERVIEW</button>
+      <button class="acc-tab" id="accTabSettings" onclick="switchAccTab('settings')">SETTINGS</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div class="acc-section active" id="accSectionOverview">
+      <div class="acc-plan-box" id="accPlanBox">
+        <div class="acc-plan-icon">🦅</div>
+        <div>
+          <div class="acc-plan-name" id="accPlanName">Free Plan</div>
+          <div class="acc-plan-desc" id="accPlanDesc">40 companies · Scanner access</div>
+        </div>
+      </div>
+      <div class="acc-stats">
+        <div class="acc-stat">
+          <div class="acc-stat-n" id="accStatCompanies">40</div>
+          <div class="acc-stat-l">COMPANIES</div>
+        </div>
+        <div class="acc-stat">
+          <div class="acc-stat-n" style="color:var(--green)" id="accStatPlan">FREE</div>
+          <div class="acc-stat-l">PLAN</div>
+        </div>
+        <div class="acc-stat">
+          <div class="acc-stat-n" style="color:var(--gold)" id="accStatScans">—</div>
+          <div class="acc-stat-l">SCANS</div>
+        </div>
+      </div>
+      <div class="acc-actions">
+        <a href="/scanner.html" class="acc-btn acc-btn-primary">Open Scanner →</a>
+        <button class="acc-btn acc-btn-outline" id="accUpgradeBtn" onclick="handleUpgrade('pro')">⬆ Upgrade Plan</button>
+        <button class="acc-btn acc-btn-outline" onclick="doSignOut()" style="margin-left:auto;">Sign out</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="acc-section" id="accSectionSettings">
+      <div class="acc-group">
+        <div class="acc-group-title">Language · Idioma</div>
+        <div class="acc-row">
+          <div class="acc-row-left">
+            <div class="acc-row-label">Interface Language</div>
+            <div class="acc-row-desc">Changes the language of the scanner and picks interface.</div>
+          </div>
+          <div class="lang-selector">
+            <button class="lang-btn active" id="langEN" onclick="setAccLang('en')">🇬🇧 English</button>
+            <button class="lang-btn" id="langES" onclick="setAccLang('es')">🇪🇸 Español</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="acc-group">
+        <div class="acc-group-title">Account</div>
+        <div class="acc-row">
+          <div class="acc-row-left">
+            <div class="acc-row-label">Email Address</div>
+            <div class="acc-row-desc" id="accEmailSettings">—</div>
+          </div>
+        </div>
+        <div class="acc-row">
+          <div class="acc-row-left">
+            <div class="acc-row-label">Current Plan</div>
+            <div class="acc-row-desc" id="accPlanSettings">Free</div>
+          </div>
+          <button class="acc-btn acc-btn-outline" id="accUpgradeSettings" onclick="handleUpgrade('pro')" style="padding:8px 14px;font-size:12px;">⬆ Upgrade</button>
+        </div>
+        <div class="acc-row" id="accRowCancel" style="display:none;">
+          <div class="acc-row-left">
+            <div class="acc-row-label">Cancel Subscription</div>
+            <div class="acc-row-desc">Your plan stays active until end of billing period.</div>
+          </div>
+          <button class="acc-btn acc-btn-danger" onclick="confirmCancelPlan()" id="accBtnCancel" style="padding:8px 14px;font-size:12px;">Cancel Plan</button>
+        </div>
+        <div class="acc-row">
+          <div class="acc-row-left">
+            <div class="acc-row-label">Sign Out</div>
+            <div class="acc-row-desc">Sign out from this device.</div>
+          </div>
+          <button class="acc-btn acc-btn-danger" onclick="doSignOut()" style="padding:8px 14px;font-size:12px;">Sign out</button>
+        </div>
+      </div>
+
+      <div class="acc-save-row">
+        <button class="acc-btn acc-btn-primary" onclick="saveAccSettings()">Save Settings</button>
+        <span class="acc-saved" id="accSaved">✓ Saved!</span>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 </body>
 </html>
