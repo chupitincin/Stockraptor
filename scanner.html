@@ -388,18 +388,7 @@ body {
 }
 
 /* ── GRID BACKGROUND ── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 60% 40% at 50% -10%, #0d1a3a44, transparent),
-    linear-gradient(var(--bord) 1px, transparent 1px),
-    linear-gradient(90deg, var(--bord) 1px, transparent 1px);
-  background-size: auto, 48px 48px, 48px 48px;
-}
+
 
 /* ── NAV UPGRADE ── */
 #scannerNav {
@@ -795,6 +784,103 @@ tbody tr.dr > td { padding: 0 !important; border: none !important; background: t
   .bf { padding: 5px 10px !important; font-size: 9px !important; }
   #scannerNav { padding: 0 16px !important; }
 }
+
+/* ═══════════════════════════════════════
+   SHARED DESIGN SYSTEM — matches index-new
+   ═══════════════════════════════════════ */
+:root {
+  --bg: #020408 !important;
+  --s1: #050a10 !important;
+  --s2: #0a1020 !important;
+  --bord: #0d1a28 !important;
+  --bord2: #152030 !important;
+  --green: #00e57a !important;
+  --green2: #00ff94 !important;
+  --teal: #00c9b1 !important;
+  --blue2: #60a5fa !important;
+  --gold: #f59e0b !important;
+  --red: #ef4444 !important;
+  --purple: #8b5cf6 !important;
+  --txt: #4a6080 !important;
+  --txb: #8aa0bc !important;
+  --txh: #c8dced !important;
+  --white: #eef4ff !important;
+  --mono: 'DM Mono', monospace !important;
+  --display: 'Bricolage Grotesque', sans-serif !important;
+}
+body {
+  background: #020408 !important;
+  font-family: 'Bricolage Grotesque', sans-serif !important;
+}
+/* NO grid background — clean solid dark */
+.bg-grid { display: none !important; }
+body::before { display: none !important; }
+
+/* NAV */
+nav, #scannerNav {
+  height: 60px !important;
+  background: rgba(2,4,8,0.92) !important;
+  border-bottom: 1px solid #152030 !important;
+  backdrop-filter: blur(16px) !important;
+}
+.sn-logo, .nav-logo {
+  font-family: 'Bricolage Grotesque', sans-serif !important;
+  font-size: 17px !important; font-weight: 700 !important;
+  color: #eef4ff !important; letter-spacing: -0.3px !important;
+}
+.sn-logo span, .nav-logo span { color: #00e57a !important; }
+.sn-logo-icon, .nav-logo-icon {
+  background: linear-gradient(135deg, #00e57a, #0091ff) !important;
+  border-radius: 8px !important;
+}
+.sn-nav-item {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 11px !important; letter-spacing: .3px !important;
+  color: #4a6080 !important; border-radius: 6px !important;
+}
+.sn-nav-item:hover { color: #c8dced !important; background: #0a1020 !important; }
+.sn-nav-item.active { color: #eef4ff !important; background: #0a1020 !important; border-color: #152030 !important; }
+.sn-plan.free { background: rgba(255,255,255,.07) !important; color: #8aa0bc !important; border-color: #152030 !important; }
+.sn-plan.pro  { background: rgba(0,229,122,.12) !important; color: #00e57a !important; border-color: rgba(0,229,122,.25) !important; }
+.sn-plan.elite{ background: rgba(245,158,11,.12) !important; color: #f59e0b !important; border-color: rgba(245,158,11,.25) !important; }
+.sn-user-btn  { border-color: #152030 !important; border-radius: 20px !important; }
+.sn-user-btn:hover { border-color: #2a4a6a !important; background: #0a1020 !important; }
+.sn-user-avatar { background: rgba(0,229,122,.12) !important; border-color: rgba(0,229,122,.3) !important; color: #00e57a !important; font-family: 'DM Mono', monospace !important; }
+.sn-user-name { color: #8aa0bc !important; font-family: 'DM Mono', monospace !important; }
+
+/* TABLE SHARED */
+table { font-family: 'Bricolage Grotesque', sans-serif !important; }
+th {
+  font-family: 'DM Mono', monospace !important;
+  font-size: 9px !important; letter-spacing: 1.5px !important;
+  color: #4a6080 !important; font-weight: 400 !important;
+  border-bottom: 1px solid #152030 !important;
+  padding: 10px 10px !important;
+}
+th:hover { color: #c8dced !important; }
+thead { background: rgba(2,4,8,.97) !important; top: 60px !important; }
+tbody tr.mr td {
+  background: #050a10 !important;
+  border-top: 1px solid #152030 !important;
+  border-bottom: 1px solid #152030 !important;
+  padding: 12px 10px !important;
+  transition: background .15s !important;
+}
+tbody tr.mr td:first-child { border-left: 1px solid #152030 !important; border-radius: 10px 0 0 10px !important; padding-left: 14px !important; }
+tbody tr.mr td:last-child  { border-right: 1px solid #152030 !important; border-radius: 0 10px 10px 0 !important; padding-right: 14px !important; }
+tbody tr.mr:hover td { background: #0a1020 !important; }
+tbody tr.mr { border-bottom: none !important; }
+.tsym { font-family: 'DM Mono', monospace !important; font-size: 14px !important; font-weight: 500 !important; color: #eef4ff !important; }
+.tname { font-family: 'Bricolage Grotesque', sans-serif !important; font-size: 11px !important; color: #4a6080 !important; }
+.tsec  { font-family: 'DM Mono', monospace !important; font-size: 9px !important; color: #1e3a50 !important; letter-spacing: .5px !important; }
+.badge { font-family: 'DM Mono', monospace !important; font-size: 9px !important; letter-spacing: 1px !important; padding: 4px 10px !important; border-radius: 20px !important; font-weight: 500 !important; }
+.sv    { font-family: 'DM Mono', monospace !important; font-size: 18px !important; font-weight: 500 !important; letter-spacing: -.5px !important; }
+.flag  { font-family: 'DM Mono', monospace !important; font-size: 9px !important; padding: 3px 7px !important; border-radius: 5px !important; font-weight: 500 !important; }
+.arr   { color: #152030 !important; }
+.arr.op { color: #00e57a !important; }
+
+/* FOOTER */
+footer { border-top: 1px solid #152030 !important; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
