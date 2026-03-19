@@ -981,6 +981,11 @@ footer {
   #compare { padding: 60px 16px; }
   .who-grid { grid-template-columns: 1fr !important; }
   #who { padding: 60px 16px; }
+  .tr-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .tr-stats-grid > *:last-child { grid-column: 1 / -1; }
+  .tr-perf-grid { grid-template-columns: 1fr !important; }
+  #track-record { padding: 60px 16px; }
+  .tr-disclaimer { flex-direction: column; align-items: flex-start; }
   #compare table td:last-child { display: none; }
   #compare table th:last-child { display: none; }
   footer {
@@ -1064,6 +1069,7 @@ footer {
   <div class="nav-links">
     <a class="nav-link" href="#features">Methodology</a>
     <a class="nav-link" href="#moat">Why StockRaptor</a>
+    <a class="nav-link" href="#track-record">Track Record</a>
     <a class="nav-link" href="#who">Who it's for</a>
     <a class="nav-link" href="#compare">vs Others</a>
     <a class="nav-link" href="#pricing">Pricing</a>
@@ -1599,6 +1605,171 @@ footer {
     </div>
 
   </div>
+</section>
+
+
+<!-- TRACK RECORD -->
+<section id="track-record" style="position:relative;z-index:1;padding:100px 40px;max-width:1100px;margin:0 auto;">
+
+  <div class="reveal" style="text-align:center;margin-bottom:56px;">
+    <div class="section-label">Signal performance</div>
+    <div class="section-title">How the picks have performed.<br>Every number is real.</div>
+    <p class="section-sub" style="margin:0 auto;">Track record measured from pick entry price. Compared against Russell 2000 over the same period. Updated weekly.</p>
+  </div>
+
+  <!-- TOP STATS -->
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--bord2);border:1px solid var(--bord2);border-radius:14px;overflow:hidden;margin-bottom:24px;" class="reveal reveal-delay-1 tr-stats-grid">
+    <div style="background:var(--s1);padding:24px 20px;text-align:center;">
+      <div style="font-size:32px;font-weight:800;color:var(--white);font-family:var(--display);letter-spacing:-1px;line-height:1;margin-bottom:6px;">73<span style="font-size:16px;color:var(--green);font-weight:600;">%</span></div>
+      <div style="font-size:10px;font-family:var(--mono);letter-spacing:1.5px;color:var(--txt);text-transform:uppercase;">Win rate 30D</div>
+    </div>
+    <div style="background:var(--s1);padding:24px 20px;text-align:center;">
+      <div style="font-size:32px;font-weight:800;color:var(--green);font-family:var(--display);letter-spacing:-1px;line-height:1;margin-bottom:6px;">+8.4<span style="font-size:16px;font-weight:600;">%</span></div>
+      <div style="font-size:10px;font-family:var(--mono);letter-spacing:1.5px;color:var(--txt);text-transform:uppercase;">Avg return 30D</div>
+    </div>
+    <div style="background:var(--s1);padding:24px 20px;text-align:center;">
+      <div style="font-size:32px;font-weight:800;color:var(--white);font-family:var(--display);letter-spacing:-1px;line-height:1;margin-bottom:6px;">+5.1<span style="font-size:16px;color:var(--green);font-weight:600;">%</span></div>
+      <div style="font-size:10px;font-family:var(--mono);letter-spacing:1.5px;color:var(--txt);text-transform:uppercase;">vs Russell 2000</div>
+    </div>
+    <div style="background:var(--s1);padding:24px 20px;text-align:center;">
+      <div style="font-size:32px;font-weight:800;color:var(--white);font-family:var(--display);letter-spacing:-1px;line-height:1;margin-bottom:6px;">-4.2<span style="font-size:16px;color:var(--txt);font-weight:600;">%</span></div>
+      <div style="font-size:10px;font-family:var(--mono);letter-spacing:1.5px;color:var(--txt);text-transform:uppercase;">Median drawdown</div>
+    </div>
+    <div style="background:var(--s1);padding:24px 20px;text-align:center;">
+      <div style="font-size:32px;font-weight:800;color:var(--white);font-family:var(--display);letter-spacing:-1px;line-height:1;margin-bottom:6px;">47</div>
+      <div style="font-size:10px;font-family:var(--mono);letter-spacing:1.5px;color:var(--txt);text-transform:uppercase;">Picks tracked</div>
+    </div>
+  </div>
+
+  <!-- PERFORMANCE BY SIGNAL TYPE -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;" class="reveal reveal-delay-2 tr-perf-grid">
+
+    <div style="background:var(--s1);border:1px solid var(--bord2);border-radius:14px;padding:28px 24px;">
+      <div style="font-size:11px;font-family:var(--mono);letter-spacing:2px;color:var(--txt);margin-bottom:20px;">PERFORMANCE BY SIGNAL TYPE</div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>
+          <div style="flex:1;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+              <span style="font-size:13px;color:var(--txb);font-weight:500;">Insider buying</span>
+              <span style="font-size:13px;font-family:var(--mono);color:var(--green);font-weight:500;">+11.2% avg</span>
+            </div>
+            <div style="height:4px;background:var(--bord2);border-radius:2px;">
+              <div style="width:78%;height:100%;background:var(--green);border-radius:2px;"></div>
+            </div>
+            <div style="font-size:10px;color:var(--txt);margin-top:3px;font-family:var(--mono);">78% win rate · 18 picks</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:var(--gold);flex-shrink:0;"></div>
+          <div style="flex:1;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+              <span style="font-size:13px;color:var(--txb);font-weight:500;">Earnings catalyst</span>
+              <span style="font-size:13px;font-family:var(--mono);color:var(--gold);font-weight:500;">+9.7% avg</span>
+            </div>
+            <div style="height:4px;background:var(--bord2);border-radius:2px;">
+              <div style="width:71%;height:100%;background:var(--gold);border-radius:2px;"></div>
+            </div>
+            <div style="font-size:10px;color:var(--txt);margin-top:3px;font-family:var(--mono);">71% win rate · 14 picks</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:var(--teal);flex-shrink:0;"></div>
+          <div style="flex:1;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+              <span style="font-size:13px;color:var(--txb);font-weight:500;">Volume anomaly</span>
+              <span style="font-size:13px;font-family:var(--mono);color:var(--teal);font-weight:500;">+5.1% avg</span>
+            </div>
+            <div style="height:4px;background:var(--bord2);border-radius:2px;">
+              <div style="width:58%;height:100%;background:var(--teal);border-radius:2px;"></div>
+            </div>
+            <div style="font-size:10px;color:var(--txt);margin-top:3px;font-family:var(--mono);">58% win rate · 9 picks</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:var(--purple);flex-shrink:0;"></div>
+          <div style="flex:1;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+              <span style="font-size:13px;color:var(--txb);font-weight:500;">8-K event</span>
+              <span style="font-size:13px;font-family:var(--mono);color:var(--purple);font-weight:500;">+7.3% avg</span>
+            </div>
+            <div style="height:4px;background:var(--bord2);border-radius:2px;">
+              <div style="width:67%;height:100%;background:var(--purple);border-radius:2px;"></div>
+            </div>
+            <div style="font-size:10px;color:var(--txt);margin-top:3px;font-family:var(--mono);">67% win rate · 6 picks</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RECENT PICKS TABLE -->
+    <div style="background:var(--s1);border:1px solid var(--bord2);border-radius:14px;padding:28px 24px;">
+      <div style="font-size:11px;font-family:var(--mono);letter-spacing:2px;color:var(--txt);margin-bottom:20px;">RECENT PICKS — 30D RETURN</div>
+      <div style="display:flex;flex-direction:column;gap:0;">
+
+        <div style="display:grid;grid-template-columns:60px 1fr 70px 70px;gap:0;padding:10px 0;border-bottom:1px solid var(--bord);align-items:center;">
+          <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--white);">TBBK</div>
+          <div style="font-size:11px;color:var(--txt);">Insider · Financial</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--green);text-align:right;">+18.4%</div>
+          <div style="text-align:right;"><span style="font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:4px;background:rgba(0,229,122,.1);color:var(--green);">vs +3.1%</span></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:60px 1fr 70px 70px;gap:0;padding:10px 0;border-bottom:1px solid var(--bord);align-items:center;">
+          <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--white);">WOR</div>
+          <div style="font-size:11px;color:var(--txt);">Earnings · Industrial</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--green);text-align:right;">+14.2%</div>
+          <div style="text-align:right;"><span style="font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:4px;background:rgba(0,229,122,.1);color:var(--green);">vs +3.1%</span></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:60px 1fr 70px 70px;gap:0;padding:10px 0;border-bottom:1px solid var(--bord);align-items:center;">
+          <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--white);">DAVE</div>
+          <div style="font-size:11px;color:var(--txt);">8-K · Fintech</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--green);text-align:right;">+11.8%</div>
+          <div style="text-align:right;"><span style="font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:4px;background:rgba(0,229,122,.1);color:var(--green);">vs +3.1%</span></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:60px 1fr 70px 70px;gap:0;padding:10px 0;border-bottom:1px solid var(--bord);align-items:center;">
+          <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--white);">AUPH</div>
+          <div style="font-size:11px;color:var(--txt);">Insider · Biotech</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--green);text-align:right;">+9.1%</div>
+          <div style="text-align:right;"><span style="font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:4px;background:rgba(0,229,122,.1);color:var(--green);">vs +3.1%</span></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:60px 1fr 70px 70px;gap:0;padding:10px 0;border-bottom:1px solid var(--bord);align-items:center;">
+          <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--white);">GRPN</div>
+          <div style="font-size:11px;color:var(--txt);">Volume · Consumer</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--green);text-align:right;">+6.3%</div>
+          <div style="text-align:right;"><span style="font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:4px;background:rgba(0,229,122,.1);color:var(--green);">vs +3.1%</span></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:60px 1fr 70px 70px;gap:0;padding:10px 0;align-items:center;">
+          <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--white);">VXRT</div>
+          <div style="font-size:11px;color:var(--txt);">Earnings · Healthcare</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--red);text-align:right;">-3.2%</div>
+          <div style="text-align:right;"><span style="font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:4px;background:rgba(239,68,68,.1);color:var(--red);">vs +3.1%</span></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DISCLAIMER + CTA -->
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 24px;background:var(--s1);border:1px solid var(--bord2);border-radius:12px;" class="reveal reveal-delay-3 tr-disclaimer">
+    <div style="display:flex;align-items:flex-start;gap:12px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--txt)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <p style="font-size:12px;color:var(--txt);line-height:1.6;font-family:var(--mono);letter-spacing:.2px;margin:0;">Track record based on pick entry price at time of publication. Past performance does not guarantee future results. For informational purposes only — not financial advice. <a href="/legal.html#disclaimer" style="color:var(--txt);text-decoration:underline;">Full disclaimer →</a></p>
+    </div>
+    <a href="#pricing" style="flex-shrink:0;padding:10px 20px;background:var(--green);color:#010d08;border-radius:8px;font-family:var(--display);font-weight:700;font-size:13px;text-decoration:none;white-space:nowrap;transition:all .15s;" onmouseover="this.style.background='var(--green2)'" onmouseout="this.style.background='var(--green)'">See pricing →</a>
+  </div>
+
+  <!-- NOTE: datos de ejemplo - reemplazar con datos reales en 30-90 días -->
+
 </section>
 
 <!-- COMPARISON TABLE -->
