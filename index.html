@@ -2516,5 +2516,116 @@ function showToast(msg, type = 'success') {
   </div>
 </div>
 
+
+<script>
+// ── ACCOUNT MODAL ─────────────────────────────────────
+function openAccountModal() {
+  const plan = currentProfile?.plan || localStorage.getItem('sr_plan') || 'free';
+  const email = currentUser?.email || localStorage.getItem('sr_user') + '@—' || '—';
+  const username = email.split('@')[0];
+
+  document.getElementById('accAvatarBig').textContent = username.charAt(0).toUpperCase();
+  document.getElementById('accEmail').textContent = email;
+  document.getElementById('accPlanBadge').textContent = plan.toUpperCase() + ' PLAN';
+
+  const planNames = { free: 'Free Plan 🦅', pro: 'Pro Plan ⚡', elite: 'Elite Plan 🔥' };
+  const planDescs = {
+    free: '40 companies · Scanner access',
+    pro:  '200 companies · Weekly picks · AI summaries',
+    elite:'1,647 companies · Manual re-scan · Priority access'
+  };
+  const companyCounts = { free: '40', pro: '200', elite: '1,647' };
+
+  document.getElementById('accPlanName').textContent = planNames[plan] || 'Free Plan';
+  document.getElementById('accPlanDesc').textContent = planDescs[plan] || '';
+  document.getElementById('accStatCompanies').textContent = companyCounts[plan] || '40';
+  document.getElementById('accStatPlan').textContent = plan.toUpperCase();
+  document.getElementById('accStatScans').textContent = currentProfile?.scans_today ?? '—';
+  document.getElementById('accEmailSettings').textContent = email;
+  document.getElementById('accPlanSettings').textContent = plan.toUpperCase();
+
+  // Show/hide upgrade and cancel
+  const isElite = plan === 'elite';
+  const isPaid  = plan !== 'free';
+  document.getElementById('accUpgradeBtn').style.display     = isElite ? 'none' : '';
+  document.getElementById('accUpgradeSettings').style.display = isElite ? 'none' : '';
+  document.getElementById('accRowCancel').style.display       = isPaid  ? '' : 'none';
+
+  // Plan box color
+  const colors = {
+    free:  { bg: 'rgba(74,96,128,.08)',  border: 'rgba(74,96,128,.2)'   },
+    pro:   { bg: 'rgba(0,229,122,.05)',  border: 'rgba(0,229,122,.15)'  },
+    elite: { bg: 'rgba(245,158,11,.05)', border: 'rgba(245,158,11,.15)' }
+  };
+  const box = document.getElementById('accPlanBox');
+  if (box && colors[plan]) {
+    box.style.background   = colors[plan].bg;
+    box.style.borderColor  = colors[plan].border;
+  }
+
+  // Language
+  const lang = localStorage.getItem('sr_lang') || 'en';
+  document.getElementById('langEN')?.classList.toggle('active', lang === 'en');
+  document.getElementById('langES')?.classList.toggle('active', lang === 'es');
+
+  switchAccTab('overview');
+  document.getElementById('accountModal').classList.add('open');
+}
+
+function closeAccountModal() {
+  document.getElementById('accountModal').classList.remove('open');
+}
+
+document.addEventListener('click', e => {
+  if (e.target === document.getElementById('accountModal')) closeAccountModal();
+});
+
+function switchAccTab(tab) {
+  ['overview','settings'].forEach(t => {
+    const cap = t.charAt(0).toUpperCase() + t.slice(1);
+    document.getElementById('accTab' + cap)?.classList.toggle('active', t === tab);
+    document.getElementById('accSection' + cap)?.classList.toggle('active', t === tab);
+  });
+}
+
+let _accLang = localStorage.getItem('sr_lang') || 'en';
+function setAccLang(lang) {
+  _accLang = lang;
+  document.getElementById('langEN')?.classList.toggle('active', lang === 'en');
+  document.getElementById('langES')?.classList.toggle('active', lang === 'es');
+}
+
+function saveAccSettings() {
+  localStorage.setItem('sr_lang', _accLang);
+  if (typeof sb !== 'undefined' && currentUser) {
+    sb.from('profiles').update({ lang: _accLang }).eq('id', currentUser.id);
+  }
+  const saved = document.getElementById('accSaved');
+  if (saved) { saved.style.display = 'inline'; setTimeout(() => saved.style.display = 'none', 2500); }
+}
+
+async function confirmCancelPlan() {
+  if (!confirm('Cancel subscription? Your plan stays active until the end of the billing period.')) return;
+  const btn = document.getElementById('accBtnCancel');
+  if (btn) { btn.textContent = '...'; btn.disabled = true; }
+  try {
+    const res = await fetch('/.netlify/functions/stripe/cancel-subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUser.id })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('accPlanSettings').textContent = 'Cancellation scheduled';
+      document.getElementById('accRowCancel').style.display = 'none';
+      showToast('Subscription cancelled. Access continues until end of period.', 'success');
+    } else throw new Error(data.error || 'Unknown error');
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+    if (btn) { btn.textContent = 'Cancel Plan'; btn.disabled = false; }
+  }
+}
+</script>
+
 </body>
 </html>
