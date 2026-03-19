@@ -4,509 +4,1879 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StockRaptor — AI-Powered Small Cap Scanner</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Geist+Mono:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,200;12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#020209;--s1:#06060f;--s2:#09091a;--bord:#0f0f20;--bord2:#181828;
-  --green:#00ff94;--gold:#ffcc00;--red:#ff2d55;--blue:#00b4ff;
-  --purple:#bf5fff;--orange:#ff7040;--teal:#00e5cc;--pink:#ff4fa0;
-  --txt:#7070a0;--txb:#b0b0d0;--white:#e8e8f8;
-  --font:'Geist Mono',monospace;--sans:'Inter',sans-serif;
+:root {
+  --bg: #020408;
+  --s1: #050a10;
+  --s2: #0a1020;
+  --bord: #0d1a28;
+  --bord2: #152030;
+  --green: #00e57a;
+  --green2: #00ff94;
+  --teal: #00c9b1;
+  --blue: #2563eb;
+  --blue2: #60a5fa;
+  --gold: #f59e0b;
+  --red: #ef4444;
+  --purple: #8b5cf6;
+  --txt: #4a6080;
+  --txb: #8aa0bc;
+  --txh: #c8dced;
+  --white: #eef4ff;
+  --mono: 'DM Mono', monospace;
+  --display: 'Bricolage Grotesque', sans-serif;
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-html{scroll-behavior:smooth;}
-body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;min-height:100vh;overflow-x:hidden;position:relative;display:flex;flex-direction:column;}
-footer{margin-top:auto;}
-.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% -5%,#0d0d3a55,transparent),radial-gradient(ellipse 40% 30% at 90% 80%,#0a1a0a33,transparent),linear-gradient(var(--bord) 1px,transparent 1px),linear-gradient(90deg,var(--bord) 1px,transparent 1px);background-size:auto,auto,36px 36px,36px 36px;}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--txt);
+  font-family: var(--display);
+  font-size: 16px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-/* NAV */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;gap:16px;background:rgba(6,6,15,.95);backdrop-filter:blur(12px);border-bottom:1px solid #181828;}
-.nav-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#e8e8f8;display:flex;align-items:center;gap:8px;cursor:pointer;text-decoration:none;flex-shrink:0;}
-.nav-logo span{color:#00ff94;}
-.nav-logo-icon{width:28px;height:28px;background:linear-gradient(135deg,#00ff94,#00996a);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;}
-.nav-links{display:flex;gap:4px;align-items:center;}
-.nav-link,.sn-nav-item{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;color:#707090;transition:all .15s;cursor:pointer;border:1px solid transparent;text-decoration:none;white-space:nowrap;}
-.nav-link:hover,.sn-nav-item:hover{color:#b0b0d0;background:#0f0f20;}
-.nav-link.active,.sn-nav-item.active{color:#e8e8f8;background:#0f0f20;border-color:#1e1e35;}
-.sn-user-btn.active{border-color:#00ff9460;background:#00ff9410;}
-.sn-user-btn.active .sn-user-avatar{background:#00ff9430;border-color:#00ff94;color:#00ff94;}
-.sn-user-btn.active .sn-user-name{color:#e8e8f8;}
-.nav-cta{padding:6px 16px;background:#00ff94;color:#000;border:none;border-radius:6px;font-family:'Inter',sans-serif;font-weight:700;font-size:11px;letter-spacing:.5px;cursor:pointer;transition:all .15s;}
-.nav-cta:hover{background:#00d07a;}
-.nav-user{display:flex;align-items:center;gap:8px;}
-.nav-divider{width:1px;height:18px;background:#181828;}
-.nav-plan{font-size:9px;font-family:'Geist Mono',monospace;letter-spacing:1.5px;font-weight:700;padding:4px 10px;border-radius:20px;}
-.nav-plan.free{background:#ffffff10;color:#707090;border:1px solid #1e1e30;}
-.nav-plan.pro{background:#00ff9420;color:#00ff94;border:1px solid #00ff9430;}
-.nav-plan.elite{background:#ffcc0020;color:#ffcc00;border:1px solid #ffcc0030;}
-.nav-username{font-size:12px;color:#9090b0;}
-.nav-logout{padding:5px 12px;background:transparent;border:1px solid #1e1e35;color:#707090;border-radius:6px;cursor:pointer;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.5px;transition:all .15s;}
-.nav-logout:hover{border-color:#707090;color:#b0b0d0;}
-.sn-user-btn{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 5px;background:transparent;border:1px solid #1e1e35;border-radius:20px;cursor:pointer;transition:all .15s;text-decoration:none;}
-.sn-user-btn:hover{border-color:#3a3a55;background:#0f0f20;}
-.sn-user-avatar{width:22px;height:22px;border-radius:50%;background:#00ff9420;border:1px solid #00ff9440;display:flex;align-items:center;justify-content:center;font-size:10px;color:#00ff94;font-family:'Geist Mono',monospace;font-weight:700;flex-shrink:0;}
-.sn-user-name{font-size:11px;color:#9090b0;font-family:'Geist Mono',monospace;letter-spacing:.3px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.nav-login{padding:6px 14px;background:transparent;border:1px solid #2a2a45;color:#b0b0d0;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;transition:all .15s;}
-.nav-login:hover{border-color:#707090;color:#e8e8f8;}
+/* ── CANVAS BACKGROUND ──────────────────────────────── */
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.4;
+}
 
-section{position:relative;z-index:1;}
-#landingPage{position:relative;z-index:1;}
-.page-inner{max-width:1100px;margin:0 auto;padding:0 24px;}
+/* ── NAV ─────────────────────────────────────────────── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  height: 60px;
+  background: rgba(2, 4, 8, 0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid #0d1a28;
+}
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--white);
+  text-decoration: none;
+  letter-spacing: -0.3px;
+}
+.nav-logo-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #00e57a, #0091ff);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav-logo span { color: var(--green); }
+.nav-links { display: flex; gap: 2px; align-items: center; }
+.nav-link {
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--txt);
+  cursor: pointer;
+  transition: all .15s;
+  text-decoration: none;
+  font-family: var(--mono);
+  letter-spacing: .3px;
+}
+.nav-link:hover { color: var(--txh); background: var(--s2); }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.nav-login {
+  padding: 7px 18px;
+  background: transparent;
+  border: 1px solid var(--bord2);
+  color: var(--txb);
+  border-radius: 7px;
+  cursor: pointer;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all .15s;
+}
+.nav-login:hover { border-color: #2a3f5a; color: var(--white); }
+.nav-cta {
+  padding: 7px 20px;
+  background: var(--green);
+  color: #010d08;
+  border: none;
+  border-radius: 7px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+  letter-spacing: .2px;
+}
+.nav-cta:hover { background: var(--green2); transform: translateY(-1px); }
 
-/* HERO */
-#hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:100px 24px 80px;}
-.hero-inner{max-width:860px;}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--green);border-radius:20px;padding:6px 16px;margin-bottom:32px;font-size:11px;font-family:var(--font);letter-spacing:2px;color:var(--green);animation:fadeUp .6s ease both;}
-.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.5s infinite;}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-h1{font-family:'Syne',sans-serif;font-size:clamp(42px,7vw,82px);line-height:1.05;color:var(--white);letter-spacing:-2px;font-weight:800;margin-bottom:8px;animation:fadeUp .6s .1s ease both;}
-h1 em{font-style:normal;background:linear-gradient(135deg,var(--green),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.hero-sub{font-size:clamp(15px,2vw,21px);color:var(--txb);font-weight:300;max-width:620px;margin:22px auto 44px;line-height:1.7;animation:fadeUp .6s .2s ease both;}
-.hero-ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;animation:fadeUp .6s .3s ease both;}
-.btn-primary{padding:16px 36px;background:linear-gradient(135deg,var(--green),#00cc78);color:#000;border:none;border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:14px;letter-spacing:1.5px;transition:all .25s;text-transform:uppercase;}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px #00ff9440;}
-.btn-secondary{padding:16px 36px;background:transparent;color:var(--txb);border:1px solid var(--bord2);border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:500;font-size:14px;transition:all .25s;}
-.btn-secondary:hover{border-color:var(--txb);color:var(--white);}
-.hero-stats{display:flex;gap:0;justify-content:center;margin-top:64px;border:1px solid var(--bord2);border-radius:8px;overflow:hidden;max-width:600px;margin-left:auto;margin-right:auto;animation:fadeUp .6s .4s ease both;}
-.hst{flex:1;padding:18px 14px;text-align:center;border-right:1px solid var(--bord2);}
-.hst:last-child{border-right:none;}
-.hst-n{font-family:'Syne',sans-serif;font-size:26px;color:var(--white);margin-bottom:4px;}
-.hst-l{font-size:9px;color:var(--txt);letter-spacing:1.5px;font-family:var(--font);}
+/* ── HERO ─────────────────────────────────────────────── */
+#hero {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 40px 80px;
+  text-align: center;
+}
+.hero-inner { max-width: 900px; }
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(0, 229, 122, 0.25);
+  background: rgba(0, 229, 122, 0.06);
+  border-radius: 40px;
+  padding: 6px 18px;
+  margin-bottom: 36px;
+  font-size: 10px;
+  font-family: var(--mono);
+  letter-spacing: 1.5px;
+  color: var(--green);
+  animation: fadeUp .6s ease both;
+  text-align: center;
+  white-space: nowrap;
+}
+.badge-pulse {
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,229,122,.4); }
+  50% { opacity: .8; box-shadow: 0 0 0 5px rgba(0,229,122,0); }
+}
+.hero-title {
+  font-size: clamp(44px, 7vw, 80px);
+  font-weight: 800;
+  color: var(--white);
+  line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: 24px;
+  animation: fadeUp .6s .1s ease both;
+}
+.hero-title em {
+  font-style: normal;
+  background: linear-gradient(135deg, #00e57a 0%, #0099ff 60%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-sub {
+  font-size: 18px;
+  color: var(--txb);
+  line-height: 1.7;
+  max-width: 640px;
+  margin: 0 auto 40px;
+  font-weight: 300;
+  animation: fadeUp .6s .2s ease both;
+}
+.hero-actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 80px;
+  animation: fadeUp .6s .3s ease both;
+}
+.btn-primary {
+  padding: 14px 32px;
+  background: var(--green);
+  color: #010d08;
+  border: none;
+  border-radius: 10px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-primary:hover { background: var(--green2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,229,122,.25); }
+.btn-outline {
+  padding: 14px 28px;
+  background: transparent;
+  border: 1px solid var(--bord2);
+  color: var(--txb);
+  border-radius: 10px;
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-outline:hover { border-color: #2a3f5a; color: var(--white); }
 
-/* FEATURES */
-#features{padding:100px 24px;}
-.section-label{font-family:var(--font);font-size:9px;letter-spacing:2px;color:var(--green);margin-bottom:14px;text-transform:uppercase;}
-.section-title{font-family:'Syne',sans-serif;font-size:clamp(26px,4vw,46px);color:var(--white);margin-bottom:14px;line-height:1.1;}
-.section-sub{font-size:16px;color:var(--txt);max-width:480px;line-height:1.7;font-weight:300;}
-.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2px;margin-top:56px;border:1px solid var(--bord2);border-radius:8px;overflow:hidden;}
-.feat-card{background:var(--s1);padding:30px 26px;border-right:1px solid var(--bord2);border-bottom:1px solid var(--bord2);transition:background .2s;}
-.feat-card:hover{background:var(--s2);}
-.feat-icon{font-size:26px;margin-bottom:14px;}
-.feat-title{font-family:'Syne',sans-serif;font-size:15px;color:var(--white);margin-bottom:8px;}
-.feat-desc{font-size:13px;color:var(--txt);line-height:1.7;font-weight:300;}
-.feat-tag{display:inline-block;margin-top:12px;font-size:8px;font-family:var(--font);letter-spacing:1.5px;padding:3px 8px;border-radius:2px;font-weight:700;}
+/* ── HERO STATS ──────────────────────────────────────── */
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--bord2);
+  border: 1px solid var(--bord2);
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 700px;
+  margin: 0 auto;
+  animation: fadeUp .6s .4s ease both;
+}
+.stat-item {
+  background: var(--s1);
+  padding: 20px 16px;
+  text-align: center;
+}
+.stat-n {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--white);
+  font-family: var(--display);
+  letter-spacing: -1px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-n .unit { font-size: 14px; font-weight: 500; color: var(--green); }
+.stat-l {
+  font-size: 10px;
+  font-family: var(--mono);
+  letter-spacing: 1.5px;
+  color: var(--txt);
+  text-transform: uppercase;
+}
 
-/* PRICING */
-#pricing{padding:100px 24px;}
-.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;margin-top:40px;max-width:920px;margin-left:auto;margin-right:auto;}
-.plan-card{background:var(--s1);border:1px solid var(--bord2);border-radius:10px;padding:34px 30px;position:relative;transition:all .25s;}
-.plan-card:hover{transform:translateY(-3px);}
-.plan-card.popular{border-color:var(--green);box-shadow:0 0 60px #00ff9415;}
-.plan-popular-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-size:9px;font-family:var(--font);font-weight:700;letter-spacing:2px;padding:4px 14px;border-radius:10px;white-space:nowrap;}
-.plan-name{font-family:'Syne',sans-serif;font-size:12px;letter-spacing:2px;color:var(--txt);margin-bottom:14px;text-transform:uppercase;}
-.plan-price{display:flex;align-items:baseline;gap:3px;margin-bottom:5px;}
-.plan-price-n{font-family:'Syne',sans-serif;font-size:50px;color:var(--white);line-height:1;}
-.plan-price-sym{font-size:20px;color:var(--txb);align-self:flex-start;margin-top:8px;}
-.plan-price-per{font-size:12px;color:var(--txt);font-weight:300;}
-.plan-desc{font-size:12px;color:var(--txt);margin-bottom:24px;line-height:1.6;font-weight:300;}
-.plan-divider{height:1px;background:var(--bord2);margin-bottom:20px;}
-.plan-feature{display:flex;align-items:flex-start;gap:9px;margin-bottom:11px;font-size:13px;color:var(--txb);line-height:1.5;font-weight:300;}
-.plan-check{color:var(--green);font-size:11px;margin-top:2px;flex-shrink:0;}
-.plan-x{color:#333348;font-size:11px;margin-top:2px;flex-shrink:0;}
-.plan-btn{width:100%;margin-top:24px;padding:13px;border:none;border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1px;transition:all .2s;text-transform:uppercase;}
-.plan-btn-primary{background:var(--green);color:#000;}
-.plan-btn-primary:hover{background:#00d07a;}
-.plan-btn-secondary{background:transparent;color:var(--txb);border:1px solid var(--bord2);}
-.plan-btn-secondary:hover{border-color:var(--txb);color:var(--white);}
-.plan-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
-.current-plan-badge{width:100%;margin-top:24px;padding:13px;border-radius:5px;background:#00ff9415;border:1px solid var(--green);color:var(--green);font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1px;text-align:center;text-transform:uppercase;}
-.billing-toggle{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px;}
-.billing-opt{font-size:13px;color:var(--txt);cursor:pointer;transition:color .2s;}
-.billing-opt.active{color:var(--white);font-weight:500;}
-.toggle-switch{width:44px;height:24px;background:var(--bord2);border-radius:12px;position:relative;cursor:pointer;transition:background .2s;}
-.toggle-switch.on{background:var(--green);}
-.toggle-knob{width:18px;height:18px;background:var(--white);border-radius:50%;position:absolute;top:3px;left:3px;transition:transform .2s;}
-.toggle-switch.on .toggle-knob{transform:translateX(20px);}
-.billing-save{font-size:9px;font-family:var(--font);letter-spacing:1px;background:#00ff9422;color:var(--green);padding:2px 8px;border-radius:10px;}
-.disclaimer{max-width:720px;margin:44px auto 0;padding:18px 22px;background:var(--s1);border:1px solid var(--bord2);border-radius:6px;font-size:11px;color:var(--txt);line-height:1.8;text-align:center;font-family:var(--font);}
+/* ── SCANNER DEMO ─────────────────────────────────────── */
+#demo {
+  position: relative;
+  z-index: 1;
+  padding: 80px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.section-label {
+  font-size: 11px;
+  font-family: var(--mono);
+  letter-spacing: 3px;
+  color: var(--green);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+  line-height: 1.15;
+}
+.section-sub {
+  font-size: 16px;
+  color: var(--txb);
+  line-height: 1.7;
+  font-weight: 300;
+  max-width: 540px;
+}
+.demo-window {
+  margin-top: 48px;
+  border: 1px solid var(--bord2);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--s1);
+  overflow-x: auto;
+}
+.demo-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--s2);
+  border-bottom: 1px solid var(--bord);
+}
+.demo-dot { width: 10px; height: 10px; border-radius: 50%; }
+.demo-url {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--bord);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--txt);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.demo-url-lock { color: var(--green); }
+.demo-header {
+  display: grid;
+  grid-template-columns: 2fr 80px 80px 80px 80px 90px 90px;
+  gap: 0;
+  padding: 8px 20px;
+  background: rgba(13,26,40,.5);
+  border-bottom: 1px solid var(--bord);
+  font-size: 9px;
+  font-family: var(--mono);
+  letter-spacing: 1.5px;
+  color: var(--txt);
+  text-transform: uppercase;
+}
+.demo-row {
+  display: grid;
+  grid-template-columns: 2fr 80px 80px 80px 80px 90px 90px;
+  gap: 0;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(13,26,40,.4);
+  align-items: center;
+  transition: background .15s;
+  cursor: pointer;
+  animation: rowIn .4s ease both;
+}
+.demo-row:hover { background: rgba(255,255,255,.02); }
+.demo-row:last-child { border-bottom: none; }
+@keyframes rowIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.dr-sym { font-family: var(--mono); font-weight: 500; font-size: 13px; color: var(--white); }
+.dr-name { font-size: 10px; color: var(--txt); margin-top: 1px; }
+.dr-price { font-family: var(--mono); font-size: 12px; color: var(--txh); }
+.dr-chg-pos { font-family: var(--mono); font-size: 12px; color: var(--green); }
+.dr-chg-neg { font-family: var(--mono); font-size: 12px; color: var(--red); }
+.dr-score { display: flex; flex-direction: column; gap: 3px; }
+.dr-score-n { font-family: var(--mono); font-size: 12px; font-weight: 500; }
+.score-bar-bg { height: 3px; background: var(--bord2); border-radius: 2px; }
+.score-bar-fill { height: 100%; border-radius: 2px; transition: width .8s ease; }
+.signal-sb {
+  font-size: 9px;
+  font-family: var(--mono);
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(0, 229, 122, .12);
+  color: var(--green);
+  border: 1px solid rgba(0, 229, 122, .2);
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+.signal-in {
+  font-size: 9px;
+  font-family: var(--mono);
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(245, 158, 11, .12);
+  color: var(--gold);
+  border: 1px solid rgba(245, 158, 11, .2);
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+.signal-w {
+  font-size: 9px;
+  font-family: var(--mono);
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(74, 96, 128, .15);
+  color: var(--txt);
+  border: 1px solid rgba(74, 96, 128, .2);
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+.dr-flags { display: flex; gap: 4px; flex-wrap: wrap; }
+.flag-mini {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.lock-row {
+  filter: blur(3px);
+  pointer-events: none;
+  user-select: none;
+}
 
-/* MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:24px;}
+/* ── FEATURES ─────────────────────────────────────────── */
+#features {
+  position: relative;
+  z-index: 1;
+  padding: 100px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 48px;
+}
+.feat-card {
+  background: var(--s1);
+  border: 1px solid var(--bord2);
+  border-radius: 14px;
+  padding: 24px 20px;
+  transition: all .25s;
+  position: relative;
+  overflow: hidden;
+}
+.feat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+}
+.feat-card:hover {
+  border-color: #1e3450;
+  transform: translateY(-3px);
+  background: var(--s2);
+}
+.feat-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.feat-icon-wrap svg { width: 20px; height: 20px; }
+.feat-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 8px;
+  letter-spacing: -0.3px;
+}
+.feat-desc {
+  font-size: 13px;
+  color: var(--txt);
+  line-height: 1.7;
+  font-weight: 300;
+}
+.feat-tag {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 9px;
+  font-family: var(--mono);
+  letter-spacing: 1.5px;
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+.feat-new {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 9px;
+  font-family: var(--mono);
+  letter-spacing: 1px;
+  color: var(--green);
+  background: rgba(0,229,122,.1);
+  border: 1px solid rgba(0,229,122,.2);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+/* ── HOW IT WORKS ─────────────────────────────────────── */
+#how {
+  position: relative;
+  z-index: 1;
+  padding: 100px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin-top: 56px;
+  position: relative;
+}
+.step {
+  padding: 0 32px 0 0;
+  position: relative;
+}
+.step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  top: 20px;
+  width: 1px;
+  height: 60px;
+  background: linear-gradient(to bottom, var(--bord2), transparent);
+}
+.step-num {
+  font-size: 11px;
+  font-family: var(--mono);
+  letter-spacing: 2px;
+  color: var(--green);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.step-num::before {
+  content: '';
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(0,229,122,.3);
+  border-radius: 50%;
+  background: rgba(0,229,122,.08);
+  flex-shrink: 0;
+}
+.step-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
+}
+.step-desc {
+  font-size: 14px;
+  color: var(--txb);
+  line-height: 1.7;
+  font-weight: 300;
+}
+
+/* ── PICKS SECTION ────────────────────────────────────── */
+#picks-section {
+  position: relative;
+  z-index: 1;
+  padding: 100px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.picks-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+  margin-top: 48px;
+}
+.picks-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pick-card-demo {
+  background: var(--s1);
+  border: 1px solid var(--bord2);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+.pick-card-demo:hover { transform: translateX(4px); border-color: #1e3450; }
+.pick-card-demo::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+.pick-sym {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--white);
+  min-width: 52px;
+}
+.pick-info { flex: 1; min-width: 0; }
+.pick-company { font-size: 12px; color: var(--txt); margin-bottom: 3px; }
+.pick-type-badge {
+  font-size: 9px;
+  font-family: var(--mono);
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: .5px;
+  display: inline-block;
+}
+.pick-score {
+  text-align: right;
+}
+.pick-score-n {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--white);
+}
+.pick-score-l {
+  font-size: 9px;
+  font-family: var(--mono);
+  color: var(--txt);
+  letter-spacing: 1px;
+}
+.picks-copy { }
+.picks-copy h3 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.5px;
+  margin-bottom: 16px;
+  line-height: 1.3;
+}
+.picks-copy p {
+  font-size: 15px;
+  color: var(--txb);
+  line-height: 1.8;
+  font-weight: 300;
+  margin-bottom: 14px;
+}
+.picks-list {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.picks-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--txb);
+  font-weight: 300;
+  line-height: 1.5;
+}
+.picks-list-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+/* ── PRICING ─────────────────────────────────────────── */
+#pricing {
+  position: relative;
+  z-index: 1;
+  padding: 100px 40px;
+  max-width: 1000px;
+  margin: 0 auto;
+  text-align: center;
+}
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 48px;
+  text-align: left;
+}
+.plan-card {
+  background: var(--s1);
+  border: 1px solid var(--bord2);
+  border-radius: 16px;
+  padding: 28px 22px;
+  position: relative;
+  transition: all .2s;
+}
+.plan-card.popular {
+  border-color: rgba(0,229,122,.3);
+  background: rgba(0,229,122,.03);
+}
+.plan-card:hover { transform: translateY(-4px); }
+.plan-card.popular:hover { box-shadow: 0 20px 60px rgba(0,229,122,.08); }
+.plan-popular-tag {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-family: var(--mono);
+  letter-spacing: 2px;
+  padding: 4px 14px;
+  border-radius: 20px;
+  background: var(--green);
+  color: #010d08;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.plan-name {
+  font-size: 12px;
+  font-family: var(--mono);
+  letter-spacing: 2px;
+  color: var(--txt);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.plan-price {
+  font-size: 42px;
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -2px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.plan-price span {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--txt);
+  letter-spacing: 0;
+}
+.plan-period {
+  font-size: 12px;
+  color: var(--txt);
+  font-family: var(--mono);
+  margin-bottom: 24px;
+}
+.plan-divider {
+  height: 1px;
+  background: var(--bord2);
+  margin: 20px 0;
+}
+.plan-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--txb);
+  margin-bottom: 12px;
+  line-height: 1.4;
+  font-weight: 300;
+}
+.plan-check { color: var(--green); flex-shrink: 0; margin-top: 1px; }
+.plan-x { color: var(--bord2); flex-shrink: 0; margin-top: 1px; }
+.plan-x ~ span { color: #1e2d3d; }
+.plan-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 9px;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all .15s;
+  margin-top: 8px;
+  border: none;
+  letter-spacing: .2px;
+}
+.plan-btn-primary { background: var(--green); color: #010d08; }
+.plan-btn-primary:hover { background: var(--green2); transform: translateY(-1px); }
+.plan-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--bord2);
+  color: var(--txb);
+}
+.plan-btn-secondary:hover { border-color: #2a3f5a; color: var(--white); }
+.plan-btn-elite {
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  color: white;
+}
+.plan-btn-elite:hover { opacity: .9; transform: translateY(-1px); }
+.pricing-note {
+  margin-top: 28px;
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--txt);
+  letter-spacing: .5px;
+}
+
+/* ── TESTIMONIAL / SIGNAL BAR ─────────────────────────── */
+#trust {
+  position: relative;
+  z-index: 1;
+  padding: 80px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.signal-bar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  background: var(--bord2);
+  border: 1px solid var(--bord2);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 64px;
+}
+.signal-item {
+  background: var(--s1);
+  padding: 18px 12px;
+  text-align: center;
+  min-width: 0;
+}
+.signal-item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+}
+.signal-item-icon svg { width: 18px; height: 18px; }
+.signal-item-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--txh);
+  margin-bottom: 4px;
+}
+.signal-item-desc {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--txt);
+  letter-spacing: .3px;
+}
+
+/* ── FOOTER ─────────────────────────────────────────────── */
+footer {
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid var(--bord);
+  padding: 28px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.footer-logo {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--txb);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+.footer-logo span { color: var(--green); }
+.footer-links {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.footer-link {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--txt);
+  text-decoration: none;
+  letter-spacing: .5px;
+  transition: color .15s;
+}
+.footer-link:hover { color: var(--txb); }
+.footer-disc {
+  font-size: 10px;
+  font-family: var(--mono);
+  color: #1e2d3d;
+  letter-spacing: .3px;
+}
+
+/* ── ANIMATIONS ──────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity .6s ease, transform .6s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-delay-1 { transition-delay: .1s; }
+.reveal-delay-2 { transition-delay: .2s; }
+.reveal-delay-3 { transition-delay: .3s; }
+.reveal-delay-4 { transition-delay: .4s; }
+.reveal-delay-5 { transition-delay: .5s; }
+
+/* ── MOBILE RESPONSIVE ───────────────────────────────── */
+@media (max-width: 768px) {
+  nav { padding: 0 16px; }
+  .nav-links { display: none; }
+  nav .nav-right { gap: 8px; }
+  .nav-login { display: none; }
+  .nav-cta { padding: 7px 16px; font-size: 12px; }
+
+  #hero { padding: 100px 20px 60px; }
+  .hero-title { font-size: 36px; letter-spacing: -1px; }
+  .hero-sub { font-size: 15px; }
+  .hero-actions { flex-direction: column; align-items: center; }
+  .btn-primary, .btn-outline { width: 100%; max-width: 300px; justify-content: center; }
+  .hero-stats {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 100%;
+  }
+
+  #demo { padding: 60px 16px; }
+  .demo-header { display: none; }
+  .demo-row {
+    grid-template-columns: 1fr 60px 60px;
+    gap: 0;
+    padding: 10px 14px;
+  }
+  .demo-row > *:nth-child(4),
+  .demo-row > *:nth-child(5),
+  .demo-row > *:nth-child(7) { display: none; }
+  .demo-row > *:nth-child(6) { display: none; }
+  .dr-sym { font-size: 12px; }
+  .dr-name { font-size: 9px; }
+
+  #features { padding: 60px 16px; }
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  #picks-section { padding: 60px 16px; }
+  .picks-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .picks-copy { order: -1; }
+  .picks-copy h3 { font-size: 22px; }
+
+  #how { padding: 60px 0; }
+  #how > div { padding: 0 20px; }
+  .steps-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .step { padding: 0; }
+  .step:not(:last-child)::after { display: none; }
+
+  #trust { padding: 40px 16px; }
+  .signal-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .signal-bar > *:last-child {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--bord2);
+  }
+
+  #pricing { padding: 60px 16px; }
+  .pricing-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .plan-card.popular { order: -1; }
+
+  .moat-grid { grid-template-columns: 1fr !important; }
+  #moat { padding: 60px 16px; }
+  #compare { padding: 60px 16px; }
+  .who-grid { grid-template-columns: 1fr !important; }
+  #who { padding: 60px 16px; }
+  #compare table td:last-child { display: none; }
+  #compare table th:last-child { display: none; }
+  footer {
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px 20px;
+    text-align: center;
+  }
+  .footer-links { flex-wrap: wrap; justify-content: center; gap: 12px; }
+
+  .section-title { font-size: 28px; letter-spacing: -0.5px; }
+}
+
+@media (max-width: 480px) {
+  .hero-title { font-size: 30px; }
+  .hero-stats { grid-template-columns: repeat(2, 1fr); }
+  .stat-n { font-size: 22px; }
+  .demo-row {
+    grid-template-columns: 1fr 55px;
+  }
+  .demo-row > *:nth-child(3) { display: none; }
+  .signal-bar { grid-template-columns: 1fr 1fr; }
+  .picks-copy h3 { font-size: 20px; }
+}
+
+/* ── AUTH MODAL ───────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:20px;}
 .modal-overlay.open{display:flex;}
-.modal-card{background:var(--s1);border:1px solid var(--bord2);border-radius:10px;padding:40px;max-width:440px;width:100%;box-shadow:0 0 80px #00ff9410;position:relative;}
-.modal-close{position:absolute;top:16px;right:20px;background:none;border:none;color:var(--txt);font-size:22px;cursor:pointer;transition:color .2s;line-height:1;}
+.modal-card{background:#060d18;border:1px solid var(--bord2);border-radius:16px;padding:36px 32px;width:100%;max-width:380px;position:relative;}
+.modal-close{position:absolute;top:16px;right:18px;background:none;border:none;color:var(--txt);font-size:22px;cursor:pointer;line-height:1;transition:color .15s;}
 .modal-close:hover{color:var(--white);}
-.modal-logo{font-family:'Syne',sans-serif;font-size:18px;color:var(--white);display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.modal-logo{font-family:var(--display);font-size:18px;font-weight:700;color:var(--white);margin-bottom:4px;}
 .modal-logo span{color:var(--green);}
-
-/* AUTH TABS */
-.auth-tabs{display:flex;border-bottom:1px solid var(--bord2);margin-bottom:28px;margin-top:20px;}
-.auth-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-family:var(--font);letter-spacing:1.5px;color:var(--txt);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;}
+.auth-tabs{display:flex;gap:0;border-bottom:1px solid var(--bord2);margin:20px 0 24px;}
+.auth-tab{flex:1;text-align:center;padding:8px;font-size:11px;font-family:var(--mono);letter-spacing:2px;color:var(--txt);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
 .auth-tab.active{color:var(--green);border-bottom-color:var(--green);}
 .auth-form{display:none;}
 .auth-form.active{display:block;}
-.auth-lbl{font-size:10px;letter-spacing:1.5px;color:var(--txt);margin-bottom:7px;font-family:var(--font);}
-.auth-inp{width:100%;background:var(--bg);border:1px solid var(--bord2);border-radius:5px;padding:12px 16px;color:var(--white);font-family:var(--font);font-size:12px;outline:none;transition:border-color .2s,box-shadow .2s;letter-spacing:.5px;margin-bottom:16px;}
-.auth-inp:focus{border-color:var(--green);box-shadow:0 0 0 3px #00ff9412;}
-.auth-inp::placeholder{color:#1e1e35;}
-.auth-btn{width:100%;padding:14px;border:none;border-radius:5px;cursor:pointer;background:linear-gradient(135deg,var(--green),#00cc78);color:#000;font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:2px;text-transform:uppercase;transition:all .2s;margin-top:4px;}
-.auth-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px #00ff9440;}
-.auth-btn:disabled{background:#111120;color:#2a2a40;cursor:not-allowed;transform:none;box-shadow:none;}
-.auth-err{display:none;color:var(--red);font-size:10px;margin-top:-8px;margin-bottom:12px;font-family:var(--font);line-height:1.6;padding:8px 12px;background:#ff2d5515;border-radius:4px;border:1px solid #ff2d5533;}
-.auth-ok{display:none;color:var(--green);font-size:10px;margin-bottom:12px;font-family:var(--font);line-height:1.6;padding:8px 12px;background:#00ff9415;border-radius:4px;border:1px solid #00ff9433;}
-.auth-divider{text-align:center;font-size:10px;color:var(--txt);font-family:var(--font);margin:16px 0;}
-.auth-forgot{text-align:right;font-size:10px;color:var(--txt);font-family:var(--font);cursor:pointer;margin-top:-10px;margin-bottom:14px;transition:color .2s;}
+.auth-lbl{font-size:10px;font-family:var(--mono);letter-spacing:1.5px;color:var(--txt);margin-bottom:6px;}
+.auth-inp{width:100%;background:var(--s2);border:1px solid var(--bord2);border-radius:8px;padding:10px 14px;color:var(--white);font-family:var(--display);font-size:14px;margin-bottom:16px;transition:border-color .15s;outline:none;}
+.auth-inp:focus{border-color:#2a4a6a;}
+.auth-inp::placeholder{color:var(--txt);}
+.auth-forgot{font-size:11px;font-family:var(--mono);color:var(--txt);cursor:pointer;margin-bottom:16px;text-align:right;margin-top:-10px;transition:color .15s;}
 .auth-forgot:hover{color:var(--green);}
-.auth-foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--bord);font-size:9px;color:#2a2a45;line-height:2;font-family:var(--font);text-align:center;}
-.auth-foot b{color:var(--green);}
+.auth-btn{width:100%;padding:12px;background:var(--green);color:#010d08;border:none;border-radius:8px;font-family:var(--display);font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;letter-spacing:.3px;}
+.auth-btn:hover{background:var(--green2);}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed;}
+.auth-err{color:#ef4444;font-size:12px;margin-bottom:12px;display:none;font-family:var(--mono);}
+.auth-ok{color:var(--green);font-size:12px;margin-bottom:12px;display:none;font-family:var(--mono);}
+.auth-foot{font-size:11px;font-family:var(--mono);color:var(--txt);text-align:center;margin-top:14px;letter-spacing:.3px;}
 
-/* TOAST */
-.toast{position:fixed;bottom:32px;right:32px;z-index:999;background:var(--s1);border:1px solid var(--bord2);border-radius:8px;padding:14px 20px;font-size:13px;color:var(--white);font-family:var(--sans);box-shadow:0 8px 32px #00000060;transform:translateY(20px);opacity:0;transition:all .3s;pointer-events:none;max-width:320px;}
-.toast.show{transform:translateY(0);opacity:1;}
-.toast.success{border-color:var(--green);}
-.toast.error{border-color:var(--red);}
+/* ── TOAST ────────────────────────────────────────── */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:#0d1e30;border:1px solid var(--bord2);color:var(--txh);padding:12px 24px;border-radius:40px;font-size:13px;font-family:var(--mono);z-index:2000;transition:transform .3s ease,opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;letter-spacing:.3px;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast.success{border-color:rgba(0,229,122,.3);color:var(--green);}
+.toast.error{border-color:rgba(239,68,68,.3);color:#ef4444;}
 
-/* FOOTER */
-footer{border-top:1px solid var(--bord2);padding:28px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;position:relative;z-index:1;}
-.footer-logo{font-family:'Syne',sans-serif;font-size:15px;color:var(--white);}
-.footer-logo span{color:var(--green);}
-.footer-copy{font-size:10px;color:var(--txt);font-family:var(--font);}
-
-/* USER DASHBOARD SECTION */
-#userDash{display:none;padding:80px 24px 60px;margin-top:0;position:relative;z-index:1;min-height:calc(100vh - 52px);}
-.dash-card{background:var(--s1);border:1px solid var(--bord2);border-radius:10px;padding:36px;max-width:700px;margin:0 auto;}
-.dash-title{font-family:'Syne',sans-serif;font-size:24px;color:var(--white);margin-bottom:6px;}
-.dash-sub{font-size:13px;color:var(--txt);margin-bottom:32px;}
-.dash-plan{display:flex;align-items:center;gap:12px;padding:16px 20px;background:var(--bg);border:1px solid var(--bord2);border-radius:8px;margin-bottom:24px;}
-.dash-plan-icon{font-size:28px;}
-.dash-plan-name{font-family:'Syne',sans-serif;font-size:18px;color:var(--white);}
-.dash-plan-desc{font-size:12px;color:var(--txt);margin-top:2px;}
-.dash-actions{display:flex;gap:12px;flex-wrap:wrap;}
-.dash-btn{padding:12px 24px;border:none;border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1px;transition:all .2s;text-transform:uppercase;}
-.dash-btn-green{background:var(--green);color:#000;}
-.dash-btn-green:hover{background:#00d07a;}
-.dash-btn-outline{background:transparent;color:var(--txb);border:1px solid var(--bord2);}
-.dash-btn-outline:hover{border-color:var(--txb);color:var(--white);}
-.dash-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:24px;}
-.dash-stat{background:var(--bg);border:1px solid var(--bord2);border-radius:6px;padding:16px;text-align:center;}
-.dash-stat-n{font-family:'Syne',sans-serif;font-size:24px;color:var(--white);}
-.dash-stat-l{font-size:9px;color:var(--txt);letter-spacing:1.5px;font-family:var(--font);margin-top:4px;}
-
-/* ── SETTINGS ── */
-.dash-tabs{display:flex;gap:0;border-bottom:1px solid var(--bord2);margin:28px 0 0;}
-.dash-tab{padding:11px 20px;font-size:12px;font-family:var(--font);letter-spacing:1.5px;color:var(--txt);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase;user-select:none;}
-.dash-tab.active{color:var(--green);border-bottom-color:var(--green);}
-.dash-tab:hover:not(.active){color:var(--txb);}
-.dash-section{display:none;padding-top:28px;}
-.dash-section.active{display:block;}
-.settings-group{margin-bottom:32px;}
-.settings-group-title{font-size:9px;font-family:var(--font);letter-spacing:2px;color:var(--txt);text-transform:uppercase;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--bord2);}
-.settings-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--bord);gap:16px;}
-.settings-row:last-child{border-bottom:none;}
-.settings-label{font-size:14px;color:var(--white);font-weight:500;}
-.settings-desc{font-size:12px;color:var(--txt);margin-top:3px;line-height:1.5;}
-.settings-left{flex:1;}
-.lang-selector{display:flex;gap:8px;}
-.lang-btn{padding:8px 18px;background:transparent;border:1px solid var(--bord2);border-radius:5px;color:var(--txt);font-family:var(--font);font-size:11px;letter-spacing:1px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px;}
-.lang-btn:hover{border-color:var(--txb);color:var(--white);}
-.lang-btn.active{border-color:var(--green);color:var(--green);background:#00ff9410;}
-.lang-flag{font-size:16px;}
-.settings-save{margin-top:24px;padding:12px 28px;background:var(--green);color:#000;border:none;border-radius:5px;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:1px;transition:all .2s;text-transform:uppercase;}
-.settings-save:hover{background:#00d07a;transform:translateY(-1px);}
-.settings-saved{display:none;font-size:11px;color:var(--green);font-family:var(--font);margin-left:14px;letter-spacing:1px;}
-
+/* ── NAV LOGGED IN STATE ──────────────────────────── */
+.nav-plan-badge{font-size:9px;font-family:var(--mono);letter-spacing:1.5px;font-weight:700;padding:4px 10px;border-radius:20px;}
+.nav-plan-badge.free{background:rgba(255,255,255,.07);color:var(--txb);border:1px solid #1e3050;}
+.nav-plan-badge.pro{background:rgba(0,229,122,.15);color:var(--green);border:1px solid rgba(0,229,122,.25);}
+.nav-plan-badge.elite{background:rgba(245,158,11,.15);color:var(--gold);border:1px solid rgba(245,158,11,.25);}
+.nav-user-btn{display:flex;align-items:center;gap:8px;padding:4px 12px 4px 5px;background:transparent;border:1px solid var(--bord2);border-radius:20px;cursor:pointer;transition:all .15s;text-decoration:none;}
+.nav-user-btn:hover{border-color:#2a4a6a;}
+.nav-avatar{width:24px;height:24px;border-radius:50%;background:rgba(0,229,122,.15);border:1px solid rgba(0,229,122,.3);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--green);font-family:var(--mono);font-weight:700;}
+.nav-username{font-size:12px;color:var(--txb);font-family:var(--mono);}
 </style>
 </head>
 <body>
-<div class="bg-grid"></div>
 
-<!-- CONFIG — replace with your actual keys -->
-<script>
-// ══════════════════════════════════════════
-// CONFIGURATION — REPLACE THESE VALUES
-// ══════════════════════════════════════════
-const CONFIG = {
-  supabaseUrl:  'https://ruqcgyctwlpjrlzmietj.supabase.co',
-  supabaseKey:  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1cWNneWN0d2xwanJsem1pZXRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzQwMTAsImV4cCI6MjA4ODkxMDAxMH0.tkhdkbPOZqQI7brgIo24zWftVbEr6EXLSF3jAmog6YM',
-  stripeProPriceId:   'price_1TAq0APBvHji1Pcv17SPtUv1',
-  stripeElitePriceId: 'price_1TAqvkPBvHji1PcvYSNF9r8I',
-  netlifyFnUrl: '/.netlify/functions/stripe',
-};
-</script>
+<canvas id="bg-canvas"></canvas>
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo" onclick="scrollToTop()">
-    <div class="nav-logo-icon">🦅</div>
+  <a class="nav-logo" href="#">
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#010d08" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
     Stock<span>Raptor</span>
+  </a>
+  <div class="nav-links">
+    <a class="nav-link" href="#features">Methodology</a>
+    <a class="nav-link" href="#moat">Why StockRaptor</a>
+    <a class="nav-link" href="#who">Who it's for</a>
+    <a class="nav-link" href="#compare">vs Others</a>
+    <a class="nav-link" href="#pricing">Pricing</a>
   </div>
-  <div class="nav-links" id="navLinks">
-    <span class="nav-link" onclick="goTo('features')">Features</span>
-    <span class="nav-link" onclick="goTo('pricing')">Pricing</span>
-  </div>
-  <div id="navAuth" style="display:flex;align-items:center;gap:8px;">
-    <button class="nav-login" onclick="openAuth('login')">Log In</button>
-    <button class="nav-cta" onclick="openAuth('register')">Start Free</button>
+  <div class="nav-right" id="navRight">
+    <button class="nav-login" onclick="openAuth('login')">Log in</button>
+    <button class="nav-cta" onclick="openAuth('register')">Start free →</button>
   </div>
 </nav>
-<script>
-(function(){
-  try {
-    const u = localStorage.getItem('sr_user');
-    const p = localStorage.getItem('sr_plan') || 'free';
-    if (!u) return;
-    // Logged in — show nav as user state immediately
-    document.getElementById('navLinks').innerHTML =
-      '<a class="sn-nav-item" href="/scanner.html">📊 Scanner</a>' +
-      '<a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>' +
-      '<a class="sn-nav-item" href="/watchlist.html">⭐ Watchlist</a>';
-    document.getElementById('navAuth').innerHTML =
-      '<div class="nav-user">' +
-        '<span class="nav-plan ' + p + '">' + p.toUpperCase() + '</span>' +
-        '<a class="sn-user-btn active" href="/" style="display:flex">' +
-          '<div class="sn-user-avatar">' + u.charAt(0).toUpperCase() + '</div>' +
-          '<span class="sn-user-name">' + u + '</span>' +
-        '</a>' +
-      '</div>';
-  } catch(e) {}
-})();
-</script>
-<script>
-(function(){
-  try {
-    const u = localStorage.getItem('sr_user');
-    const p = localStorage.getItem('sr_plan') || 'free';
-    if (u) {
-      document.getElementById('navLinks').innerHTML =
-        '<a class="sn-nav-item" href="/scanner.html">📊 Scanner</a>' +
-        '<a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>';
-      document.getElementById('navAuth').innerHTML =
-        '<div class="nav-user">' +
-          '<span class="nav-plan ' + p + '">' + p.toUpperCase() + '</span>' +
-          '<a class="sn-user-btn active" href="/" style="display:flex">' +
-            '<div class="sn-user-avatar">' + u.charAt(0).toUpperCase() + '</div>' +
-            '<span class="sn-user-name">' + u + '</span>' +
-          '</a>' +
-        '</div>';
-    }
-  } catch(e) {}
-})();
-</script>
-
-<!-- ══ LANDING ══ -->
-<div id="landingPage" style="display:none">
 
 <!-- HERO -->
-<section id="hero" style="padding-top:100px">
+<section id="hero">
   <div class="hero-inner">
-    <div class="hero-badge"><div class="badge-dot"></div>AI-POWERED · REAL-TIME · 14 SCORING FACTORS</div>
-    <h1>Hunt Small Caps<br>Like a <em>Raptor</em></h1>
-    <p class="hero-sub">The only small cap scanner that combines fundamental analysis, news sentiment, insider trading, short squeeze detection and volume anomalies — scored in real time.</p>
-    <div class="hero-ctas">
-      <button class="btn-primary" onclick="openAuth('register')">▶ Start Free — No Card</button>
-      <button class="btn-secondary" onclick="goTo('features')">See How It Works</button>
+    <div class="hero-badge">
+      <div class="badge-pulse"></div>
+      SMALL CAP RESEARCH · 1,647 STOCKS · WEEKLY IDEAS
+    </div>
+    <h1 class="hero-title">
+      Small cap ideas backed<br>
+      <em>by data, not noise.</em>
+    </h1>
+    <p class="hero-sub">
+      Most small cap ideas come from Twitter tips, random screeners or gut feeling. StockRaptor builds a fundamental case for each company — insider buying activity, earnings trajectory, analyst consensus and sector position — and surfaces the ones worth investigating for the next 3–6 months.
+    </p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="openAuth('register')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+        See this week's ideas — free
+      </button>
+      <button class="btn-outline" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+        How the scoring works
+      </button>
     </div>
     <div class="hero-stats">
-      <div class="hst"><div class="hst-n" style="color:var(--green)">14</div><div class="hst-l">SCORING FACTORS</div></div>
-      <div class="hst"><div class="hst-n" style="color:var(--gold)" id="heroTrackedCount">—</div><div class="hst-l">TRACKED TODAY</div></div>
-      <div class="hst"><div class="hst-n" style="color:var(--blue)">Live</div><div class="hst-l">MARKET DATA</div></div>
-      <div class="hst"><div class="hst-n" style="color:var(--purple)">$0</div><div class="hst-l">TO START</div></div>
+      <div class="stat-item">
+        <div class="stat-n">1,647<span class="unit"> ↑</span></div>
+        <div class="stat-l">stocks scanned</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-n">14</div>
+        <div class="stat-l">scoring factors</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-n">8<span class="unit">K</span></div>
+        <div class="stat-l">insider filings</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-n">3–6<span class="unit">mo</span></div>
+        <div class="stat-l">weekly picks</div>
+      </div>
     </div>
+  </div>
+</section>
+
+<!-- LIVE SCANNER DEMO -->
+<section id="demo">
+  <div class="reveal">
+    <div class="section-label">Live scanner</div>
+    <div class="section-title">The full universe, ranked.<br>With every signal visible.</div>
+    <p class="section-sub">1,647 small caps scored across 14 independent factors. Use it to explore the full universe or go straight to the weekly picks — each one backed by a written investment thesis.</p>
+  </div>
+  <div class="demo-window reveal reveal-delay-2">
+    <div class="demo-toolbar">
+      <div class="demo-dot" style="background:#ff5f57"></div>
+      <div class="demo-dot" style="background:#ffbd2e"></div>
+      <div class="demo-dot" style="background:#28c840"></div>
+      <div class="demo-url">
+        <svg class="demo-url-lock" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a5 5 0 015 5v3h2a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V11a2 2 0 012-2h2V6a5 5 0 015-5zm0 12a2 2 0 100 4 2 2 0 000-4zm0-10a3 3 0 00-3 3v3h6V6a3 3 0 00-3-3z"/></svg>
+        stockraptor.app/scanner</div>
+      <div style="margin-left:auto;font-size:10px;font-family:var(--mono);color:var(--green);letter-spacing:.5px;">LIVE
+      </div>
+    </div>
+    <div class="demo-header">
+      <div>Company</div>
+      <div>Price</div>
+      <div>1D</div>
+      <div>Score</div>
+      <div>Signal</div>
+      <div>Flags</div>
+      <div>vs Sector</div>
+    </div>
+    <div class="demo-row" style="animation-delay:.1s">
+      <div><div class="dr-sym">TBBK</div><div class="dr-name">The Bancorp · Financial</div></div>
+      <div class="dr-price">$38.20</div>
+      <div class="dr-chg-pos">+2.8%</div>
+      <div class="dr-score">
+        <div class="dr-score-n" style="color:#00e57a">73</div>
+        <div class="score-bar-bg"><div class="score-bar-fill" style="width:73%;background:linear-gradient(90deg,#00e57a,#0099ff)"></div></div>
+      </div>
+      <div><span class="signal-sb">STRONG BUY</span></div>
+      <div class="dr-flags">
+        <span class="flag-mini" style="background:rgba(0,229,122,.1);color:#00e57a;border:1px solid rgba(0,229,122,.2)">INSIDER</span>
+        <span class="flag-mini" style="background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.2)">EPS ×4</span>
+      </div>
+      <div class="dr-chg-pos">+1.9%</div>
+    </div>
+    <div class="demo-row" style="animation-delay:.2s">
+      <div><div class="dr-sym">GRPN</div><div class="dr-name">Groupon · Consumer</div></div>
+      <div class="dr-price">$12.44</div>
+      <div class="dr-chg-pos">+4.1%</div>
+      <div class="dr-score">
+        <div class="dr-score-n" style="color:#00e57a">68</div>
+        <div class="score-bar-bg"><div class="score-bar-fill" style="width:68%;background:linear-gradient(90deg,#00e57a,#0099ff)"></div></div>
+      </div>
+      <div><span class="signal-sb">STRONG BUY</span></div>
+      <div class="dr-flags">
+        <span class="flag-mini" style="background:rgba(0,201,177,.1);color:#00c9b1;border:1px solid rgba(0,201,177,.2)">SQUEEZE</span>
+        <span class="flag-mini" style="background:rgba(0,144,255,.1);color:#60a5fa;border:1px solid rgba(0,144,255,.2)">VOL 3.2×</span>
+      </div>
+      <div class="dr-chg-pos">+3.4%</div>
+    </div>
+    <div class="demo-row" style="animation-delay:.3s">
+      <div><div class="dr-sym">AUPH</div><div class="dr-name">Aurinia Pharma · Biotech</div></div>
+      <div class="dr-price">$7.18</div>
+      <div class="dr-chg-pos">+1.2%</div>
+      <div class="dr-score">
+        <div class="dr-score-n" style="color:#f59e0b">61</div>
+        <div class="score-bar-bg"><div class="score-bar-fill" style="width:61%;background:linear-gradient(90deg,#f59e0b,#ef4444)"></div></div>
+      </div>
+      <div><span class="signal-in">INTERESTING</span></div>
+      <div class="dr-flags">
+        <span class="flag-mini" style="background:rgba(139,92,246,.1);color:#8b5cf6;border:1px solid rgba(139,92,246,.2)">8-K EVENT</span>
+      </div>
+      <div class="dr-chg-pos">+0.8%</div>
+    </div>
+    <div class="demo-row lock-row" style="animation-delay:.4s">
+      <div><div class="dr-sym">VXRT</div><div class="dr-name">Vaxart · Healthcare</div></div>
+      <div class="dr-price">$3.91</div>
+      <div class="dr-chg-pos">+5.4%</div>
+      <div class="dr-score">
+        <div class="dr-score-n" style="color:#00e57a">74</div>
+        <div class="score-bar-bg"><div class="score-bar-fill" style="width:74%;background:linear-gradient(90deg,#00e57a,#0099ff)"></div></div>
+      </div>
+      <div><span class="signal-sb">STRONG BUY</span></div>
+      <div class="dr-flags">
+        <span class="flag-mini" style="background:rgba(0,229,122,.1);color:#00e57a">INSIDER</span>
+        <span class="flag-mini" style="background:rgba(0,144,255,.1);color:#60a5fa">8-K</span>
+      </div>
+      <div class="dr-chg-pos">+4.1%</div>
+    </div>
+    <div class="demo-row lock-row" style="animation-delay:.5s">
+      <div><div class="dr-sym">DAVE</div><div class="dr-name">Dave Inc · Fintech</div></div>
+      <div class="dr-price">$89.20</div>
+      <div class="dr-chg-pos">+3.7%</div>
+      <div class="dr-score">
+        <div class="dr-score-n" style="color:#00e57a">71</div>
+        <div class="score-bar-bg"><div class="score-bar-fill" style="width:71%;background:linear-gradient(90deg,#00e57a,#0099ff)"></div></div>
+      </div>
+      <div><span class="signal-sb">STRONG BUY</span></div>
+      <div class="dr-flags">
+        <span class="flag-mini" style="background:rgba(245,158,11,.1);color:#f59e0b">EPS ×3</span>
+      </div>
+      <div class="dr-chg-pos">+2.9%</div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:16px;font-size:11px;font-family:var(--mono);color:var(--txt);letter-spacing:.5px;">
+    STRONG BUY signals locked on free plan &nbsp;·&nbsp; <a href="#pricing" style="color:var(--green);text-decoration:none;">Upgrade to unlock →</a>
   </div>
 </section>
 
 <!-- FEATURES -->
 <section id="features">
-  <div class="page-inner">
-    <div class="section-label">What makes StockRaptor different</div>
-    <div class="section-title">Every edge, in one place.</div>
-    <div class="section-sub">Most scanners show raw numbers. StockRaptor scores each company across 14 weighted factors so you know exactly what to focus on.</div>
-    <div class="features-grid">
-      <div class="feat-card"><div class="feat-icon">📊</div><div class="feat-title">Sector-Adjusted Fundamentals</div><div class="feat-desc">P/E, P/B, debt, ROE and revenue growth benchmarked against each company's own sector, not a generic average.</div><span class="feat-tag" style="background:#00b4ff22;color:var(--blue)">FUNDAMENTAL · 25 PTS</span></div>
-      <div class="feat-card"><div class="feat-icon">📰</div><div class="feat-title">News Sentiment Analysis</div><div class="feat-desc">Automatically reads and scores the last 14 days of company news, cross-referenced with insider activity.</div><span class="feat-tag" style="background:#bf5fff22;color:var(--purple)">SENTIMENT · 20 PTS</span></div>
-      <div class="feat-card"><div class="feat-icon">⚡</div><div class="feat-title">Volume Anomaly Detector</div><div class="feat-desc">When volume spikes 2.5x or more without obvious news, something is likely moving before it goes public.</div><span class="feat-tag" style="background:#ff4fa022;color:var(--pink)">VOLUME SIGNAL</span></div>
-      <div class="feat-card"><div class="feat-icon">🎯</div><div class="feat-title">Short Squeeze Radar</div><div class="feat-desc">High short interest combined with positive momentum flags squeeze setups before they happen.</div><span class="feat-tag" style="background:#00e5cc22;color:var(--teal)">SHORT INTEREST</span></div>
-      <div class="feat-card"><div class="feat-icon">👥</div><div class="feat-title">Insider MSPR Tracking</div><div class="feat-desc">Net insider buying vs selling over 90 days. When executives buy their own stock, that's a signal.</div><span class="feat-tag" style="background:#00ff9422;color:var(--green)">INSIDER DATA</span></div>
-      <div class="feat-card"><div class="feat-icon">⚠️</div><div class="feat-title">Dilution Penalty Engine</div><div class="feat-desc">Penalizes companies with share count growth above 8% annually — eliminating the most common value traps.</div><span class="feat-tag" style="background:#ff2d5522;color:var(--red)">RISK FILTER</span></div>
+  <div class="reveal">
+    <div class="section-label">Methodology</div>
+    <div class="section-title">What other screeners skip.<br>And why it matters.</div>
+    <p class="section-sub">Most screeners give you raw numbers and leave the analysis to you. StockRaptor combines signals that individually are weak but together are meaningful — and weights them transparently.</p>
+  </div>
+  <div class="features-grid">
+
+    <div class="feat-card reveal reveal-delay-1">
+      <div class="feat-icon-wrap" style="background:rgba(37,99,235,.15)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <div class="feat-title">Sector-Adjusted Fundamentals</div>
+      <div class="feat-desc">P/E, P/B, ROE and revenue growth benchmarked against each company's own sector. Biotech gets different yardsticks than banking.</div>
+      <span class="feat-tag" style="background:rgba(37,99,235,.12);color:#60a5fa">FUNDAMENTAL SCORE · 32 PTS</span>
+    </div>
+
+    <div class="feat-card reveal reveal-delay-2">
+      <div class="feat-icon-wrap" style="background:rgba(0,229,122,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00e57a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      </div>
+      <div class="feat-title">SEC Insider Tracking</div>
+      <div class="feat-desc">Parses all Form 4 filings from EDGAR. Real transaction dates, exact dollar values. Fresh insider buys in the last 7 days get a recency multiplier.</div>
+      <span class="feat-tag" style="background:rgba(0,229,122,.1);color:#00e57a">INSIDER SIGNAL · 8 PTS</span>
+    </div>
+
+    <div class="feat-card reveal reveal-delay-3">
+      <div class="feat-icon-wrap" style="background:rgba(0,201,177,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00c9b1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      </div>
+      <div class="feat-title">Short Squeeze Radar</div>
+      <div class="feat-desc">High short float combined with rising price and volume is the setup before the squeeze. StockRaptor flags the anomaly the same morning — before it gets widely discussed.</div>
+      <span class="feat-tag" style="background:rgba(0,201,177,.1);color:#00c9b1">SHORT INTEREST SIGNAL</span>
+    </div>
+
+    <div class="feat-card reveal reveal-delay-1">
+      <div class="feat-icon-wrap" style="background:rgba(245,158,11,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <div class="feat-title">Volume Anomaly Detector</div>
+      <div class="feat-desc">When volume spikes 2.5× or more without an obvious catalyst, it signals unusual activity. StockRaptor detects it early in the information cycle and surfaces it with context.</div>
+      <span class="feat-tag" style="background:rgba(245,158,11,.1);color:#f59e0b">VOLUME SIGNAL</span>
+    </div>
+
+    <div class="feat-card reveal reveal-delay-2">
+      <span class="feat-new">NEW</span>
+      <div class="feat-icon-wrap" style="background:rgba(139,92,246,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      </div>
+      <div class="feat-title">SEC 8-K Real-Time Signal</div>
+      <div class="feat-desc">Material corporate events — earnings surprises, FDA decisions, acquisitions — filed directly with the SEC. We detect them within hours of filing.</div>
+      <span class="feat-tag" style="background:rgba(139,92,246,.1);color:#8b5cf6">8-K EVENT FLAG</span>
+    </div>
+
+    <div class="feat-card reveal reveal-delay-3">
+      <span class="feat-new">NEW</span>
+      <div class="feat-icon-wrap" style="background:rgba(96,165,250,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </div>
+      <div class="feat-title">Relative Strength vs Sector</div>
+      <div class="feat-desc">A stock up 3% when the whole sector is up 4% is weak. We measure each stock against its sector median to surface true relative outperformers.</div>
+      <span class="feat-tag" style="background:rgba(96,165,250,.1);color:#60a5fa">SECTOR COMPARISON</span>
+    </div>
+
+    <div class="feat-card reveal reveal-delay-1">
+      <div class="feat-icon-wrap" style="background:rgba(239,68,68,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div class="feat-title">Dilution Penalty Engine</div>
+      <div class="feat-desc">Share counts growing faster than revenue is the #1 small cap value trap. Stocks with &gt;8% annual dilution get penalized automatically.</div>
+      <span class="feat-tag" style="background:rgba(239,68,68,.1);color:#ef4444">RISK FILTER</span>
+    </div>
+
+    <div class="feat-card reveal reveal-delay-2">
+      <div class="feat-icon-wrap" style="background:rgba(0,229,122,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00e57a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="feat-title">Earnings Pattern Analysis</div>
+      <div class="feat-desc">Three or four consecutive EPS beats means something. We track the streak, the average surprise magnitude, and upcoming earnings proximity.</div>
+      <span class="feat-tag" style="background:rgba(0,229,122,.1);color:#00e57a">EARNINGS SIGNAL · 15 PTS</span>
+    </div>
+
+    <div class="feat-card reveal reveal-delay-3">
+      <div class="feat-icon-wrap" style="background:rgba(245,158,11,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      </div>
+      <div class="feat-title">Investment Thesis in Plain English</div>
+      <div class="feat-desc">Each weekly pick comes with an AI-generated thesis: what the fundamentals show, what insiders are doing, and what the growth case looks like over 3–6 months. No jargon.</div>
+      <span class="feat-tag" style="background:rgba(245,158,11,.1);color:#f59e0b">PRO + ELITE</span>
+    </div>
+
+  </div>
+</section>
+
+<!-- DAILY PICKS -->
+<section id="picks-section">
+  <div class="picks-layout">
+    <div class="picks-preview reveal">
+      <div class="pick-card-demo" style="--before-bg:#00e57a">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#00e57a;border-radius:2px 0 0 2px"></div>
+        <div class="pick-sym">TBBK</div>
+        <div class="pick-info">
+          <div class="pick-company">The Bancorp Inc</div>
+          <span class="pick-type-badge" style="background:rgba(0,229,122,.1);color:#00e57a;border:1px solid rgba(0,229,122,.2)">👤 INSIDER BUYING</span>
+        </div>
+        <div class="pick-score">
+          <div class="pick-score-n">63</div>
+          <div class="pick-score-l">/ 100</div>
+        </div>
+      </div>
+      <div class="pick-card-demo">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#00c9b1;border-radius:2px 0 0 2px"></div>
+        <div class="pick-sym">GRPN</div>
+        <div class="pick-info">
+          <div class="pick-company">Groupon Inc</div>
+          <span class="pick-type-badge" style="background:rgba(0,201,177,.1);color:#00c9b1;border:1px solid rgba(0,201,177,.2)">🎯 SHORT SQUEEZE</span>
+        </div>
+        <div class="pick-score">
+          <div class="pick-score-n">55</div>
+          <div class="pick-score-l">/ 100</div>
+        </div>
+      </div>
+      <div class="pick-card-demo">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#f59e0b;border-radius:2px 0 0 2px"></div>
+        <div class="pick-sym">WOR</div>
+        <div class="pick-info">
+          <div class="pick-company">Worthington Enterprises</div>
+          <span class="pick-type-badge" style="background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.2)">📅 EARNINGS CATALYST</span>
+        </div>
+        <div class="pick-score">
+          <div class="pick-score-n">54</div>
+          <div class="pick-score-l">/ 100</div>
+        </div>
+      </div>
+      <div class="pick-card-demo">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:#60a5fa;border-radius:2px 0 0 2px"></div>
+        <div class="pick-sym">YDDL</div>
+        <div class="pick-info">
+          <div class="pick-company">Yiddle Inc</div>
+          <span class="pick-type-badge" style="background:rgba(96,165,250,.1);color:#60a5fa;border:1px solid rgba(96,165,250,.2)">⚡ VOLUME ANOMALY</span>
+        </div>
+        <div class="pick-score">
+          <div class="pick-score-n">49</div>
+          <div class="pick-score-l">/ 100</div>
+        </div>
+      </div>
+    </div>
+    <div class="picks-copy reveal reveal-delay-2">
+      <div class="section-label">Weekly picks</div>
+      <h3>5–8 ideas a week.<br>With a full investment case behind each.</h3>
+      <p>Every week StockRaptor surfaces the small caps where the data builds a coherent medium-term case — solid fundamentals, insider conviction, earnings momentum, and analyst upside all pointing the same direction.</p>
+      <p>Each idea includes the current price, a written thesis, the specific signals that triggered it, and a track record measured at 30, 60 and 90 days — compared against the Russell 2000.</p>
+      <div class="picks-list">
+        <div class="picks-list-item"><div class="picks-list-dot"></div>Fundamental-first — fundamentals, insider buying and earnings streak weighted highest</div>
+        <div class="picks-list-item"><div class="picks-list-dot"></div>Growth estimate — analyst price target and upside % shown for every pick</div>
+        <div class="picks-list-item"><div class="picks-list-dot"></div>Track record at 30, 60 and 90 days vs Russell 2000 — fully transparent</div>
+        <div class="picks-list-item"><div class="picks-list-dot"></div>AI thesis explaining the case in plain English — what the data says, why it matters now</div>
+      </div>
     </div>
   </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" style="background:var(--s1);padding:100px 0;">
+  <div style="max-width:1100px;margin:0 auto;padding:0 40px;">
+    <div class="reveal" style="text-align:center;margin-bottom:56px;">
+      <div class="section-label">Transparent methodology</div>
+      <div class="section-title">Systematic. Repeatable.<br>Designed for medium-term conviction.</div>
+    </div>
+    <div class="steps-grid">
+      <div class="step reveal">
+        <div class="step-num">STEP 01</div>
+        <div class="step-title">Full universe scanned daily</div>
+        <div class="step-desc">Every trading day StockRaptor fetches fresh data on all 1,647 small caps from FMP, SEC EDGAR and Yahoo Finance. The universe is always complete — no sampling, no stale data.</div>
+      </div>
+      <div class="step reveal reveal-delay-2">
+        <div class="step-num">STEP 02</div>
+        <div class="step-title">14 factors, weighted for medium-term validity</div>
+        <div class="step-desc">Fundamentals, insider activity, earnings streaks and analyst consensus carry the most weight — signals with academic evidence behind them at 3–12 month horizons. Volume and momentum are secondary signals. Each factor normalized independently so no single outlier dominates.</div>
+      </div>
+      <div class="step reveal reveal-delay-4">
+        <div class="step-num">STEP 03</div>
+        <div class="step-title">Confluence filter, then a written investment thesis</div>
+        <div class="step-desc">Only stocks where 3 or more independent signals align make the weekly shortlist. Each pick gets a written thesis from Claude AI — the fundamental case, what insiders are doing, and the growth estimate. Entry price stored, track record measured at 30/60/90 days vs Russell 2000.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- WHY NOT JUST FMP + CHATGPT -->
+<section id="moat" style="position:relative;z-index:1;padding:100px 40px;max-width:1100px;margin:0 auto;">
+  <div class="reveal" style="max-width:600px;">
+    <div class="section-label">Why StockRaptor</div>
+    <div class="section-title">Not a trading alert service.<br>A research filter for real investors.</div>
+    <p class="section-sub">The signals StockRaptor uses have academic evidence behind them at 3–12 month horizons. Here's what that means in practice.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:48px;" class="moat-grid reveal reveal-delay-1">
+
+    <div style="background:var(--s1);border:1px solid var(--bord2);border-radius:14px;padding:28px 24px;">
+      <div style="font-size:11px;font-family:var(--mono);letter-spacing:2px;color:var(--txt);margin-bottom:16px;">WHAT MOST SCREENERS DO</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px;color:var(--txt);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2a4a6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Filter by one or two raw metrics (P/E, volume) and show you a list
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px;color:var(--txt);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2a4a6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          No sector-relative benchmarking — biotech and banking scored the same way
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px;color:var(--txt);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2a4a6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          No insider data — or delayed, aggregated, not from primary source
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px;color:var(--txt);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2a4a6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          No 8-K event detection — you miss FDA decisions, acquisitions, guidance changes
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px;color:var(--txt);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2a4a6a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          No measurable track record — no way to know if the signals actually work
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--s1);border:1px solid rgba(0,229,122,.2);border-radius:14px;padding:28px 24px;">
+      <div style="font-size:11px;font-family:var(--mono);letter-spacing:2px;color:var(--green);margin-bottom:16px;">WHAT STOCKRAPTOR DOES DIFFERENTLY</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px;color:var(--txb);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00e57a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><polyline points="20 6 9 17 4 12"/></svg>
+          14 factors combined into one score — a single outlier can't dominate
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px;color:var(--txb);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00e57a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><polyline points="20 6 9 17 4 12"/></svg>
+          Sector-adjusted benchmarks — each company compared to its own peer group
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px;color:var(--txb);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00e57a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><polyline points="20 6 9 17 4 12"/></svg>
+          SEC Form 4 parsed directly from EDGAR with exact transaction dates and values
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px;color:var(--txb);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00e57a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><polyline points="20 6 9 17 4 12"/></svg>
+          8-K material events detected within hours of filing — earnings, FDA, acquisitions
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px;color:var(--txb);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00e57a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><polyline points="20 6 9 17 4 12"/></svg>
+          Every pick stored with entry price — measurable 1D, 5D and 1W track record
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div style="margin-top:20px;padding:20px 24px;background:var(--s1);border:1px solid var(--bord2);border-radius:12px;font-size:13px;color:var(--txb);line-height:1.7;" class="reveal reveal-delay-2">
+    <strong style="color:var(--white);">The honest answer on replicability:</strong> the data sources are public. Anyone can build something similar with enough time. What's hard to replicate is the calibration — the specific weights, penalties, confluence thresholds and quality filters that took months of iteration to get right. And the track record, which compounds daily and can't be faked.
+  </div>
+</section>
+
+<!-- SIGNAL BAR -->
+<section id="trust">
+  <div class="signal-bar reveal">
+    <div class="signal-item">
+      <div class="signal-item-icon" style="background:rgba(37,99,235,.15)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <div class="signal-item-label">Real-time data</div>
+      <div class="signal-item-desc">Yahoo + FMP + SEC</div>
+    </div>
+    <div class="signal-item">
+      <div class="signal-item-icon" style="background:rgba(0,229,122,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00e57a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <div class="signal-item-label">SEC filings</div>
+      <div class="signal-item-desc">Form 4 + 8-K direct</div>
+    </div>
+    <div class="signal-item">
+      <div class="signal-item-icon" style="background:rgba(245,158,11,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4"/></svg>
+      </div>
+      <div class="signal-item-label">Claude AI</div>
+      <div class="signal-item-desc">Haiku-powered summaries</div>
+    </div>
+    <div class="signal-item">
+      <div class="signal-item-icon" style="background:rgba(139,92,246,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <div class="signal-item-label">Track record</div>
+      <div class="signal-item-desc">30 · 60 · 90 day vs Russell</div>
+    </div>
+    <div class="signal-item">
+      <div class="signal-item-icon" style="background:rgba(0,201,177,.12)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#00c9b1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .18h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14v2.92z"/></svg>
+      </div>
+      <div class="signal-item-label">No ads, ever</div>
+      <div class="signal-item-desc">Subscription-only model</div>
+    </div>
+  </div>
+</section>
+
+
+
+<!-- WHO IT'S FOR -->
+<section style="position:relative;z-index:1;padding:80px 40px;max-width:900px;margin:0 auto;" id="who">
+  <div class="reveal" style="text-align:center;margin-bottom:48px;">
+    <div class="section-label">Who it's for</div>
+    <div class="section-title">Built for a specific<br>kind of investor.</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="reveal reveal-delay-1 who-grid">
+
+    <div style="background:var(--s1);border:1px solid rgba(0,229,122,.15);border-radius:14px;padding:28px 24px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:rgba(0,229,122,.12);border:1px solid rgba(0,229,122,.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#00e57a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <span style="font-size:11px;font-family:var(--mono);letter-spacing:2px;color:var(--green);">BEST FOR</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00e57a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:3px;"><polyline points="20 6 9 17 4 12"/></svg>
+          <div>
+            <div style="font-size:14px;color:var(--txh);font-weight:500;margin-bottom:3px;">Small-cap investors with a 1–6 month horizon</div>
+            <div style="font-size:12px;color:var(--txt);line-height:1.6;">You want to own companies for weeks or months, not scalp them. You want a data-backed case before you commit capital.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00e57a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:3px;"><polyline points="20 6 9 17 4 12"/></svg>
+          <div>
+            <div style="font-size:14px;color:var(--txh);font-weight:500;margin-bottom:3px;">Investors who want research, not just a ticker list</div>
+            <div style="font-size:12px;color:var(--txt);line-height:1.6;">You want to understand why a stock is interesting before touching it. StockRaptor gives you the fundamental case, not just a number.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00e57a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:3px;"><polyline points="20 6 9 17 4 12"/></svg>
+          <div>
+            <div style="font-size:14px;color:var(--txh);font-weight:500;margin-bottom:3px;">Self-directed investors who want an edge in discovery</div>
+            <div style="font-size:12px;color:var(--txt);line-height:1.6;">You already invest but miss opportunities because you can't monitor 1,647 companies. StockRaptor does the filtering — you make the final call.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--s1);border:1px solid var(--bord2);border-radius:14px;padding:28px 24px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:rgba(74,96,128,.12);border:1px solid rgba(74,96,128,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--txt)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </div>
+        <span style="font-size:11px;font-family:var(--mono);letter-spacing:2px;color:var(--txt);">NOT FOR</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--txt)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:3px;opacity:.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <div>
+            <div style="font-size:14px;color:var(--txt);font-weight:500;margin-bottom:3px;">Day traders or scalpers</div>
+            <div style="font-size:12px;color:var(--txt);opacity:.7;line-height:1.6;">StockRaptor ideas are designed for 3–6 month horizons. If you need intraday signals or same-day momentum plays, this isn't the right tool.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--txt)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:3px;opacity:.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <div>
+            <div style="font-size:14px;color:var(--txt);font-weight:500;margin-bottom:3px;">Large-cap or macro investors</div>
+            <div style="font-size:12px;color:var(--txt);opacity:.7;line-height:1.6;">The universe is exclusively small caps ($80M–$3B market cap). Apple, Nvidia and S&P 500 names are not in scope.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--txt)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:3px;opacity:.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <div>
+            <div style="font-size:14px;color:var(--txt);font-weight:500;margin-bottom:3px;">Anyone looking for automated buy/sell signals</div>
+            <div style="font-size:12px;color:var(--txt);opacity:.7;line-height:1.6;">StockRaptor surfaces setups for you to evaluate — it doesn't tell you what to buy. Your judgment is still required.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- COMPARISON TABLE -->
+<section style="position:relative;z-index:1;padding:80px 40px;max-width:900px;margin:0 auto;" id="compare">
+  <div class="reveal" style="text-align:center;margin-bottom:40px;">
+    <div class="section-label">How it compares</div>
+    <div class="section-title">Why not just use<br>Finviz or TradingView?</div>
+    <p class="section-sub" style="margin:0 auto;">Fair question. Here's the honest answer.</p>
+  </div>
+  <div class="reveal reveal-delay-1" style="border:1px solid var(--bord2);border-radius:14px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:var(--s2);">
+          <th style="padding:14px 20px;text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--txt);font-weight:400;border-bottom:1px solid var(--bord2);">TOOL</th>
+          <th style="padding:14px 20px;text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--txt);font-weight:400;border-bottom:1px solid var(--bord2);">GOOD FOR</th>
+          <th style="padding:14px 20px;text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--txt);font-weight:400;border-bottom:1px solid var(--bord2);">WHAT IT MISSES</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--bord);">
+          <td style="padding:14px 20px;color:var(--txb);font-weight:500;">Finviz</td>
+          <td style="padding:14px 20px;color:var(--txt);">Broad screening by single metrics</td>
+          <td style="padding:14px 20px;color:var(--txt);">No confluence model, no insider/8-K integration, no sector benchmarking</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--bord);">
+          <td style="padding:14px 20px;color:var(--txb);font-weight:500;">TradingView</td>
+          <td style="padding:14px 20px;color:var(--txt);">Charts, alerts, technical analysis</td>
+          <td style="padding:14px 20px;color:var(--txt);">No fundamental scoring layer, no SEC filings, no daily ranked shortlist</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--bord);">
+          <td style="padding:14px 20px;color:var(--txb);font-weight:500;">Raw FMP / API</td>
+          <td style="padding:14px 20px;color:var(--txt);">Access to raw financial data</td>
+          <td style="padding:14px 20px;color:var(--txt);">No scoring, no filtering, no picks — you still do all the analysis yourself</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--bord);">
+          <td style="padding:14px 20px;color:var(--txb);font-weight:500;">Twitter / StockTwits</td>
+          <td style="padding:14px 20px;color:var(--txt);">Community ideas, real-time sentiment</td>
+          <td style="padding:14px 20px;color:var(--txt);">No systematic methodology, high noise, no measurable track record</td>
+        </tr>
+        <tr style="background:rgba(0,229,122,.03);">
+          <td style="padding:14px 20px;font-weight:600;color:var(--green);font-family:var(--mono);">StockRaptor</td>
+          <td style="padding:14px 20px;color:var(--txb);">Weekly investment ideas with fundamental thesis, 3–6 month horizon</td>
+          <td style="padding:14px 20px;color:var(--txt);font-style:italic;">Small-cap universe only — not for large caps or ETF screening</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="reveal reveal-delay-2" style="text-align:center;margin-top:16px;font-size:12px;font-family:var(--mono);color:var(--txt);letter-spacing:.3px;">Most tools are complementary. StockRaptor sits on top as the research layer — filtering 1,647 to the 6–8 worth investigating this week.</p>
 </section>
 
 <!-- PRICING -->
 <section id="pricing">
-  <div class="page-inner">
-    <div style="text-align:center;margin-bottom:6px;"><div class="section-label" style="display:inline-block">Transparent pricing</div></div>
-    <div class="section-title" style="text-align:center">Start free. Scale when ready.</div>
-    <div class="billing-toggle" style="margin-top:24px;">
-      <span class="billing-opt active" id="billMonthly" onclick="setBilling('monthly')">Monthly</span>
-      <div class="toggle-switch" id="billToggle" onclick="toggleBilling()"><div class="toggle-knob"></div></div>
-      <span class="billing-opt" id="billAnnual" onclick="setBilling('annual')">Annual</span>
-      <span class="billing-save">SAVE 20%</span>
+  <div class="reveal">
+    <div class="section-label">Plans</div>
+    <div class="section-title">Start free. Upgrade when<br>the ideas prove their value.</div>
+  </div>
+  <div class="pricing-grid">
+    <div class="plan-card reveal reveal-delay-1">
+      <div class="plan-name">Free</div>
+      <div class="plan-price">$0<span>/mo</span></div>
+      <div class="plan-period">Forever free</div>
+      <div class="plan-divider"></div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>Full 1,647-stock scanner</div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>14-factor scoring</div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>Watchlist &amp; detail panels</div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>Insider &amp; volume flags</div>
+      <div class="plan-feature"><span class="plan-x">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </span><span>STRONG BUY signals locked</span></div>
+      <div class="plan-feature"><span class="plan-x">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </span><span>Weekly picks &amp; investment theses</span></div>
+      <button class="plan-btn plan-btn-secondary" id="btnFree" onclick="openAuth('register')">Get started free</button>
     </div>
-    <div class="pricing-grid" id="pricingGrid">
-      <!-- Free -->
-      <div class="plan-card">
-        <div class="plan-name">Free</div>
-        <div class="plan-price"><span class="plan-price-sym">$</span><span class="plan-price-n">0</span><span class="plan-price-per">/month</span></div>
-        <div class="plan-desc">Explore the scanner and validate signals before committing.</div>
-        <div class="plan-divider"></div>
-        <div class="plan-feature"><span class="plan-check">✓</span>40 small caps analyzed</div>
-        <div class="plan-feature"><span class="plan-check">✓</span>14 scoring factors</div>
-        <div class="plan-feature"><span class="plan-check">✓</span>Volume & short squeeze alerts</div>
-        <div class="plan-feature"><span class="plan-x">✗</span><span style="color:#2a2a45">Daily automated ranking</span></div>
-        <div class="plan-feature"><span class="plan-x">✗</span><span style="color:#2a2a45">AI summaries</span></div>
-        <button class="plan-btn plan-btn-secondary" onclick="openAuth('register')" id="btnFree">Get Started Free</button>
-      </div>
-      <!-- Pro -->
-      <div class="plan-card popular">
-        <div class="plan-popular-badge">MOST POPULAR</div>
-        <div class="plan-name">Pro</div>
-        <div class="plan-price"><span class="plan-price-sym">$</span><span class="plan-price-n" id="proPrice">19</span><span class="plan-price-per">/month</span></div>
-        <div class="plan-desc">Daily signals and AI summaries for active investors.</div>
-        <div class="plan-divider"></div>
-        <div class="plan-feature"><span class="plan-check">✓</span>Everything in Free</div>
-        <div class="plan-feature"><span class="plan-check">✓</span>200 small caps — full list</div>
-        <div class="plan-feature"><span class="plan-check">✓</span>Daily automated ranking</div>
-        <div class="plan-feature"><span class="plan-check">✓</span><strong style="color:var(--white)">AI summaries</strong> in plain English</div>
-        <div class="plan-feature"><span class="plan-check">✓</span>Morning email digest</div>
-        <div class="plan-feature"><span class="plan-x">✗</span><span style="color:#2a2a45">Manual re-scan (Elite only)</span></div>
-        <button class="plan-btn plan-btn-primary" onclick="handleUpgrade('pro')" id="btnPro">Start 7-Day Free Trial</button>
-      </div>
-      <!-- Elite -->
-      <div class="plan-card">
-        <div class="plan-name">Elite</div>
-        <div class="plan-price"><span class="plan-price-sym">$</span><span class="plan-price-n" id="elitePrice">49</span><span class="plan-price-per">/month</span></div>
-        <div class="plan-desc">Full market coverage for serious investors.</div>
-        <div class="plan-divider"></div>
-        <div class="plan-feature"><span class="plan-check">✓</span>Everything in Pro</div>
-        <div class="plan-feature"><span class="plan-check">✓</span>400+ companies — full universe</div>
-        <div class="plan-feature"><span class="plan-check">✓</span>2× daily updates</div>
-        <div class="plan-feature"><span class="plan-check">✓</span><strong style="color:var(--white)">Manual re-scan</strong> anytime</div>
-        <div class="plan-feature"><span class="plan-check">✓</span>AI chat — ask about any company</div>
-        <div class="plan-feature"><span class="plan-check">✓</span>Priority support</div>
-        <button class="plan-btn plan-btn-secondary" onclick="handleUpgrade('elite')" id="btnElite">Start 7-Day Free Trial</button>
-      </div>
+
+    <div class="plan-card popular reveal reveal-delay-2">
+      <div class="plan-popular-tag">MOST POPULAR</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">$19<span>/mo</span></div>
+      <div class="plan-period">7-day free trial · cancel anytime</div>
+      <div class="plan-divider"></div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>Everything in Free</div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>All STRONG BUY signals unlocked</div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>Weekly picks with investment thesis</div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>Track record at 30 / 60 / 90 days</div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>8-K event alerts</div>
+      <div class="plan-feature"><span class="plan-x">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </span><span>Manual re-scan (Elite only)</span></div>
+      <button class="plan-btn plan-btn-primary" id="btnPro" onclick="handleUpgrade('pro')">Start 7-day free trial</button>
     </div>
-    <div class="disclaimer">⚠️ <strong style="color:var(--txb)">Disclaimer:</strong> StockRaptor provides financial data and algorithmic scores for informational and educational purposes only. This is not financial advice. Always conduct your own research and consult a qualified financial advisor.</div>
+
+    <div class="plan-card reveal reveal-delay-3">
+      <div class="plan-name">Elite</div>
+      <div class="plan-price">$49<span>/mo</span></div>
+      <div class="plan-period">7-day free trial · cancel anytime</div>
+      <div class="plan-divider"></div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>Everything in Pro</div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>Manual re-scan anytime</div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>Full 1,647-stock universe</div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>Growth estimate per pick (analyst upside)</div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>Priority support &amp; early access</div>
+      <div class="plan-feature"><span class="plan-check">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </span>AI analysis on any company</div>
+      <button class="plan-btn plan-btn-elite" id="btnElite" onclick="handleUpgrade('elite')">Start 7-day free trial</button>
+    </div>
+  </div>
+  <div class="pricing-note reveal">
+    <svg style="display:inline;vertical-align:middle;margin-right:6px;color:#3a5070" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    Secure payments via Stripe · No contracts · Cancel from your account in one click
   </div>
 </section>
 
-</div><!-- end landingPage -->
-
-<!-- ══ USER DASHBOARD ══ -->
-<div id="userDash">
-  <div class="page-inner">
-    <div class="dash-card">
-
-      <!-- HEADER -->
-      <div class="dash-title" id="dashWelcome">Welcome back 👋</div>
-      <div class="dash-sub" id="dashEmail">Loading your account...</div>
-
-      <!-- PLAN INFO -->
-      <div class="dash-plan" id="dashPlan">
-        <div class="dash-plan-icon">🦅</div>
-        <div>
-          <div class="dash-plan-name" id="dashPlanName">Free Plan</div>
-          <div class="dash-plan-desc" id="dashPlanDesc">40 companies · Manual scan</div>
-        </div>
-      </div>
-
-      <!-- TABS -->
-      <div class="dash-tabs">
-        <div class="dash-tab active" onclick="switchDashTab('overview')" id="tabOverview">Overview</div>
-        <div class="dash-tab" onclick="switchDashTab('settings')" id="tabSettings">⚙ Settings</div>
-      </div>
-
-      <!-- OVERVIEW TAB -->
-      <div class="dash-section active" id="sectionOverview">
-        <div class="dash-actions">
-          <button class="dash-btn dash-btn-outline" id="dashUpgradeBtn" onclick="startCheckout('pro')">⬆ Upgrade Plan</button>
-          <button class="dash-btn dash-btn-outline" id="btnSignOut" onclick="signOut()">Sign Out</button>
-        </div>
-        <div class="dash-stats" id="dashStats">
-          <div class="dash-stat"><div class="dash-stat-n" id="statCompanies">40</div><div class="dash-stat-l" id="statCompaniesL">COMPANIES</div></div>
-          <div class="dash-stat"><div class="dash-stat-n" style="color:var(--green)" id="statPlan">FREE</div><div class="dash-stat-l" id="statPlanL">CURRENT PLAN</div></div>
-          <div class="dash-stat"><div class="dash-stat-n" style="color:var(--gold)" id="statScans">0</div><div class="dash-stat-l" id="statScansL">SCANS TODAY</div></div>
-        </div>
-      </div>
-
-      <!-- SETTINGS TAB -->
-      <div class="dash-section" id="sectionSettings">
-
-        <div class="settings-group">
-          <div class="settings-group-title" id="sgLanguage">Language · Idioma</div>
-          <div class="settings-row">
-            <div class="settings-left">
-              <div class="settings-label" id="slLangTitle">Interface Language</div>
-              <div class="settings-desc" id="slLangDesc">Changes the language of the dashboard and scanner interface.</div>
-            </div>
-            <div class="lang-selector">
-              <button class="lang-btn active" id="langEN" onclick="setLang('en')">
-                <span class="lang-flag">🇬🇧</span> English
-              </button>
-              <button class="lang-btn" id="langES" onclick="setLang('es')">
-                <span class="lang-flag">🇪🇸</span> Español
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <div class="settings-group-title" id="sgAccount">Account</div>
-          <div class="settings-row">
-            <div class="settings-left">
-              <div class="settings-label" id="slEmailTitle">Email Address</div>
-              <div class="settings-desc" id="dashEmailSettings">—</div>
-            </div>
-          </div>
-          <div class="settings-row">
-            <div class="settings-left">
-              <div class="settings-label" id="slPlanTitle">Current Plan</div>
-              <div class="settings-desc" id="dashPlanSettings">Free</div>
-            </div>
-            <button class="dash-btn dash-btn-outline" id="btnUpgradeSettings" onclick="startCheckout('pro')" style="white-space:nowrap;padding:8px 16px;font-size:12px;">⬆ Upgrade</button>
-          </div>
-          <div class="settings-row" id="rowCancelPlan" style="display:none;">
-            <div class="settings-left">
-              <div class="settings-label" id="slCancelTitle">Cancel Subscription</div>
-              <div class="settings-desc" id="slCancelDesc">Your plan will remain active until the end of the billing period.</div>
-            </div>
-            <button onclick="confirmCancelPlan()" style="padding:8px 16px;font-size:12px;background:transparent;border:1px solid var(--red);color:var(--red);border-radius:4px;cursor:pointer;font-family:var(--sans);font-weight:600;white-space:nowrap;" id="btnCancelPlan">Cancel Plan</button>
-          </div>
-          <div class="settings-row">
-            <div class="settings-left">
-              <div class="settings-label" id="slSignOutTitle">Sign Out</div>
-              <div class="settings-desc" id="slSignOutDesc">Sign out from this device.</div>
-            </div>
-            <button class="dash-btn dash-btn-outline" onclick="signOut()" style="padding:8px 16px;font-size:12px;border-color:var(--red);color:var(--red);" id="btnSignOutSettings">Sign Out</button>
-          </div>
-        </div>
-
-        <div style="display:flex;align-items:center;">
-          <button class="settings-save" onclick="saveSettings()" id="btnSaveSettings">Save Settings</button>
-          <span class="settings-saved" id="settingsSaved">✓ Saved!</span>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
 <!-- FOOTER -->
 <footer>
-  <div class="footer-logo">Stock<span>Raptor</span></div>
-  <div style="display:flex;gap:22px;">
-    <span style="font-size:12px;color:var(--txt);cursor:pointer;" onclick="goTo('features')">Features</span>
-    <span style="font-size:12px;color:var(--txt);cursor:pointer;" onclick="startCheckout('pro')">Pricing</span>
+  <a class="footer-logo" href="#">
+    <div class="nav-logo-icon" style="width:24px;height:24px;border-radius:6px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#010d08" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </div>
+    Stock<span>Raptor</span>
+  </a>
+  <div class="footer-links">
+    <a class="footer-link" href="/scanner.html">Scanner</a>
+    <a class="footer-link" href="/picks.html">Daily Picks</a>
+    <a class="footer-link" href="/legal.html">Terms</a>
+    <a class="footer-link" href="/legal.html#privacy">Privacy</a>
+    <a class="footer-link" href="/legal.html#disclaimer">Disclaimer</a>
   </div>
-  <div class="footer-copy">© 2026 StockRaptor · Not financial advice · Educational use only</div>
+  <div class="footer-disc">For informational purposes only · Not financial advice</div>
 </footer>
+
+<script>
+/* ── ANIMATED BACKGROUND CANVAS ─────────────────────── */
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [], lines = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Create floating data particles
+  for (let i = 0; i < 60; i++) {
+    particles.push({
+      x: Math.random() * 1200,
+      y: Math.random() * 800,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -Math.random() * 0.4 - 0.1,
+      size: Math.random() * 1.5 + 0.5,
+      alpha: Math.random() * 0.4 + 0.1,
+      color: Math.random() > 0.6 ? '#00e57a' : Math.random() > 0.5 ? '#2563eb' : '#0a1020',
+    });
+  }
+
+  function drawGrid() {
+    ctx.strokeStyle = '#0d1a28';
+    ctx.lineWidth = 0.5;
+    const step = 48;
+    for (let x = 0; x < W; x += step) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += step) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+  }
+
+  function drawScanLine() {
+    const t = Date.now() / 8000;
+    const x = (t % 1) * W;
+    const grad = ctx.createLinearGradient(x - 60, 0, x + 60, 0);
+    grad.addColorStop(0, 'transparent');
+    grad.addColorStop(0.5, 'rgba(0,229,122,0.04)');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x - 60, 0, 120, H);
+  }
+
+  function tick() {
+    ctx.clearRect(0, 0, W, H);
+    drawGrid();
+    drawScanLine();
+
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; }
+      if (p.x < -10) p.x = W + 10;
+      if (p.x > W + 10) p.x = -10;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.alpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+
+/* ── SCROLL REVEAL ────────────────────────────────── */
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+/* ── ANIMATE SCORE BARS ───────────────────────────── */
+const barObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.querySelectorAll('.score-bar-fill').forEach(bar => {
+        const w = bar.style.width;
+        bar.style.width = '0';
+        setTimeout(() => { bar.style.width = w; }, 100);
+      });
+    }
+  });
+}, { threshold: 0.5 });
+document.querySelector('.demo-window') && barObserver.observe(document.querySelector('.demo-window'));
+
+/* ── SMOOTH SCROLL OFFSET ─────────────────────────── */
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) {
+      e.preventDefault();
+      const top = target.getBoundingClientRect().top + window.scrollY - 70;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+  });
+});
+</script>
 
 <!-- AUTH MODAL -->
 <div class="modal-overlay" id="authModal">
   <div class="modal-card">
     <button class="modal-close" onclick="closeModal()">×</button>
     <div class="modal-logo">🦅 Stock<span>Raptor</span></div>
-    <div style="font-size:12px;color:var(--txt);font-family:var(--font);">Your edge in small cap markets</div>
-
+    <div style="font-size:12px;color:var(--txt);font-family:var(--mono);margin-bottom:2px;">Your edge in small cap markets</div>
     <div class="auth-tabs">
-      <div class="auth-tab active" id="tabLogin" onclick="switchTab('login')">LOG IN</div>
-      <div class="auth-tab" id="tabRegister" onclick="switchTab('register')">REGISTER</div>
+      <div class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">LOG IN</div>
+      <div class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">REGISTER</div>
     </div>
-
-    <!-- LOGIN -->
     <div class="auth-form active" id="formLogin">
       <div class="auth-lbl">EMAIL</div>
       <input class="auth-inp" id="loginEmail" type="email" placeholder="your@email.com"/>
@@ -516,551 +1886,252 @@ const CONFIG = {
       <div class="auth-err" id="loginErr"></div>
       <div class="auth-ok" id="loginOk"></div>
       <button class="auth-btn" id="loginBtn" onclick="doLogin()">LOG IN →</button>
-      <div class="auth-foot"><b>✓</b> Secure · Encrypted · Never shared</div>
+      <div class="auth-foot">✓ Secure · Encrypted · Never shared</div>
     </div>
-
-    <!-- REGISTER -->
     <div class="auth-form" id="formRegister">
       <div class="auth-lbl">EMAIL</div>
       <input class="auth-inp" id="regEmail" type="email" placeholder="your@email.com"/>
       <div class="auth-lbl">PASSWORD</div>
-      <input class="auth-inp" id="regPass" type="password" placeholder="Min. 8 characters" onkeydown="if(event.key==='Enter')doRegister()"/>
+      <input class="auth-inp" id="regPass" type="password" placeholder="Min. 8 characters"/>
       <div class="auth-lbl">CONFIRM PASSWORD</div>
       <input class="auth-inp" id="regPass2" type="password" placeholder="Repeat password" onkeydown="if(event.key==='Enter')doRegister()"/>
       <div class="auth-err" id="regErr"></div>
       <div class="auth-ok" id="regOk"></div>
       <button class="auth-btn" id="regBtn" onclick="doRegister()">CREATE ACCOUNT →</button>
-      <div class="auth-foot"><b>✓</b> Free forever · No credit card needed</div>
+      <div class="auth-foot">✓ Free forever · No credit card needed</div>
     </div>
-
   </div>
 </div>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+
 <script>
-// ══════════════════════════════════════════
-// SUPABASE INIT
-// ══════════════════════════════════════════
+// ── CONFIG ────────────────────────────────────────────
+const CONFIG = {
+  supabaseUrl:        'https://ruqcgyctwlpjrlzmietj.supabase.co',
+  supabaseKey:        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1cWNneWN0d2xwanJsem1pZXRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzQwMTAsImV4cCI6MjA4ODkxMDAxMH0.tkhdkbPOZqQI7brgIo24zWftVbEr6EXLSF3jAmog6YM',
+  stripeProPriceId:   'price_1TAq0APBvHji1Pcv17SPtUv1',
+  stripeElitePriceId: 'price_1TAqvkPBvHji1PcvYSNF9r8I',
+  netlifyFnUrl:       '/.netlify/functions/stripe',
+};
+
 const { createClient } = supabase;
 let sb, currentUser = null, currentProfile = null;
 
-function initSupabase() {
-  if (CONFIG.supabaseUrl === 'YOUR_SUPABASE_URL') {
-    console.warn('⚠ Configure Supabase keys in CONFIG object');
-    return false;
-  }
+// ── INIT ─────────────────────────────────────────────
+window.addEventListener('load', () => {
   sb = createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
-  return true;
-}
 
-// ══════════════════════════════════════════
-// AUTH STATE
-// ══════════════════════════════════════════
-async function checkAuth() {
-  if (!sb) return;
-
-  // Show dashboard instantly if we have cached user — no flash
+  // Instant nav from cache — no flash
   const cachedUser = localStorage.getItem('sr_user');
   const cachedPlan = localStorage.getItem('sr_plan') || 'free';
-  if (cachedUser) {
-    document.getElementById('landingPage').style.display = 'none';
-    document.getElementById('userDash').style.display = 'block';
-    document.getElementById('navLinks').innerHTML = `
-      <a class="sn-nav-item" href="/scanner.html">📊 Scanner</a>
-      <a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>`;
-    document.getElementById('navAuth').innerHTML = `
-      <div class="nav-user">
-        <span class="nav-plan ${cachedPlan}">${cachedPlan.toUpperCase()}</span>
-        <a class="sn-user-btn active" href="/" style="display:flex">
-          <div class="sn-user-avatar">${cachedUser.charAt(0).toUpperCase()}</div>
-          <span class="sn-user-name">${cachedUser}</span>
-        </a>
-      </div>`;
-  }
+  if (cachedUser) showNavLoggedIn(cachedUser, cachedPlan);
 
+  checkAuth();
+
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT') showNavGuest();
+  });
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('upgraded')) {
+    showToast('🎉 Plan upgraded! Welcome to ' + (localStorage.getItem('sr_plan') || 'Pro').toUpperCase(), 'success');
+    window.history.replaceState({}, '', '/');
+  }
+});
+
+// ── AUTH CHECK ───────────────────────────────────────
+async function checkAuth() {
   const { data: { session } } = await sb.auth.getSession();
-  if (session?.user) {
-    currentUser = session.user;
-    await loadProfile();
-    showUserState();
-  } else {
-    // Clear stale cache and show guest
-    try { localStorage.removeItem('sr_user'); localStorage.removeItem('sr_plan'); } catch(e) {}
-    showGuestState();
-  }
-}
-
-async function loadProfile() {
-  if (!currentUser) return;
+  if (!session?.user) { showNavGuest(); return; }
+  currentUser = session.user;
   const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
   currentProfile = data;
-  return data;
+  const plan = data?.plan || 'free';
+  const username = currentUser.email.split('@')[0];
+  localStorage.setItem('sr_user', username);
+  localStorage.setItem('sr_plan', plan);
+  showNavLoggedIn(username, plan);
+  updatePricingButtons(plan);
+
+  // Redirect logged-in users straight to scanner
+  // (comment this out if you want them to see the landing page)
+  // window.location.href = '/scanner.html';
 }
 
-function showGuestState() {
-  document.getElementById('navAuth').innerHTML = `
-    <button class="nav-login" onclick="openAuth('login')">Log In</button>
-    <button class="nav-cta" onclick="openAuth('register')">Start Free</button>`;
-  document.getElementById('userDash').style.display = 'none';
-  document.getElementById('landingPage').style.display = 'block';
+// ── NAV STATES ───────────────────────────────────────
+function showNavGuest() {
+  document.getElementById('navRight').innerHTML = `
+    <button class="nav-login" onclick="openAuth('login')">Log in</button>
+    <button class="nav-cta" onclick="openAuth('register')">Start free →</button>`;
   updatePricingButtons(null);
 }
 
-async function showUserState() {
-  const plan = currentProfile?.plan || 'free';
-  const email = currentUser.email;
-
-  // Fix: swap nav links to Scanner / Daily Picks
-  document.getElementById('navLinks').innerHTML = `
-    <a class="sn-nav-item" href="/scanner.html">📊 Scanner</a>
-    <a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>
-    <a class="sn-nav-item" href="/watchlist.html">⭐ Watchlist</a>`;
-
-  document.getElementById('navAuth').innerHTML = `
-    <div class="nav-user">
-      <span class="nav-plan ${plan}">${plan.toUpperCase()}</span>
-      <a class="sn-user-btn active" href="/" style="display:flex">
-        <div class="sn-user-avatar">${email.charAt(0).toUpperCase()}</div>
-        <span class="sn-user-name">${email.split('@')[0]}</span>
-      </a>
-    </div>`;
-  // Cache for instant nav on other pages
-  try { localStorage.setItem('sr_user', email.split('@')[0]); localStorage.setItem('sr_plan', plan); } catch(e) {}
-
-  // Show dashboard
-  document.getElementById('landingPage').style.display = 'none';
-  document.getElementById('userDash').style.display = 'block';
-
-  const planNames = { free: 'Free Plan 🦅', pro: 'Pro Plan ⚡', elite: 'Elite Plan 🔥' };
-
-  document.getElementById('dashEmail').textContent = email;
-  document.getElementById('dashPlanName').textContent = planNames[plan] || 'Free Plan';
-  document.getElementById('statPlan').textContent = plan.toUpperCase();
-
-  // Fetch real scanned count from cache, then fill in dynamic values
-  try {
-    const { data: cacheData } = await sb.from('scan_cache').select('total_count').eq('id', 'daily').single();
-    const realCount = cacheData?.total_count > 0 ? cacheData.total_count : null;
-    const countLabel = realCount ? `${realCount}` : '200';
-    const planDescs = {
-      free: '40 companies · Manual scan only',
-      pro: `${countLabel} companies · Daily updates · AI summaries`,
-      elite: `${realCount ? realCount + '+' : '400+'} companies · 2× daily · AI chat`
-    };
-    const companyCounts = { free: '40', pro: countLabel, elite: realCount ? realCount + '+' : '400+' };
-    document.getElementById('dashPlanDesc').textContent = planDescs[plan] || '';
-    document.getElementById('statCompanies').textContent = companyCounts[plan] || '40';
-  } catch(e) {
-    const planDescs = { free: '40 companies · Manual scan only', pro: '200 companies · Daily updates · AI summaries', elite: '400+ companies · 2× daily · AI chat' };
-    const companyCounts = { free: '40', pro: '200', elite: '400+' };
-    document.getElementById('dashPlanDesc').textContent = planDescs[plan] || '';
-    document.getElementById('statCompanies').textContent = companyCounts[plan] || '40';
-  }
-  document.getElementById('statScans').textContent = currentProfile?.scans_today || 0;
-  // populate settings panel
-  const emailSet = document.getElementById('dashEmailSettings');
-  const planSet = document.getElementById('dashPlanSettings');
-  if (emailSet) emailSet.textContent = email;
-  if (planSet) planSet.textContent = plan.toUpperCase();
-  // apply current language
-  applyLang(localStorage.getItem('sr_lang') || 'en');
-
-  if (plan !== 'free') {
-    document.getElementById('dashUpgradeBtn').style.display = plan === 'elite' ? 'none' : '';
-    document.getElementById('rowCancelPlan').style.display = '';
-    document.getElementById('btnUpgradeSettings').style.display = plan === 'elite' ? 'none' : '';
-  } else {
-    document.getElementById('rowCancelPlan').style.display = 'none';
-  }
-
-  updatePricingButtons(plan);
-
-  // Check for successful payment redirect
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('upgraded')) {
-    showToast('🎉 Plan upgraded successfully! Welcome to ' + plan.toUpperCase(), 'success');
-    window.history.replaceState({}, '', '/');
-  }
+function showNavLoggedIn(username, plan) {
+  document.getElementById('navRight').innerHTML = `
+    <span class="nav-plan-badge ${plan}">${plan.toUpperCase()}</span>
+    <a class="nav-user-btn" href="/scanner.html">
+      <div class="nav-avatar">${username.charAt(0).toUpperCase()}</div>
+      <span class="nav-username">${username}</span>
+    </a>
+    <button onclick="doSignOut()" style="padding:6px 14px;background:transparent;border:1px solid var(--bord2);color:var(--txt);border-radius:7px;cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.3px;transition:all .15s;" onmouseover="this.style.borderColor='#2a4a6a';this.style.color='var(--txb)'" onmouseout="this.style.borderColor='var(--bord2)';this.style.color='var(--txt)'">Sign out</button>`;
 }
 
+async function doSignOut() {
+  await sb.auth.signOut();
+  currentUser = null; currentProfile = null;
+  try { localStorage.removeItem('sr_user'); localStorage.removeItem('sr_plan'); } catch(e) {}
+  showToast('Signed out. See you soon! 👋', 'success');
+  setTimeout(() => { showNavGuest(); window.scrollTo(0, 0); }, 500);
+}
+
+// ── PRICING BUTTONS ──────────────────────────────────
 function updatePricingButtons(plan) {
-  const btns = { free: 'btnFree', pro: 'btnPro', elite: 'btnElite' };
-  Object.entries(btns).forEach(([p, id]) => {
+  const map = { free: 'btnFree', pro: 'btnPro', elite: 'btnElite' };
+  Object.entries(map).forEach(([p, id]) => {
     const btn = document.getElementById(id);
     if (!btn) return;
     if (plan === p) {
-      btn.outerHTML = `<div class="current-plan-badge">✓ Current Plan</div>`;
+      btn.textContent = '✓ Current Plan';
+      btn.disabled = true;
+      btn.style.opacity = '.5';
     }
   });
+  // If logged in, Free button goes to scanner
+  if (plan) {
+    const freeBtn = document.getElementById('btnFree');
+    if (freeBtn && !freeBtn.disabled) {
+      freeBtn.onclick = () => window.location.href = '/scanner.html';
+      freeBtn.textContent = 'Open Scanner';
+    }
+  }
 }
 
-// ══════════════════════════════════════════
-// AUTH ACTIONS
-// ══════════════════════════════════════════
+// ── LOGIN ────────────────────────────────────────────
 async function doLogin() {
   const email = document.getElementById('loginEmail').value.trim();
-  const pass = document.getElementById('loginPass').value;
-  const btn = document.getElementById('loginBtn');
-  const err = document.getElementById('loginErr');
-  const ok = document.getElementById('loginOk');
-
+  const pass  = document.getElementById('loginPass').value;
+  const btn   = document.getElementById('loginBtn');
+  const err   = document.getElementById('loginErr');
+  const ok    = document.getElementById('loginOk');
   err.style.display = 'none'; ok.style.display = 'none';
-  if (!email || !pass) { showErr(err, 'Please enter your email and password.'); return; }
-
+  if (!email || !pass) { showAuthErr(err, 'Enter your email and password.'); return; }
   btn.disabled = true; btn.textContent = 'LOGGING IN...';
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-
   if (error) {
-    showErr(err, error.message === 'Invalid login credentials' ? '⚠ Wrong email or password.' : error.message);
+    showAuthErr(err, error.message === 'Invalid login credentials' ? '⚠ Wrong email or password.' : error.message);
     btn.disabled = false; btn.textContent = 'LOG IN →';
     return;
   }
-
   currentUser = data.user;
-  await loadProfile();
+  const { data: profile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  currentProfile = profile;
+  const plan = profile?.plan || 'free';
+  const username = currentUser.email.split('@')[0];
+  localStorage.setItem('sr_user', username);
+  localStorage.setItem('sr_plan', plan);
   closeModal();
-  showUserState();
+  showNavLoggedIn(username, plan);
+  updatePricingButtons(plan);
   showToast('Welcome back! 👋', 'success');
+  setTimeout(() => window.location.href = '/scanner.html', 800);
 }
 
+// ── REGISTER ─────────────────────────────────────────
 async function doRegister() {
   const email = document.getElementById('regEmail').value.trim();
-  const pass = document.getElementById('regPass').value;
+  const pass  = document.getElementById('regPass').value;
   const pass2 = document.getElementById('regPass2').value;
-  const btn = document.getElementById('regBtn');
-  const err = document.getElementById('regErr');
-  const ok = document.getElementById('regOk');
-
+  const btn   = document.getElementById('regBtn');
+  const err   = document.getElementById('regErr');
+  const ok    = document.getElementById('regOk');
   err.style.display = 'none'; ok.style.display = 'none';
-  if (!email || !pass) { showErr(err, 'Please fill in all fields.'); return; }
-  if (pass.length < 8) { showErr(err, 'Password must be at least 8 characters.'); return; }
-  if (pass !== pass2) { showErr(err, 'Passwords do not match.'); return; }
-
+  if (!email || !pass) { showAuthErr(err, 'Please fill in all fields.'); return; }
+  if (pass.length < 8) { showAuthErr(err, 'Password must be at least 8 characters.'); return; }
+  if (pass !== pass2)  { showAuthErr(err, 'Passwords do not match.'); return; }
   btn.disabled = true; btn.textContent = 'CREATING ACCOUNT...';
-  const { data, error } = await sb.auth.signUp({ email, password: pass });
-
+  const { error } = await sb.auth.signUp({ email, password: pass });
   if (error) {
-    showErr(err, error.message);
+    showAuthErr(err, error.message);
     btn.disabled = false; btn.textContent = 'CREATE ACCOUNT →';
     return;
   }
-
   ok.textContent = '✓ Account created! Check your email to confirm, then log in.';
   ok.style.display = 'block';
   btn.disabled = false; btn.textContent = 'CREATE ACCOUNT →';
-  setTimeout(() => switchTab('login'), 3000);
+  setTimeout(() => switchAuthTab('login'), 3000);
 }
 
+// ── FORGOT PASSWORD ───────────────────────────────────
 async function doForgotPassword() {
   const email = document.getElementById('loginEmail').value.trim();
   const err = document.getElementById('loginErr');
-  const ok = document.getElementById('loginOk');
-  if (!email) { showErr(err, 'Enter your email above first.'); return; }
+  const ok  = document.getElementById('loginOk');
+  if (!email) { showAuthErr(err, 'Enter your email above first.'); return; }
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
-  if (error) { showErr(err, error.message); return; }
+  if (error) { showAuthErr(err, error.message); return; }
   ok.textContent = '✓ Reset link sent! Check your inbox.';
   ok.style.display = 'block';
   err.style.display = 'none';
 }
 
-async function confirmCancelPlan() {
-  const lang = localStorage.getItem('sr_lang') || 'en';
-  const msg = lang === 'es'
-    ? '¿Seguro que quieres cancelar tu suscripción? Tu plan seguirá activo hasta el final del período de facturación.'
-    : 'Are you sure you want to cancel your subscription? Your plan will remain active until the end of the billing period.';
-  if (!confirm(msg)) return;
-
-  const btn = document.getElementById('btnCancelPlan');
-  btn.textContent = '...';
-  btn.disabled = true;
-
-  try {
-    const res = await fetch('/.netlify/functions/stripe/cancel-subscription', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: currentUser.id })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      document.getElementById('dashPlanSettings').textContent = lang === 'es' ? 'Cancelación programada' : 'Cancellation scheduled';
-      document.getElementById('rowCancelPlan').style.display = 'none';
-      alert(lang === 'es' ? 'Suscripción cancelada. Tu acceso continúa hasta el final del período.' : 'Subscription cancelled. Your access continues until the end of the billing period.');
-    } else {
-      throw new Error(data.error || 'Unknown error');
-    }
-  } catch(e) {
-    alert('Error: ' + e.message);
-    btn.textContent = lang === 'es' ? 'Cancelar Plan' : 'Cancel Plan';
-    btn.disabled = false;
-  }
-}
-
-async function signOut() {
-  await sb.auth.signOut();
-  currentUser = null; currentProfile = null;
-  try { localStorage.removeItem('sr_user'); localStorage.removeItem('sr_plan'); } catch(e) {}
-  showToast('Signed out. See you soon! 👋', 'success');
-  setTimeout(() => { showGuestState(); window.scrollTo(0,0); }, 500);
-}
-
-// ══════════════════════════════════════════
-// STRIPE CHECKOUT
-// ══════════════════════════════════════════
-function startCheckout(plan) { showUpgradeModal(plan); }
-function showUpgradeModal(preselect) {
-  document.getElementById('upgradeModal').style.display = 'flex';
-}
-function closeUpgradeModal() {
-  document.getElementById('upgradeModal').style.display = 'none';
-}
+// ── STRIPE CHECKOUT ───────────────────────────────────
 async function handleUpgrade(plan) {
   if (!currentUser) {
     openAuth('register');
     showToast('Create a free account first, then upgrade.', 'success');
     return;
   }
-
   const priceId = plan === 'pro' ? CONFIG.stripeProPriceId : CONFIG.stripeElitePriceId;
-
-  if (priceId.startsWith('YOUR_')) {
-    showToast('⚠ Stripe price IDs not configured yet.', 'error');
-    return;
-  }
-
-  const btn = document.getElementById('btn' + plan.charAt(0).toUpperCase() + plan.slice(1));
+  const btnId = plan === 'pro' ? 'btnPro' : 'btnElite';
+  const btn = document.getElementById(btnId);
   if (btn) { btn.disabled = true; btn.textContent = 'REDIRECTING...'; }
-
   try {
     const res = await fetch(`${CONFIG.netlifyFnUrl}/create-checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        priceId,
-        userId: currentUser.id,
-        userEmail: currentUser.email,
-        plan
-      })
+      body: JSON.stringify({ priceId, userId: currentUser.id, userEmail: currentUser.email, plan }),
     });
-
     const { url, error } = await res.json();
     if (error) throw new Error(error);
-    window.location.href = url; // redirect to Stripe checkout
-  } catch (e) {
+    window.location.href = url;
+  } catch(e) {
     showToast('Payment error: ' + e.message, 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Start 7-Day Free Trial'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Start 7-day free trial'; }
   }
 }
 
-// ══════════════════════════════════════════
-// UI HELPERS
-// ══════════════════════════════════════════
+// ── UI HELPERS ────────────────────────────────────────
 function openAuth(tab = 'login') {
   document.getElementById('authModal').classList.add('open');
-  switchTab(tab);
-  setTimeout(() => {
-    document.getElementById(tab === 'login' ? 'loginEmail' : 'regEmail').focus();
-  }, 100);
+  switchAuthTab(tab);
+  setTimeout(() => document.getElementById(tab === 'login' ? 'loginEmail' : 'regEmail').focus(), 100);
 }
 function closeModal() { document.getElementById('authModal').classList.remove('open'); }
-document.getElementById('authModal').addEventListener('click', e => { if (e.target === document.getElementById('authModal')) closeModal(); });
+document.addEventListener('click', e => {
+  const modal = document.getElementById('authModal');
+  if (e.target === modal) closeModal();
+});
 
-function switchTab(tab) {
+function switchAuthTab(tab) {
   ['login','register'].forEach(t => {
-    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
-    document.getElementById('form' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+    const cap = t.charAt(0).toUpperCase() + t.slice(1);
+    document.getElementById('tab' + cap).classList.toggle('active', t === tab);
+    document.getElementById('form' + cap).classList.toggle('active', t === tab);
   });
 }
 
-function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+function showAuthErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
 
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.className = 'toast ' + type;
-  t.classList.add('show');
+  t.className = 'toast ' + type + ' show';
   setTimeout(() => t.classList.remove('show'), 3500);
 }
-
-function goTo(id) { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); }
-function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
-
-let billingAnnual = false;
-function toggleBilling() { setBilling(billingAnnual ? 'monthly' : 'annual'); }
-function setBilling(mode) {
-  billingAnnual = (mode === 'annual');
-  document.getElementById('billToggle').classList.toggle('on', billingAnnual);
-  document.getElementById('billMonthly').classList.toggle('active', !billingAnnual);
-  document.getElementById('billAnnual').classList.toggle('active', billingAnnual);
-  document.getElementById('proPrice').textContent = billingAnnual ? '15' : '19';
-  document.getElementById('elitePrice').textContent = billingAnnual ? '39' : '49';
-}
-
-// ══════════════════════════════════════════
-
-// ══════════════════════════════════════════
-// i18n — LANGUAGE SYSTEM
-// ══════════════════════════════════════════
-const LANG = {
-  en: {
-    dashWelcome: 'Welcome back 👋',
-    tabOverview: 'Overview', tabSettings: '⚙ Settings',
-    btnOpenScanner: '▶ Open Scanner', dashUpgradeBtn: '⬆ Upgrade Plan', btnSignOut: 'Sign Out',
-    statCompaniesL: 'COMPANIES', statPlanL: 'CURRENT PLAN', statScansL: 'SCANS TODAY',
-    sgLanguage: 'Language · Idioma', slLangTitle: 'Interface Language',
-    slLangDesc: 'Changes the language of the dashboard and scanner interface.',
-    sgAccount: 'Account', slEmailTitle: 'Email Address', slPlanTitle: 'Current Plan',
-    slSignOutTitle: 'Sign Out', slSignOutDesc: 'Sign out from this device.',
-    btnUpgradeSettings: '⬆ Upgrade', btnSaveSettings: 'Save Settings', settingsSaved: '✓ Saved!',
-    planFree:'Free Plan 🦅', planPro:'Pro Plan ⚡', planElite:'Elite Plan 🔥',
-    planDescFree:'40 companies · Manual scan only',
-    planDescPro:'200 companies · Daily updates · AI summaries',
-    planDescElite:'400+ companies · 2× daily · AI chat',
-  },
-  es: {
-    dashWelcome: 'Bienvenido 👋',
-    tabOverview: 'Resumen', tabSettings: '⚙ Ajustes',
-    btnOpenScanner: '▶ Abrir Scanner', dashUpgradeBtn: '⬆ Mejorar Plan', btnSignOut: 'Cerrar Sesión',
-    statCompaniesL: 'EMPRESAS', statPlanL: 'PLAN ACTUAL', statScansL: 'SCANS HOY',
-    sgLanguage: 'Idioma · Language', slLangTitle: 'Idioma de la interfaz',
-    slLangDesc: 'Cambia el idioma del panel y del scanner.',
-    sgAccount: 'Cuenta', slEmailTitle: 'Correo electrónico', slPlanTitle: 'Plan actual',
-    slSignOutTitle: 'Cerrar sesión', slSignOutDesc: 'Cerrar sesión en este dispositivo.',
-    btnUpgradeSettings: '⬆ Mejorar', btnSaveSettings: 'Guardar ajustes', settingsSaved: '✓ ¡Guardado!',
-    planFree:'Plan Gratuito 🦅', planPro:'Plan Pro ⚡', planElite:'Plan Elite 🔥',
-    planDescFree:'40 empresas · Scan manual',
-    planDescPro:'200 empresas · Actualizaciones diarias · Resúmenes IA',
-    planDescElite:'400+ empresas · 2× al día · Chat IA',
-  }
-};
-
-let currentLang = localStorage.getItem('sr_lang') || 'en';
-
-function applyLang(lang) {
-  currentLang = lang;
-  const t = LANG[lang];
-  if (!t) return;
-  Object.entries(t).forEach(([id, text]) => {
-    const el = document.getElementById(id);
-    if (el && !['dashEmail','dashEmailSettings','dashPlanSettings','statCompanies','statPlan','statScans','dashPlanName','dashPlanDesc'].includes(id)) {
-      el.textContent = text;
-    }
-  });
-  document.getElementById('langEN')?.classList.toggle('active', lang === 'en');
-  document.getElementById('langES')?.classList.toggle('active', lang === 'es');
-}
-
-function setLang(lang) { applyLang(lang); }
-
-function saveSettings() {
-  localStorage.setItem('sr_lang', currentLang);
-  if (sb && currentUser) sb.from('profiles').update({ lang: currentLang }).eq('id', currentUser.id);
-  const saved = document.getElementById('settingsSaved');
-  saved.style.display = 'inline';
-  setTimeout(() => saved.style.display = 'none', 2500);
-}
-
-function switchDashTab(tab) {
-  ['overview','settings'].forEach(t => {
-    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1))?.classList.toggle('active', t === tab);
-    document.getElementById('section' + t.charAt(0).toUpperCase() + t.slice(1))?.classList.toggle('active', t === tab);
-  });
-}
-
-// INIT
-// ══════════════════════════════════════════
-async function fetchScanCount() {
-  try {
-    if (!sb) return;
-    const { data } = await sb
-      .from('scan_cache')
-      .select('total_count')
-      .eq('id', 'daily')
-      .single();
-    const el = document.getElementById('heroTrackedCount');
-    if (el) el.textContent = (data?.total_count > 0) ? data.total_count : '200';
-  } catch(e) {
-    const el = document.getElementById('heroTrackedCount');
-    if (el) el.textContent = '200';
-  }
-}
-
-window.addEventListener('load', () => {
-  if (initSupabase()) {
-    checkAuth();
-    fetchScanCount();
-    sb.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') showGuestState();
-    });
-  }
-  // Apply saved language
-  applyLang(localStorage.getItem('sr_lang') || 'en');
-
-  // Handle URL params
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('canceled')) {
-    showToast('Payment canceled. You can upgrade anytime.', 'error');
-    window.history.replaceState({}, '', '/');
-  }
-});
 </script>
-<!-- Upgrade Plan Modal -->
-<div id="upgradeModal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:24px;">
-  <div style="background:#09091a;border:1px solid #181828;border-radius:12px;max-width:600px;width:100%;padding:40px 32px;position:relative;">
-    <button onclick="closeUpgradeModal()" style="position:absolute;top:16px;right:16px;background:#1a1a2e;border:1px solid #2a2a4a;color:#b0b0d0;font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;">×</button>
-    <div style="text-align:center;margin-bottom:28px;">
-      <div style="font-size:32px;margin-bottom:8px;">🔓</div>
-      <div style="font-family:'Syne',sans-serif;font-size:22px;color:#e8e8f8;margin-bottom:8px;">Unlock Full Access</div>
-      <div style="color:#7070a0;font-size:14px;">Choose your plan and start your 7-day free trial today.</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
-      <div style="border:1px solid #00ff9444;border-radius:10px;padding:24px 20px;background:#00ff9408;">
-        <div style="font-size:11px;letter-spacing:2px;color:#00ff94;margin-bottom:8px;">PRO</div>
-        <div style="font-size:28px;font-weight:700;color:#e8e8f8;margin-bottom:4px;">$19<span style="font-size:13px;color:#7070a0;font-weight:400">/mo</span></div>
-        <div style="font-size:12px;color:#7070a0;margin-bottom:16px;">7-day free trial</div>
-        <div style="font-size:12px;color:#b0b0d0;line-height:2;margin-bottom:20px;">
-          ✓ All 200 companies<br>
-          ✓ Daily auto-scan<br>
-          ✓ 14-factor scoring<br>
-          ✓ Insider & analyst data<br>
-          ✓ Short squeeze alerts<br>
-          ✗ Manual re-scan (Elite only)
-        </div>
-        <button onclick="handleUpgrade('pro')" style="width:100%;padding:12px;background:linear-gradient(135deg,#00ff94,#00cc78);color:#000;border:none;border-radius:5px;font-weight:700;font-size:12px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;">Start Free Trial →</button>
-      </div>
-      <div style="border:1px solid #bf5fff44;border-radius:10px;padding:24px 20px;background:#bf5fff08;">
-        <div style="font-size:11px;letter-spacing:2px;color:#bf5fff;margin-bottom:8px;">ELITE</div>
-        <div style="font-size:28px;font-weight:700;color:#e8e8f8;margin-bottom:4px;">$49<span style="font-size:13px;color:#7070a0;font-weight:400">/mo</span></div>
-        <div style="font-size:12px;color:#7070a0;margin-bottom:16px;">7-day free trial</div>
-        <div style="font-size:12px;color:#b0b0d0;line-height:2;margin-bottom:20px;">
-          ✓ Everything in Pro<br>
-          ✓ 400+ companies<br>
-          ✓ Manual re-scan anytime<br>
-          ✓ Priority updates<br>
-          ✓ Early access features
-        </div>
-        <button onclick="handleUpgrade('elite')" style="width:100%;padding:12px;background:linear-gradient(135deg,#bf5fff,#9933ff);color:#fff;border:none;border-radius:5px;font-weight:700;font-size:12px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;">Start Free Trial →</button>
-      </div>
-    </div>
-    <div style="text-align:center;font-size:11px;color:#5050a0;">🔒 Secure payment via Stripe · Cancel anytime · No hidden fees</div>
-  </div>
-</div>
 
-
-<!-- FOOTER -->
-<footer style="position:relative;z-index:1;border-top:1px solid #0f0f20;padding:20px 24px;text-align:center;">
-  <div style="font-size:10px;color:#3a3a55;font-family:'Geist Mono',monospace;letter-spacing:.5px;line-height:2;">
-    <span style="color:#5050a0;">🦅 StockRaptor</span> &nbsp;·&nbsp; For informational purposes only &nbsp;·&nbsp; Not financial advice
-    <br>
-    <a href="/legal.html" style="color:#4a4a70;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#7070a0'" onmouseout="this.style.color='#4a4a70'">Terms of Service</a>
-    &nbsp;·&nbsp;
-    <a href="/legal.html#privacy" style="color:#4a4a70;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#7070a0'" onmouseout="this.style.color='#4a4a70'">Privacy Policy</a>
-    &nbsp;·&nbsp;
-    <a href="/legal.html#disclaimer" style="color:#4a4a70;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#7070a0'" onmouseout="this.style.color='#4a4a70'">Disclaimer</a>
-    &nbsp;·&nbsp;
-    <a href="/legal.html#cookies" style="color:#4a4a70;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#7070a0'" onmouseout="this.style.color='#4a4a70'">Cookies</a>
-  </div>
-</footer>
 </body>
 </html>
