@@ -903,7 +903,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
   </a>
   <div class="sn-center">
     <a class="sn-nav-item active" href="/scanner.html">📊 Scanner</a>
-    <a class="sn-nav-item" href="/picks.html">🎯 Daily Picks</a>
+    <a class="sn-nav-item" href="/picks.html">🎯 Weekly Picks</a>
     <a class="sn-nav-item" href="/watchlist.html">⭐ Watchlist</a>
   </div>
   <div class="sn-right">
@@ -2526,7 +2526,7 @@ async function loadDailyCache() {
     renderTable();
     if (typeof applyScannerLang === 'function') applyScannerLang();
 
-    // Highlight stock from ?highlight=SYM param (e.g. coming from Daily Picks)
+    // Highlight stock from ?highlight=SYM param (e.g. coming from Weekly Picks)
     const _hlSym = new URLSearchParams(window.location.search).get('highlight');
     if (_hlSym) {
       setTimeout(() => {
