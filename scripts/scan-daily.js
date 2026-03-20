@@ -805,44 +805,102 @@ async function main() {
   });
   console.log(`   ✅ Sector medians: ${Object.entries(sectorMedians).map(([s,v])=>`${s}:${v>0?'+':''}${v}%`).join(' | ')}`);
 
-  // ── PHASE 3: GENERATE DAILY PICKS + AI SUMMARIES ─────────
-  console.log('\n🎯 Phase 3: Generating daily picks...');
-  const picks = selectPicks(results);
-  console.log(`   ${picks.length} picks selected`);
+  // ── PHASE 3: WEEKLY PICKS + AI SUMMARIES ──────────────────
+  // Picks regenerate once per week (Monday). Other days skip unless forced.
+  const todayUTC  = new Date();
+  const dayOfWeek = todayUTC.getUTCDay(); // 0=Sun,1=Mon...5=Fri
+  const scanDateStr = todayUTC.toISOString().substring(0, 10);
 
-  if (picks.length > 0 && process.env.ANTHROPIC_API_KEY) {
-    console.log('   Generating AI summaries...');
-    for (const pick of picks) {
-      pick.aiSummary = await generateAISummary(pick);
-      process.stdout.write('.');
-      await sleep(300); // avoid rate limits
+  // Calculate Monday of current week as the week_of key
+  const daysFromMon = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const monday = new Date(todayUTC);
+  monday.setUTCDate(todayUTC.getUTCDate() - daysFromMon);
+  const weekOf = monday.toISOString().substring(0, 10);
+
+  // Check if we already have picks for this week
+  const { data: existingPicks } = await sb
+    .from('picks_cache')
+    .select('week_of, total_count')
+    .eq('id', 'weekly')
+    .single();
+
+  const alreadyThisWeek = existingPicks?.week_of === weekOf;
+
+  if (alreadyThisWeek && !process.env.FORCE_PICKS) {
+    console.log(`\n🎯 Phase 3: Weekly picks already generated for week of ${weekOf} — skipping.`);
+    console.log('   Set FORCE_PICKS=1 env var to regenerate.');
+  } else {
+    console.log(`\n🎯 Phase 3: Generating weekly picks (week of ${weekOf})...`);
+
+    // Get last week's picks to avoid repeating same companies
+    const { data: lastWeekData } = await sb
+      .from('picks_cache')
+      .select('picks')
+      .eq('id', 'weekly_prev')
+      .single();
+    const lastWeekSyms = new Set((lastWeekData?.picks || []).map(p => p.sym));
+
+    const picks = selectPicks(results, lastWeekSyms);
+    console.log(`   ${picks.length} picks selected`);
+
+    if (picks.length > 0 && process.env.ANTHROPIC_API_KEY) {
+      console.log('   Generating AI summaries...');
+      for (const pick of picks) {
+        pick.aiSummary = await generateAISummary(pick);
+        process.stdout.write('.');
+        await sleep(300);
+      }
+      console.log(' done');
     }
-    console.log(' done');
+
+    // Archive current picks as previous week before overwriting
+    if (existingPicks?.total_count > 0) {
+      const { data: currentPicks } = await sb
+        .from('picks_cache').select('picks').eq('id', 'weekly').single();
+      if (currentPicks?.picks) {
+        await sb.from('picks_cache').upsert({
+          id: 'weekly_prev',
+          week_of: existingPicks.week_of,
+          picks: currentPicks.picks,
+          generated_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    // Save new weekly picks
+    const { error: picksError } = await sb.from('picks_cache').upsert({
+      id: 'weekly',
+      week_of: weekOf,
+      scan_date: scanDateStr,
+      generated_at: new Date().toISOString(),
+      picks,
+      total_count: picks.length,
+    });
+
+    // Keep 'daily' id for backwards compatibility with old picks.html
+    await sb.from('picks_cache').upsert({
+      id: 'daily',
+      week_of: weekOf,
+      scan_date: scanDateStr,
+      generated_at: new Date().toISOString(),
+      picks,
+      total_count: picks.length,
+    });
+
+    if (picksError) console.warn('⚠ picks_cache save failed:', picksError.message);
+    else console.log(`✅ ${picks.length} weekly picks saved (week of ${weekOf})`);
+
+    await savePicksHistory(sb, picks, scanDateStr);
   }
-
-  const { error: picksError } = await sb.from('picks_cache').upsert({
-    id: 'daily',
-    scan_date: new Date().toISOString().substring(0, 10),
-    generated_at: new Date().toISOString(),
-    picks,
-    total_count: picks.length,
-  });
-
-  if (picksError) console.warn('⚠ picks_cache save failed:', picksError.message);
-  else console.log(`✅ ${picks.length} picks saved to picks_cache`);
-
-  // ── Save to picks_history for track record ──────────────
-  const scanDateStr = new Date().toISOString().substring(0, 10);
-  await savePicksHistory(sb, picks, scanDateStr);
 }
 
 // ── SELECT TOP PICKS ──────────────────────────────────────
 // Logic: quality-first with multi-signal confluence scoring.
 // Each pick category has strict quality floors + a confluence
 // bonus to reward stocks where multiple signals align.
-function selectPicks(results) {
+function selectPicks(results, excludeSyms = new Set()) {
   const picks = [];
-  const used  = new Set();
+  const used  = new Set([...excludeSyms]); // exclude last week's picks
 
   const norm = results.map(r => {
     const revGrowth = r.revenueGrowth ?? r.revGrowth ?? null;
@@ -913,7 +971,7 @@ function selectPicks(results) {
       && r.total >= 48 && r.fund >= 12,
     (a, b) => (b.volRatio * 2 + b.total + b.confluence * 5 + (b.relStrength||0))
             - (a.volRatio * 2 + a.total + a.confluence * 5 + (a.relStrength||0)),
-    2
+    1
   );
   picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'volume'; });
 
@@ -977,7 +1035,7 @@ function selectPicks(results) {
 
   // ── 7. FILL remaining slots with best confluence stocks ──
   // If we still have < 6 picks, fill with top multi-signal stocks
-  const target = 6;
+  const target = 4;
   if (picks.length < target) {
     fillSlots(
       r => r.total >= 52 && r.confluence >= 3 && r.priceChange1D >= 0,
@@ -990,7 +1048,7 @@ function selectPicks(results) {
   // Final quality check: remove any that snuck through with bad price action
   return picks
     .filter(p => p.priceChange1D === null || p.priceChange1D > -5)
-    .slice(0, 8);
+    .slice(0, 4);
 }
 
 // ── GENERATE MOVER SUMMARY ────────────────────────────────
