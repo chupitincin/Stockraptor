@@ -1,0 +1,57 @@
+name: Monthly ML Optimizer
+
+on:
+  schedule:
+    # Primer lunes de cada mes a las 09:00 UTC
+    # (no hay forma directa en cron, así que corre cada lunes
+    #  y el script comprueba si es el primero del mes)
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force run even if not first Monday'
+        required: false
+        default: 'false'
+
+jobs:
+  ml-optimizer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install supabase scikit-learn numpy anthropic requests
+
+      - name: Check if first Monday of month
+        id: check_date
+        run: |
+          DAY=$(date +%d)
+          FORCE="${{ github.event.inputs.force }}"
+          if [ "$FORCE" = "true" ] || [ "$DAY" -le 7 ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+            echo "✅ Running ML optimizer (day $DAY of month)"
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+            echo "⏭ Skipping — not first Monday (day $DAY)"
+          fi
+
+      - name: Run ML Optimizer
+        if: steps.check_date.outputs.run == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python scripts/ml_optimizer.py
+
+      - name: Skip message
+        if: steps.check_date.outputs.run == 'false'
+        run: echo "Not first Monday of month — ML optimizer skipped"
