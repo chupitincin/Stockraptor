@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StockRaptor — Daily Picks</title>
+<title>StockRaptor — Weekly Picks</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;700;800&family=Geist+Mono:wght@300;400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -423,7 +423,7 @@ const CONFIG = {
   </a>
   <div class="sn-center">
     <a class="sn-nav-item" href="/scanner.html">📊 Scanner</a>
-    <a class="sn-nav-item active" href="/picks.html">🎯 Daily Picks</a>
+    <a class="sn-nav-item active" href="/picks.html">🎯 Weekly Picks</a>
     <a class="sn-nav-item" href="/watchlist.html">⭐ Watchlist</a>
   </div>
   <div class="sn-right">
@@ -467,9 +467,10 @@ const CONFIG = {
   <div class="picks-header">
     <div class="picks-date">
       <div class="picks-date-dot"></div>
+      <span id="picksDateLabel">THIS WEEK'S IDEAS</span>
       <span id="picksDateLabel">TODAY'S SIGNALS</span>
     </div>
-    <div class="picks-title">Daily <span>Picks</span></div>
+    <div class="picks-title">Weekly <span>Picks</span></div>
     <div class="picks-sub">Companies with unusual signal confluence today — volume anomalies, insider activity, earnings setups and short squeeze potential identified by the scanner.</div>
   </div>
 
@@ -573,20 +574,34 @@ async function init() {
 // ── LOAD PICKS FROM SUPABASE ──────────────────────────────
 async function loadPicks() {
   try {
-    const { data, error } = await sb
+    // Try weekly id first, fall back to daily for backwards compatibility
+    let { data, error } = await sb
       .from('picks_cache')
       .select('*')
-      .eq('id', 'daily')
+      .eq('id', 'weekly')
       .single();
 
     if (error || !data?.picks?.length) {
-      // No picks yet — try to generate on-the-fly from scan_cache
+      // Fall back to daily id
+      const res = await sb.from('picks_cache').select('*').eq('id', 'daily').single();
+      data = res.data; error = res.error;
+    }
+
+    if (error || !data?.picks?.length) {
       await generatePicksFromCache();
       return;
     }
 
+    // Update page header with week_of date
+    if (data.week_of) {
+      const weekStart = new Date(data.week_of + 'T00:00:00Z');
+      const weekEnd   = new Date(weekStart); weekEnd.setUTCDate(weekStart.getUTCDate() + 4);
+      const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+      const dateEl = document.getElementById('picksDateLabel');
+      if (dateEl) dateEl.textContent = `WEEK OF ${fmt(weekStart)} – ${fmt(weekEnd)}`;
+    }
+
     renderPicks(data.picks, data.generated_at);
-    // Generate AI summaries on-the-fly for any picks missing them
     generateMissingSummaries(data.picks);
   } catch(e) {
     await generatePicksFromCache();
@@ -820,7 +835,7 @@ function renderUpgradeGate() {
   document.getElementById('picksContent').innerHTML = `
     <div class="upgrade-gate">
       <div class="upgrade-gate-icon">🎯</div>
-      <div class="upgrade-gate-title">Daily Picks</div>
+      <div class="upgrade-gate-title">Weekly Picks</div>
       <div class="upgrade-gate-sub">Get 5–8 AI-curated trade ideas every morning — short squeeze setups, earnings catalysts, volume anomalies and insider buying signals. Pro and Elite only.</div>
       <a href="/" class="upgrade-btn">⬆ Upgrade to Pro →</a>
     </div>`;
