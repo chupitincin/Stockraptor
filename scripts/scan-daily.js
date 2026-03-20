@@ -578,17 +578,40 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
 async function savePicksHistory(sb, picks, scanDate) {
   try {
     const rows = picks.map(p => ({
-      scan_date:    scanDate,
-      sym:          p.sym,
-      company_name: p.companyName || p.sym,
-      sector:       p.sector || null,
-      pick_type:    p.pickType || null,
-      score:        p.total || null,
-      entry_price:  p.price || null,
-      ai_summary:   p.aiSummary || null,
-      perf_1d:      null,
-      perf_5d:      null,
-      perf_1w:      null,
+      scan_date:      scanDate,
+      sym:            p.sym,
+      company_name:   p.companyName || p.sym,
+      sector:         p.sector || null,
+      pick_type:      p.pickType || null,
+      score:          p.total || null,
+      entry_price:    p.price || null,
+      ai_summary:     p.aiSummary || null,
+      perf_1d:        null,
+      perf_5d:        null,
+      perf_1w:        null,
+      perf_30d:       null,
+      perf_60d:       null,
+      perf_90d:       null,
+      russell_30d:    null,
+      russell_60d:    null,
+      russell_90d:    null,
+      beat_30d:       null,
+      beat_60d:       null,
+      beat_90d:       null,
+      // ── Signal breakdown for ML feedback ──
+      score_fund:     p.fund     ?? null,
+      score_sent:     p.sent     ?? null,
+      score_analyst:  p.analyst  ?? null,
+      score_momentum: p.momentum ?? null,
+      score_earnings: p.earnings ?? null,
+      score_volume:   p.vol      ?? null,
+      score_insider:  p.insider  ?? null,
+      flags_fired:    Array.isArray(p.flags) ? p.flags.map(f => f.label) : [],
+      confluence:     p.confluence ?? null,
+      rel_strength:   p.relStrength ?? null,
+      vol_ratio:      p.volRatio ?? null,
+      fresh_insider:  p.freshInsiderDays !== null && p.freshInsiderDays <= 7,
+      earnings_days:  p.earningsDays ?? null,
     }));
 
     const { error } = await sb
@@ -596,40 +619,80 @@ async function savePicksHistory(sb, picks, scanDate) {
       .upsert(rows, { onConflict: 'scan_date,sym' });
 
     if (error) console.warn('⚠ picks_history save error:', error.message);
-    else console.log(`✅ ${rows.length} picks saved to picks_history`);
+    else console.log(`✅ ${rows.length} picks saved to picks_history (with signal breakdown)`);
   } catch (e) {
     console.warn('⚠ savePicksHistory failed:', e.message);
   }
 }
 
 // ── UPDATE PAST PICKS PERFORMANCE ─────────────────────────────
-// Called each day to fill perf_1d/5d/1w for previous picks
+// Called each day to fill perf columns and Russell benchmark
 async function updatePicksPerformance(sb, currentPrices) {
   try {
     const today = new Date();
 
-    // Load all picks without complete performance data
+    // Fetch Russell 2000 (IWM ETF) price as benchmark
+    let russellPrice = null;
+    try {
+      const iwmData = await fmp(`/quote/IWM`);
+      russellPrice = iwmData?.[0]?.price ?? null;
+    } catch(e) {}
+
+    // Load all picks with incomplete performance data
     const { data: rows, error } = await sb
       .from('picks_history')
-      .select('id, sym, scan_date, entry_price, perf_1d, perf_5d, perf_1w')
-      .or('perf_1d.is.null,perf_5d.is.null,perf_1w.is.null')
-      .limit(100);
+      .select('id, sym, scan_date, entry_price, perf_1d, perf_5d, perf_1w, perf_30d, perf_60d, perf_90d, beat_30d, beat_60d, beat_90d')
+      .or('perf_1d.is.null,perf_5d.is.null,perf_1w.is.null,perf_30d.is.null,perf_60d.is.null,perf_90d.is.null')
+      .limit(200);
 
     if (error || !rows?.length) return;
+
+    // Get Russell historical prices for benchmark comparison
+    let russellHistory = {};
+    try {
+      const hist = await fmp(`/historical-price-full/IWM?timeseries=120`);
+      if (hist?.historical) {
+        hist.historical.forEach(d => { russellHistory[d.date] = d.close; });
+      }
+    } catch(e) {}
 
     const updates = [];
     for (const row of rows) {
       const currentPrice = currentPrices[row.sym];
       if (!currentPrice || !row.entry_price) continue;
 
-      const perf = Math.round(((currentPrice - row.entry_price) / row.entry_price) * 1000) / 10;
+      const perf = pct(row.entry_price, currentPrice);
       const scanDate = new Date(row.scan_date);
       const daysAgo  = Math.floor((today - scanDate) / 86400000);
 
+      // Find Russell price on the scan date for benchmark
+      const scanDateStr = row.scan_date.substring(0, 10);
+      const russellEntry = russellHistory[scanDateStr] ?? null;
+      const russellPerf  = russellEntry && russellPrice
+        ? pct(russellEntry, russellPrice)
+        : null;
+
       const update = { id: row.id };
-      if (row.perf_1d === null && daysAgo >= 1) update.perf_1d = perf;
-      if (row.perf_5d === null && daysAgo >= 5) update.perf_5d = perf;
-      if (row.perf_1w === null && daysAgo >= 7) update.perf_1w = perf;
+
+      if (row.perf_1d  === null && daysAgo >= 1)  update.perf_1d  = perf;
+      if (row.perf_5d  === null && daysAgo >= 5)  update.perf_5d  = perf;
+      if (row.perf_1w  === null && daysAgo >= 7)  update.perf_1w  = perf;
+
+      if (row.perf_30d === null && daysAgo >= 30) {
+        update.perf_30d   = perf;
+        update.russell_30d = russellPerf;
+        update.beat_30d   = russellPerf !== null ? perf > russellPerf : null;
+      }
+      if (row.perf_60d === null && daysAgo >= 60) {
+        update.perf_60d   = perf;
+        update.russell_60d = russellPerf;
+        update.beat_60d   = russellPerf !== null ? perf > russellPerf : null;
+      }
+      if (row.perf_90d === null && daysAgo >= 90) {
+        update.perf_90d   = perf;
+        update.russell_90d = russellPerf;
+        update.beat_90d   = russellPerf !== null ? perf > russellPerf : null;
+      }
 
       if (Object.keys(update).length > 1) updates.push(update);
     }
@@ -639,10 +702,81 @@ async function updatePicksPerformance(sb, currentPrices) {
         const { id, ...fields } = upd;
         await sb.from('picks_history').update(fields).eq('id', id);
       }
-      console.log(`✅ Updated performance for ${updates.length} past picks`);
+      console.log(`✅ Updated performance for ${updates.length} past picks (1d/5d/1w/30d/60d/90d)`);
+
+      // After updating, log summary stats to feedback_log
+      await logFeedbackSummary(sb);
     }
   } catch (e) {
     console.warn('⚠ updatePicksPerformance failed:', e.message);
+  }
+}
+
+// Helper: % change between two prices
+function pct(entry, current) {
+  if (!entry || !current) return null;
+  return Math.round(((current - entry) / entry) * 1000) / 10;
+}
+
+// ── LOG FEEDBACK SUMMARY ──────────────────────────────────────
+// After updating performance, log aggregate stats for ML analysis
+async function logFeedbackSummary(sb) {
+  try {
+    // Get picks with 30d data
+    const { data: rows30 } = await sb
+      .from('picks_history')
+      .select('pick_type, score_fund, score_sent, score_analyst, score_momentum, score_earnings, score_volume, score_insider, confluence, flags_fired, perf_30d, beat_30d, perf_60d, beat_60d')
+      .not('perf_30d', 'is', null);
+
+    if (!rows30?.length || rows30.length < 10) return; // need min 10 picks
+
+    const total = rows30.length;
+    const beat30 = rows30.filter(r => r.beat_30d === true).length;
+    const beat60 = rows30.filter(r => r.beat_60d === true).length;
+    const winRate30 = Math.round((beat30 / total) * 100);
+    const winRate60 = rows30.filter(r => r.beat_60d !== null).length > 0
+      ? Math.round((beat60 / rows30.filter(r => r.beat_60d !== null).length) * 100)
+      : null;
+
+    // Signal performance breakdown
+    const signalTypes = ['catalyst','volume','insider','fresh_insider','squeeze','breakout','momentum'];
+    const signalStats = {};
+    signalTypes.forEach(type => {
+      const typePicks = rows30.filter(r => r.pick_type === type && r.beat_30d !== null);
+      if (typePicks.length > 0) {
+        signalStats[type] = {
+          count: typePicks.length,
+          win_rate: Math.round((typePicks.filter(r => r.beat_30d).length / typePicks.length) * 100),
+          avg_30d: Math.round((typePicks.reduce((s,r) => s + (r.perf_30d||0), 0) / typePicks.length) * 10) / 10,
+        };
+      }
+    });
+
+    // Get current weights
+    const { data: weights } = await sb.from('scoring_weights').select('*').eq('id', 'active').single();
+
+    // Update win rates in scoring_weights
+    await sb.from('scoring_weights').update({
+      trained_on:   total,
+      win_rate_30d: winRate30,
+      win_rate_60d: winRate60,
+      updated_at:   new Date().toISOString(),
+    }).eq('id', 'active');
+
+    // Log to feedback_log
+    await sb.from('feedback_log').insert({
+      picks_count:  total,
+      win_rate_30d: winRate30,
+      win_rate_60d: winRate60,
+      old_weights:  weights ? JSON.stringify(weights) : null,
+      top_signals:  JSON.stringify(signalStats),
+      notes:        `Auto-log: ${total} picks tracked, ${winRate30}% beat Russell at 30d`,
+      approved:     false,
+    });
+
+    console.log(`📊 Feedback logged: ${total} picks | 30d win rate: ${winRate30}% | Signal stats: ${Object.keys(signalStats).join(', ')}`);
+  } catch(e) {
+    console.warn('⚠ logFeedbackSummary failed:', e.message);
   }
 }
 
