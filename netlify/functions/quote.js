@@ -58,28 +58,32 @@ export const handler = async (event) => {
     }
   }
 
-  // ── COMPANY PROFILE MODE (website) ───────────────────────
+  // ── COMPANY PROFILE MODE (website) via Yahoo Finance ─────
   if (p.profile === '1' && p.symbols) {
     const sym = p.symbols.trim().toUpperCase();
-    const FMP_KEY = process.env.FMP_KEY;
-    if (!FMP_KEY) return { statusCode: 200, headers, body: JSON.stringify({}) };
     try {
+      // Yahoo Finance quote summary has website in assetProfile module
       const res = await fetch(
-        `https://financialmodelingprep.com/api/v3/profile/${sym}?apikey=${FMP_KEY}`,
-        { signal: AbortSignal.timeout(8000) }
+        `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${sym}?modules=assetProfile,summaryProfile`,
+        { headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' }, signal: AbortSignal.timeout(8000) }
       );
       if (!res.ok) return { statusCode: 200, headers, body: JSON.stringify({}) };
       const data = await res.json();
-      const profile = data?.[0] || {};
+      const profile = data?.quoteSummary?.result?.[0]?.assetProfile
+                   || data?.quoteSummary?.result?.[0]?.summaryProfile
+                   || {};
+      const website = profile.website || null;
+      if (!website) return { statusCode: 200, headers, body: JSON.stringify({}) };
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
-          website:     profile.website     || null,
-          description: profile.description || null,
-          ceo:         profile.ceo         || null,
-          employees:   profile.fullTimeEmployees || null,
-          ipo:         profile.ipoDate     || null,
+          website,
+          description: (profile.longBusinessSummary || '').substring(0, 200) || null,
+          ceo: profile.companyOfficers?.[0]?.name || null,
+          employees: profile.fullTimeEmployees || null,
+          sector: profile.sector || null,
+          industry: profile.industry || null,
         })
       };
     } catch(e) {
