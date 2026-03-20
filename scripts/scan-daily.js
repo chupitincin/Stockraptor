@@ -573,6 +573,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     return {
       sym, sector, signal, total,
       companyName: p?.companyName || baseData?.companyName || sym,
+      website: p?.website || null,
       fund, sent, analyst, momentum, earPts, volShort,
       price: Math.round(price * 100) / 100,
       prevClose: prev ? Math.round(prev * 100) / 100 : null,
