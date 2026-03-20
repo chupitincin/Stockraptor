@@ -31,7 +31,7 @@ except ImportError as e:
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 SUPABASE_URL   = os.environ["SUPABASE_URL"]
-SUPABASE_KEY   = os.environ["SUPABASE_KEY"]
+SUPABASE_KEY   = os.environ.get("SUPABASE_KEY") or os.environ["SUPABASE_SERVICE_KEY"]
 ANTHROPIC_KEY  = os.environ["ANTHROPIC_API_KEY"]
 TG_TOKEN       = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TG_CHAT_ID     = os.environ.get("TELEGRAM_CHAT_ID", "")
