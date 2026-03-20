@@ -34,11 +34,57 @@ const SECTOR_PE = {
   'Utilities': 16, 'default': 20
 };
 
-// Máximo teórico por factor — usado para normalizar a 0-100
-const MAX_SCORES = {
+// Máximo teórico por factor — loaded from Supabase scoring_weights
+// Defaults used if table not available
+const DEFAULT_MAX_SCORES = {
   fund: 32, sent: 8, analyst: 15, momentum: 17, earPts: 15, volShort: 11, insider: 8
 };
-const MAX_TOTAL = Object.values(MAX_SCORES).reduce((a, b) => a + b, 0); // 106
+let MAX_SCORES = { ...DEFAULT_MAX_SCORES };
+let MAX_TOTAL  = Object.values(MAX_SCORES).reduce((a, b) => a + b, 0); // 106
+
+async function loadScoringWeights(sb) {
+  try {
+    const { data, error } = await sb
+      .from('scoring_weights')
+      .select('*')
+      .eq('id', 'active')
+      .single();
+
+    if (error || !data) {
+      console.log('   ⚠ scoring_weights not found — using defaults');
+      return;
+    }
+
+    // Map Supabase weight keys → internal factor names
+    const loaded = {
+      fund:      data.w_fund      ?? DEFAULT_MAX_SCORES.fund,
+      sent:      data.w_sent      ?? DEFAULT_MAX_SCORES.sent,
+      analyst:   data.w_analyst   ?? DEFAULT_MAX_SCORES.analyst,
+      momentum:  data.w_momentum  ?? DEFAULT_MAX_SCORES.momentum,
+      earPts:    data.w_earnings  ?? DEFAULT_MAX_SCORES.earPts,
+      volShort:  data.w_volume    ?? DEFAULT_MAX_SCORES.volShort,
+      insider:   data.w_insider   ?? DEFAULT_MAX_SCORES.insider,
+    };
+
+    // Validate — all values must be positive numbers
+    const valid = Object.values(loaded).every(v => typeof v === 'number' && v > 0);
+    if (!valid) {
+      console.log('   ⚠ Invalid weights in Supabase — using defaults');
+      return;
+    }
+
+    MAX_SCORES = loaded;
+    MAX_TOTAL  = Object.values(MAX_SCORES).reduce((a, b) => a + b, 0);
+
+    const version = data.version || 1;
+    const winRate = data.win_rate_30d ? ` | win_rate_30d: ${data.win_rate_30d}%` : '';
+    console.log(`   ✅ Scoring weights loaded from Supabase (v${version}${winRate})`);
+    console.log(`   Weights: ${Object.entries(MAX_SCORES).map(([k,v])=>`${k}:${v}`).join(' | ')} → total: ${MAX_TOTAL}`);
+
+  } catch (e) {
+    console.warn('   ⚠ Could not load scoring weights:', e.message, '— using defaults');
+  }
+}
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -275,7 +321,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       else if (sharesDilution > 2) dilPenalty = -2;
     }
     fund += dilPenalty;
-    fund = Math.max(0, Math.min(32, fund));
+    fund = Math.max(0, Math.min(MAX_SCORES.fund, fund));
 
     // ── 2. SENTIMENT (0-8 pts) ────────────────────────────────
     // FIX: reducido de 12 a 8 pts — señal ruidosa con keyword matching
@@ -349,7 +395,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       }
     }
 
-    analyst = Math.min(15, Math.max(0, analyst));
+    analyst = Math.min(MAX_SCORES.analyst, Math.max(0, analyst));
 
     // ── 4. MOMENTUM (0-17 pts) ────────────────────────────────
     // FIX: movimiento diario reducido de 4 a 2 pts máximo — muy ruidoso
@@ -493,7 +539,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       else if (insider.totalBuyValue > 500000) insiderScore = Math.min(8, insiderScore + 1);
     }
     // Sin actividad insider → 0 (neutral, no penaliza ni bonifica)
-    insiderScore = Math.max(-2, Math.min(8, insiderScore));
+    insiderScore = Math.max(-2, Math.min(MAX_SCORES.insider, insiderScore));
 
     // ── FLAGS ─────────────────────────────────────────────────
     const flags = [];
@@ -784,6 +830,10 @@ async function main() {
   const t0 = Date.now();
   console.log('🦅 StockRaptor Daily Scan v3 starting...');
 
+  // ── Load scoring weights from Supabase (replaces hardcoded defaults) ──
+  console.log('\n⚖️  Loading scoring weights...');
+  await loadScoringWeights(sb);
+
   const universe = await getUniverse();
   const tickers = [...universe.keys()];
 
@@ -964,6 +1014,7 @@ async function main() {
     console.log(`\n🎯 Phase 3: Weekly picks already generated for week of ${weekOf} — skipping.`);
     console.log('   Set FORCE_PICKS=1 env var to regenerate.');
   } else {
+    console.log(`\n⚖️  Active weights: fund:${MAX_SCORES.fund} sent:${MAX_SCORES.sent} analyst:${MAX_SCORES.analyst} momentum:${MAX_SCORES.momentum} earPts:${MAX_SCORES.earPts} insider:${MAX_SCORES.insider}`);
     console.log(`\n🎯 Phase 3: Generating weekly picks (week of ${weekOf})...`);
 
     // Get last week's picks to avoid repeating same companies
