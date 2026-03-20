@@ -58,6 +58,35 @@ export const handler = async (event) => {
     }
   }
 
+  // ── COMPANY PROFILE MODE (website) ───────────────────────
+  if (p.profile === '1' && p.symbols) {
+    const sym = p.symbols.trim().toUpperCase();
+    const FMP_KEY = process.env.FMP_KEY;
+    if (!FMP_KEY) return { statusCode: 200, headers, body: JSON.stringify({}) };
+    try {
+      const res = await fetch(
+        `https://financialmodelingprep.com/api/v3/profile/${sym}?apikey=${FMP_KEY}`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (!res.ok) return { statusCode: 200, headers, body: JSON.stringify({}) };
+      const data = await res.json();
+      const profile = data?.[0] || {};
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({
+          website:     profile.website     || null,
+          description: profile.description || null,
+          ceo:         profile.ceo         || null,
+          employees:   profile.fullTimeEmployees || null,
+          ipo:         profile.ipoDate     || null,
+        })
+      };
+    } catch(e) {
+      return { statusCode: 200, headers, body: JSON.stringify({}) };
+    }
+  }
+
   // ── LIVE PRICE MODE ────────────────────────────────────────
   const symbols = p.symbols;
   if (!symbols) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing symbols param' }) };
