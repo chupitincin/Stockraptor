@@ -1634,6 +1634,10 @@ function renderDet(d){
   const epsHtml=d.epsHistory.length?`<div class="eps-grid">${d.epsHistory.slice(0,4).map(e=>`<div class="eps-cell"><div class="eps-q">${e.q}</div><div class="eps-v" style="color:${e.surprise>3?'var(--green)':e.surprise<-3?'var(--red)':'var(--txt)'}">${e.surprise>0?'+':''}${e.surprise}%</div><div style="font-size:7px;color:var(--txt);margin-top:2px">${e.actual} vs ${e.est}</div></div>`).join('')}</div>`:'<span class="cd" style="font-size:9px">No history</span>';
   const newsHtml=d.newsItems?.length?d.newsItems.slice(0,6).map(n=>`<div class="news-item"><div class="news-h">${n.headline}</div><div class="news-m">${n.source} · ${n.time}${n.sentiment?`<span class="news-s" style="color:${n.sentiment==='positive'?'var(--green)':n.sentiment==='negative'?'var(--red)':'var(--txt)'}">${n.sentiment==='positive'?'▲ Pos':n.sentiment==='negative'?'▼ Neg':'→ Neu'}</span>`:''}</div></div>`).join(''):'<span class="cd" style="font-size:9px">No recent news</span>';
   return`<div class="det-inner">
+  <div style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+    <div style="font-family:var(--mono);font-size:10px;color:var(--txt);letter-spacing:1px;">${d.companyName||d.sym}</div>
+    <div id="website-link-${d.sym}" style="min-height:20px;"></div>
+  </div>
   <div class="det-card"><div class="det-title" style="display:flex;align-items:center;justify-content:space-between;">${(window._detTitles&&window._detTitles().fund)||"📊 FUNDAMENTALS"} <span style="font-size:7px;color:#1e1e30;margin-left:4px">sector P/E benchmark: ${SECTOR_PE[d.sector]||22}</span>${d.website?`<a href="${d.website}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:9px;font-family:var(--mono);color:var(--green);text-decoration:none;letter-spacing:.3px;opacity:.8;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.8'">↗ IR</a>`:''}</div>
     <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipPE)||'Price-to-Earnings: how much you pay per $1 of profit. Lower is better vs sector avg.'}">P/E Ratio</span><span class="dv ${d.pe&&d.pe<(SECTOR_PE[d.sector]||22)?'cg':'cd'}">${d.pe??'—'}</span></div>
     <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipPB)||'Price-to-Book.'}">P/B Ratio</span><span class="dv ${d.pb&&d.pb<2?'cg':'cd'}">${d.pb??'—'}</span></div>
@@ -1723,6 +1727,47 @@ function renderDet(d){
   </div></div>`;
 }
 
+
+// ── LOAD COMPANY WEBSITE ON DETAIL OPEN ──────────────────────
+async function loadCompanyWebsite(sym) {
+  const target = document.getElementById('website-link-' + sym);
+  if (!target || target.dataset.loaded) return;
+  target.dataset.loaded = '1';
+
+  // Check if already in data
+  const row = (window.allData || []).find(d => d.sym === sym);
+  if (row?.website) {
+    renderWebsiteLink(sym, row.website);
+    return;
+  }
+
+  // Fetch via Netlify proxy
+  try {
+    const res = await fetch(`/.netlify/functions/quote?symbols=${sym}&profile=1`);
+    const data = await res.json();
+    const website = data?.website || data?.[sym]?.website || data?.[0]?.website;
+    if (website) {
+      if (row) row.website = website;
+      renderWebsiteLink(sym, website);
+    }
+  } catch(e) {}
+}
+
+function renderWebsiteLink(sym, url) {
+  const target = document.getElementById('website-link-' + sym);
+  if (!target || !url) return;
+  const clean = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  target.innerHTML = `<a href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()"
+    style="font-size:10px;font-family:var(--mono);color:var(--green);text-decoration:none;
+    letter-spacing:.3px;display:inline-flex;align-items:center;gap:4px;
+    padding:3px 8px;border:1px solid rgba(0,229,122,.2);border-radius:5px;
+    background:rgba(0,229,122,.06);transition:all .15s;"
+    onmouseover="this.style.background='rgba(0,229,122,.12)'"
+    onmouseout="this.style.background='rgba(0,229,122,.06)'">
+    ↗ ${clean}
+  </a>`;
+}
+
 function toggleDet(sym){
   const dt=document.getElementById('dt-'+sym),ar=document.getElementById('ar-'+sym),was=dt.classList.contains('open');
   document.querySelectorAll('.dr.open').forEach(r=>r.classList.remove('open'));document.querySelectorAll('.arr.op').forEach(a=>a.classList.remove('op'));
@@ -1734,6 +1779,8 @@ function toggleDet(sym){
     if (typeof startLiveDetPrice === 'function') startLiveDetPrice(sym);
     // Load price chart
     setTimeout(() => { if (typeof loadChart === 'function') loadChart(sym, '1M', null); }, 100);
+    // Load website link from FMP profile if not already in data
+    loadCompanyWebsite(sym);
     // Scroll row into view below fixed navbar
     setTimeout(()=>{
       const row=document.querySelector(`tr.mr [id="ar-${sym}"]`)?.closest('tr');
