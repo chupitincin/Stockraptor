@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CryptoRaptor — Performance Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080810;--bg2:#0e0e1a;--bg3:#141426;
+  --border:#1e1e36;--border2:#2a2a48;
+  --green:#00e57a;--green-dim:#00e57a18;
+  --red:#ff3b5c;--red-dim:#ff3b5c18;
+  --yellow:#f5c542;--yellow-dim:#f5c54218;
+  --blue:#4d8cff;--blue-dim:#4d8cff18;
+  --purple:#7b5cf0;--purple-dim:#7b5cf018;
+  --text:#c8c8e8;--text-dim:#5a5a7a;--text-bright:#eeeef8;
+  --mono:'Space Mono',monospace;
+  --sans:'DM Sans',sans-serif;
+  --display:'Bebas Neue',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;opacity:0.3;pointer-events:none;z-index:0}
+
+.wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 24px 80px}
+
+/* Header */
+header{display:flex;align-items:center;justify-content:space-between;padding:28px 0 20px;border-bottom:1px solid var(--border2);flex-wrap:wrap;gap:12px}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:44px;height:44px;background:linear-gradient(135deg,var(--purple),var(--blue));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.logo-text{font-family:var(--display);font-size:32px;letter-spacing:3px;color:var(--text-bright);line-height:1}
+.logo-sub{font-family:var(--mono);font-size:10px;color:var(--purple);letter-spacing:2px;margin-top:2px}
+.live-badge{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--green);letter-spacing:1px;padding:6px 14px;border:1px solid var(--green);border-radius:20px;background:var(--green-dim)}
+.live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
+
+/* Period tabs */
+.period-tabs{display:flex;gap:6px;margin:24px 0 0}
+.tab{background:var(--bg2);border:1px solid var(--border2);color:var(--text-dim);font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:6px 16px;border-radius:6px;cursor:pointer;transition:all .15s}
+.tab:hover,.tab.active{border-color:var(--purple);color:var(--purple);background:var(--purple-dim)}
+
+/* KPI grid */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:20px 0}
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:500px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--purple),transparent);opacity:.5}
+.kpi-label{font-size:9px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;font-family:var(--mono);margin-bottom:6px}
+.kpi-value{font-family:var(--display);font-size:32px;color:var(--text-bright);line-height:1}
+.kpi-value.green{color:var(--green)}
+.kpi-value.red{color:var(--red)}
+.kpi-value.yellow{color:var(--yellow)}
+.kpi-value.blue{color:var(--blue)}
+.kpi-sub{font-size:10px;color:var(--text-dim);font-family:var(--mono);margin-top:4px}
+
+/* Charts row */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin:28px 0}
+@media(max-width:768px){.charts-row{grid-template-columns:1fr}}
+.chart-card{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:20px}
+.chart-title{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:16px}
+.chart-title strong{color:var(--text-bright)}
+
+/* Win rate circle */
+.wr-circle-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;position:relative}
+.wr-value{font-family:var(--display);font-size:52px;color:var(--text-bright);line-height:1}
+.wr-label{font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-top:4px}
+.wr-breakdown{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px}
+.wr-item{background:var(--bg3);border-radius:8px;padding:10px;text-align:center}
+.wr-item-val{font-family:var(--mono);font-size:16px;font-weight:700}
+.wr-item-lbl{font-size:9px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+
+/* Table */
+.table-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;overflow:hidden;margin-top:28px}
+.table-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border2)}
+.table-title{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase}
+.table-title strong{color:var(--text-bright)}
+.search-box{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 12px;font-family:var(--mono);font-size:11px;color:var(--text);outline:none;width:180px}
+.search-box::placeholder{color:var(--text-dim)}
+.table-overflow{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);padding:10px 16px;text-align:left;border-bottom:1px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{color:var(--text)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg3)}
+tbody td{font-family:var(--mono);font-size:12px;color:var(--text);padding:10px 16px;white-space:nowrap}
+td.sym{color:var(--text-bright);font-weight:700;font-size:13px}
+td.up{color:var(--green)}
+td.dn{color:var(--red)}
+td.neu{color:var(--text-dim)}
+.badge{display:inline-block;font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:4px;text-transform:uppercase}
+.badge.WIN{background:var(--green-dim);color:var(--green)}
+.badge.LOSS{background:var(--red-dim);color:var(--red)}
+.badge.OPEN{background:var(--blue-dim);color:var(--blue)}
+.badge.ACTIVE{background:var(--yellow-dim);color:var(--yellow)}
+.badge.EXPIRED{background:#ffffff10;color:var(--text-dim)}
+
+/* Equity curve */
+.equity-bar{height:3px;background:var(--border2);border-radius:2px;margin-top:6px;overflow:hidden}
+.equity-fill{height:100%;border-radius:2px;transition:width .6s ease}
+
+/* Empty */
+.empty{text-align:center;padding:48px;color:var(--text-dim);font-family:var(--mono);font-size:12px}
+
+/* Loading */
+.loading{text-align:center;padding:48px;color:var(--text-dim);font-family:var(--mono);font-size:11px;letter-spacing:2px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.loading span{animation:blink 1.2s ease infinite}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* Pagination */
+.pagination{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;border-top:1px solid var(--border)}
+.page-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text-dim);font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:6px;cursor:pointer;transition:all .15s}
+.page-btn:hover,.page-btn.active{border-color:var(--purple);color:var(--purple)}
+.page-info{font-family:var(--mono);font-size:10px;color:var(--text-dim)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🦖</div>
+    <div>
+      <div class="logo-text">CRYPTORAPTOR</div>
+      <div class="logo-sub">PERFORMANCE TRACKER</div>
+    </div>
+  </div>
+  <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+</header>
+
+<div class="period-tabs">
+  <button class="tab active" onclick="setPeriod(7,this)">7D</button>
+  <button class="tab" onclick="setPeriod(30,this)">30D</button>
+  <button class="tab" onclick="setPeriod(90,this)">90D</button>
+  <button class="tab" onclick="setPeriod(365,this)">1 AÑO</button>
+  <button class="tab" onclick="setPeriod(9999,this)">TODO</button>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-label">PnL Total</div>
+    <div class="kpi-value green" id="kpi-pnl">—</div>
+    <div class="kpi-sub" id="kpi-pnl-pct">—</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Win Rate</div>
+    <div class="kpi-value" id="kpi-wr">—</div>
+    <div class="kpi-sub" id="kpi-wr-sub">—</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Trades</div>
+    <div class="kpi-value blue" id="kpi-trades">—</div>
+    <div class="kpi-sub" id="kpi-trades-sub">—</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Avg Win</div>
+    <div class="kpi-value green" id="kpi-avgwin">—</div>
+    <div class="kpi-sub">por trade ganado</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Avg Loss</div>
+    <div class="kpi-value red" id="kpi-avgloss">—</div>
+    <div class="kpi-sub">por trade perdido</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Mejor trade</div>
+    <div class="kpi-value yellow" id="kpi-best">—</div>
+    <div class="kpi-sub" id="kpi-best-sym">—</div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="charts-row">
+  <div class="chart-card">
+    <div class="chart-title"><strong>CURVA DE EQUITY</strong> — PnL acumulado</div>
+    <div style="position:relative;height:220px">
+      <canvas id="equityChart"></canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title"><strong>WIN RATE</strong></div>
+    <div class="wr-circle-wrap">
+      <div style="position:relative;width:140px;height:140px">
+        <canvas id="wrChart"></canvas>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div class="wr-value" id="wr-big">—</div>
+          <div class="wr-label">WIN RATE</div>
+        </div>
+      </div>
+    </div>
+    <div class="wr-breakdown">
+      <div class="wr-item">
+        <div class="wr-item-val" style="color:var(--green)" id="wr-wins">—</div>
+        <div class="wr-item-lbl">Wins</div>
+      </div>
+      <div class="wr-item">
+        <div class="wr-item-val" style="color:var(--red)" id="wr-losses">—</div>
+        <div class="wr-item-lbl">Losses</div>
+      </div>
+      <div class="wr-item">
+        <div class="wr-item-val" style="color:var(--blue)" id="wr-open">—</div>
+        <div class="wr-item-lbl">Abiertas</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="table-wrap">
+  <div class="table-head">
+    <div class="table-title"><strong>HISTORIAL DE TRADES</strong></div>
+    <input class="search-box" type="text" placeholder="Buscar coin..." id="search" oninput="filterTable()">
+  </div>
+  <div class="table-overflow">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortBy('detected_at')">Fecha ↕</th>
+          <th onclick="sortBy('symbol')">Par ↕</th>
+          <th onclick="sortBy('price')">Precio entrada</th>
+          <th onclick="sortBy('price_change_pct')">Señal ↕</th>
+          <th onclick="sortBy('volume_ratio')">Volumen ↕</th>
+          <th onclick="sortBy('rsi')">RSI ↕</th>
+          <th onclick="sortBy('score')">Score ↕</th>
+          <th onclick="sortBy('result_pct')">Resultado ↕</th>
+          <th onclick="sortBy('status')">Estado ↕</th>
+        </tr>
+      </thead>
+      <tbody id="trades-tbody">
+        <tr><td colspan="9"><div class="loading"><span>Cargando...</span></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+</div>
+
+<script>
+// ── CONFIG — RELLENA ESTO ─────────────────────────────────────
+const SUPABASE_URL  = 'https://ruqcgyctwlpjrlzmietj.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1cWNneWN0d2xwanJsem1pZXRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzQwMTAsImV4cCI6MjA4ODkxMDAxMH0.tkhdkbPOZqQI7brgIo24zWftVbEr6EXLSF3jAmog6YM';
+// ─────────────────────────────────────────────────────────────
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let allData       = [];
+let filtered      = [];
+let sortKey       = 'detected_at';
+let sortDir       = -1;
+let currentPeriod = 7;
+let currentPage   = 1;
+const PAGE_SIZE   = 20;
+let equityChart   = null;
+let wrChart       = null;
+
+// ── Helpers ───────────────────────────────────────────────────
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'}) +
+    ' ' + d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+}
+function fmtPrice(p) {
+  return p < 0.01 ? '$'+p.toFixed(6) : p < 1 ? '$'+p.toFixed(4) : '$'+p.toFixed(2);
+}
+function fmtPct(v) {
+  if (v == null) return '—';
+  return (v > 0 ? '+' : '') + v.toFixed(2) + '%';
+}
+
+// ── Period filter ─────────────────────────────────────────────
+function setPeriod(days, btn) {
+  currentPeriod = days;
+  currentPage   = 1;
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilter();
+}
+
+function applyFilter() {
+  const cutoff = currentPeriod === 9999
+    ? new Date(0)
+    : new Date(Date.now() - currentPeriod * 86400000);
+  const search = document.getElementById('search').value.toLowerCase();
+
+  filtered = allData.filter(r => {
+    const inPeriod = new Date(r.detected_at) >= cutoff;
+    const matchSearch = !search || r.symbol.toLowerCase().includes(search);
+    return inPeriod && matchSearch;
+  });
+
+  sortData();
+  renderKPIs();
+  renderCharts();
+  renderTable();
+}
+
+// ── Sort ──────────────────────────────────────────────────────
+function sortBy(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = -1; }
+  sortData();
+  renderTable();
+}
+
+function sortData() {
+  filtered.sort((a, b) => {
+    const va = a[sortKey] ?? '';
+    const vb = b[sortKey] ?? '';
+    if (va < vb) return sortDir;
+    if (va > vb) return -sortDir;
+    return 0;
+  });
+}
+
+// ── Filter from search ────────────────────────────────────────
+function filterTable() {
+  currentPage = 1;
+  applyFilter();
+}
+
+// ── KPIs ──────────────────────────────────────────────────────
+function renderKPIs() {
+  const closed = filtered.filter(r => r.status === 'WIN' || r.status === 'LOSS');
+  const wins   = filtered.filter(r => r.status === 'WIN');
+  const losses = filtered.filter(r => r.status === 'LOSS');
+  const open   = filtered.filter(r => r.status === 'OPEN' || r.status === 'ACTIVE');
+
+  const wr     = closed.length > 0 ? (wins.length / closed.length * 100) : 0;
+  const totalPnlPct = closed.reduce((s, r) => s + (r.result_pct || 0), 0);
+  const avgWin  = wins.length   > 0 ? wins.reduce((s,r)=>s+(r.result_pct||0),0)/wins.length : 0;
+  const avgLoss = losses.length > 0 ? losses.reduce((s,r)=>s+(r.result_pct||0),0)/losses.length : 0;
+  const best    = wins.sort((a,b)=>(b.result_pct||0)-(a.result_pct||0))[0];
+
+  const pnlEl = document.getElementById('kpi-pnl');
+  pnlEl.textContent = fmtPct(totalPnlPct);
+  pnlEl.className   = 'kpi-value ' + (totalPnlPct >= 0 ? 'green' : 'red');
+
+  document.getElementById('kpi-pnl-pct').textContent = closed.length + ' trades cerrados';
+  document.getElementById('kpi-wr').textContent      = wr > 0 ? wr.toFixed(1) + '%' : '—';
+  document.getElementById('kpi-wr').className        = 'kpi-value ' + (wr >= 55 ? 'green' : wr >= 45 ? 'yellow' : 'red');
+  document.getElementById('kpi-wr-sub').textContent  = wins.length + 'W / ' + losses.length + 'L';
+  document.getElementById('kpi-trades').textContent  = filtered.length;
+  document.getElementById('kpi-trades-sub').textContent = open.length + ' abiertas';
+  document.getElementById('kpi-avgwin').textContent  = avgWin  ? '+' + avgWin.toFixed(2)  + '%' : '—';
+  document.getElementById('kpi-avgloss').textContent = avgLoss ? avgLoss.toFixed(2) + '%' : '—';
+  document.getElementById('kpi-best').textContent    = best ? '+' + best.result_pct.toFixed(2) + '%' : '—';
+  document.getElementById('kpi-best-sym').textContent= best ? best.symbol : '—';
+
+  document.getElementById('wr-big').textContent      = wr > 0 ? wr.toFixed(0) + '%' : '—';
+  document.getElementById('wr-wins').textContent     = wins.length;
+  document.getElementById('wr-losses').textContent   = losses.length;
+  document.getElementById('wr-open').textContent     = open.length;
+}
+
+// ── Charts ────────────────────────────────────────────────────
+function renderCharts() {
+  const closed = filtered
+    .filter(r => (r.status==='WIN'||r.status==='LOSS') && r.closed_at)
+    .sort((a,b) => new Date(a.closed_at)-new Date(b.closed_at));
+
+  // Equity curve
+  let cumulative = 0;
+  const labels = ['Inicio'];
+  const data   = [0];
+  closed.forEach(r => {
+    cumulative += (r.result_pct || 0);
+    labels.push(new Date(r.closed_at).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'}));
+    data.push(parseFloat(cumulative.toFixed(2)));
+  });
+
+  if (equityChart) equityChart.destroy();
+  equityChart = new Chart(document.getElementById('equityChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        borderColor:     cumulative >= 0 ? '#00e57a' : '#ff3b5c',
+        backgroundColor: cumulative >= 0 ? 'rgba(0,229,122,0.06)' : 'rgba(255,59,92,0.06)',
+        borderWidth: 2,
+        pointRadius: data.length > 20 ? 0 : 3,
+        pointBackgroundColor: '#00e57a',
+        fill: true,
+        tension: 0.4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => ' PnL acum.: ' + (ctx.parsed.y > 0 ? '+' : '') + ctx.parsed.y + '%' }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: '#1e1e36' },
+          ticks: { color: '#5a5a7a', font: { size: 10 }, maxTicksLimit: 8 }
+        },
+        y: {
+          grid: { color: '#1e1e36' },
+          ticks: {
+            color: '#5a5a7a', font: { size: 10 },
+            callback: v => (v > 0 ? '+' : '') + v + '%'
+          }
+        }
+      }
+    }
+  });
+
+  // Win rate donut
+  const wins   = filtered.filter(r => r.status==='WIN').length;
+  const losses = filtered.filter(r => r.status==='LOSS').length;
+  const open   = filtered.filter(r => r.status==='OPEN'||r.status==='ACTIVE').length;
+
+  if (wrChart) wrChart.destroy();
+  wrChart = new Chart(document.getElementById('wrChart'), {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [wins || 0.001, losses || 0.001, open || 0.001],
+        backgroundColor: ['#00e57a', '#ff3b5c', '#4d8cff'],
+        borderWidth: 0,
+        hoverOffset: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '70%',
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: {
+          label: ctx => [' Wins', ' Losses', ' Abiertas'][ctx.dataIndex] + ': ' + [wins,losses,open][ctx.dataIndex]
+        }
+      }}
+    }
+  });
+}
+
+// ── Table ─────────────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('trades-tbody');
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page  = filtered.slice(start, start + PAGE_SIZE);
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty">Sin trades en este período</div></td></tr>';
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = page.map(r => {
+    const resCls = r.result_pct > 0 ? 'up' : r.result_pct < 0 ? 'dn' : 'neu';
+    const sigCls = r.price_change_pct > 0 ? 'up' : 'dn';
+    return `
+      <tr>
+        <td class="neu">${fmtDate(r.detected_at)}</td>
+        <td class="sym">${r.symbol}<span style="color:var(--text-dim);font-size:10px">/USDT</span></td>
+        <td>${fmtPrice(r.price)}</td>
+        <td class="${sigCls}">+${r.price_change_pct}%</td>
+        <td>${r.volume_ratio}x</td>
+        <td>${r.rsi || '—'}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px">
+            ${r.score}
+            <div style="width:40px;height:3px;background:var(--border2);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${r.score}%;background:${r.score>=70?'var(--green)':r.score>=50?'var(--yellow)':'var(--red)'};border-radius:2px"></div>
+            </div>
+          </div>
+        </td>
+        <td class="${resCls}">${r.result_pct != null ? (r.result_pct > 0 ? '+' : '') + r.result_pct.toFixed(2) + '%' : '—'}</td>
+        <td><span class="badge ${r.status}">${r.status}</span></td>
+      </tr>
+    `;
+  }).join('');
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const total = Math.ceil(filtered.length / PAGE_SIZE);
+  if (total <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+
+  let html = '';
+  if (currentPage > 1)  html += `<button class="page-btn" onclick="goPage(${currentPage-1})">←</button>`;
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || Math.abs(i - currentPage) <= 1) {
+      html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+    } else if (Math.abs(i - currentPage) === 2) {
+      html += `<span class="page-info">...</span>`;
+    }
+  }
+  if (currentPage < total) html += `<button class="page-btn" onclick="goPage(${currentPage+1})">→</button>`;
+  html += `<span class="page-info">${filtered.length} trades</span>`;
+  document.getElementById('pagination').innerHTML = html;
+}
+
+function goPage(p) {
+  currentPage = p;
+  renderTable();
+  window.scrollTo({ top: document.querySelector('.table-wrap').offsetTop - 80, behavior: 'smooth' });
+}
+
+// ── Load & Realtime ───────────────────────────────────────────
+async function loadData() {
+  const { data, error } = await db
+    .from('crypto_signals')
+    .select('*')
+    .order('detected_at', { ascending: false })
+    .limit(1000);
+
+  if (error) { console.error('Supabase error:', error); return; }
+  allData = data || [];
+  applyFilter();
+}
+
+function subscribeRealtime() {
+  db.channel('tracker_live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'crypto_signals' }, payload => {
+      if (payload.eventType === 'INSERT') {
+        allData.unshift(payload.new);
+      } else if (payload.eventType === 'UPDATE') {
+        const idx = allData.findIndex(r => r.id === payload.new.id);
+        if (idx >= 0) allData[idx] = payload.new;
+      }
+      applyFilter();
+    })
+    .subscribe();
+}
+
+(async () => {
+  await loadData();
+  subscribeRealtime();
+})();
+</script>
+</body>
+</html>
