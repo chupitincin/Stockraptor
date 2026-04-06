@@ -618,7 +618,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       sym, sector, signal, total,
       companyName: p?.companyName || baseData?.companyName || sym,
       website: p?.website || null,
-      fund, sent, analyst, momentum, earPts, volShort,
+      fund, sent, analyst, momentum, earPts, volShort, insiderScore,
       price: Math.round(price * 100) / 100,
       prevClose: prev ? Math.round(prev * 100) / 100 : null,
       priceChange1D, lo52: yearLow || null, hi52: yearHigh || null,
@@ -694,9 +694,9 @@ async function savePicksHistory(sb, picks, scanDate) {
       score_sent:     p.sent     ?? null,
       score_analyst:  p.analyst  ?? null,
       score_momentum: p.momentum ?? null,
-      score_earnings: p.earnings ?? null,
-      score_volume:   p.vol      ?? null,
-      score_insider:  p.insider  ?? null,
+      score_earnings: p.earPts       ?? null,
+      score_volume:   p.volShort     ?? null,
+      score_insider:  p.insiderScore ?? null,
       flags_fired:    Array.isArray(p.flags) ? p.flags.map(f => f.label) : [],
       confluence:     p.confluence ?? null,
       rel_strength:   p.relStrength ?? null,
@@ -1173,12 +1173,13 @@ async function main() {
 }
 
 // ── SELECT TOP PICKS ──────────────────────────────────────
-// Logic: quality-first with multi-signal confluence scoring.
-// Each pick category has strict quality floors + a confluence
-// bonus to reward stocks where multiple signals align.
+// v4: sector diversification, balanced slots, tighter quality floors
+// Max 4 picks, max 2 per sector, all categories require fund >= 10
 function selectPicks(results, excludeSyms = new Set()) {
   const picks = [];
   const used  = new Set([...excludeSyms]); // exclude last week's picks
+  const sectorCount = {}; // track picks per sector
+  const MAX_PER_SECTOR = 2;
 
   // Never select stale stocks as picks — their data is outdated
   const freshResults = results.filter(r => !r._stale);
@@ -1186,25 +1187,22 @@ function selectPicks(results, excludeSyms = new Set()) {
   const norm = freshResults.map(r => {
     const revGrowth = r.revenueGrowth ?? r.revGrowth ?? null;
 
-    // ── Confluence score: count how many strong signals fire ──
+    // ── Weighted confluence score: higher-conviction signals worth more ──
     let confluence = 0;
-    if (r.priceChange1D > 2)                           confluence++; // price up today
-    if (r.relStrength > 2)                             confluence++; // beating sector by 2%+
-    if (r.volRatio > 2)                                confluence++; // unusual volume
-    if (r.upside > 25)                                 confluence++; // analyst upside
-    if (r.streak >= 3)                                 confluence++; // EPS beat streak
-    if (r.earningsDays != null && r.earningsDays <= 20) confluence++; // earnings soon
-    if (r.fund >= 20)                                  confluence++; // strong fundamentals
-    if (r.momentum >= 12)                              confluence++; // strong momentum
-    if (r.flags?.some(f => f.label?.includes('INSIDER'))) confluence++; // insider buy
-    if (revGrowth > 15)                                confluence++; // revenue growing
+    if (r.flags?.some(f => f.label?.includes('INSIDER')))  confluence += 2;   // insider buy (high conviction)
+    if (r.fund >= 20)                                      confluence += 2;   // strong fundamentals
+    if (revGrowth > 15)                                    confluence += 1.5; // revenue growing
+    if (r.streak >= 3)                                     confluence += 1.5; // EPS beat streak
+    if (r.upside > 25)                                     confluence += 1;   // analyst upside
+    if (r.volRatio > 2)                                    confluence += 1;   // unusual volume
+    if (r.relStrength > 2)                                 confluence += 1;   // beating sector
+    if (r.momentum >= 12)                                  confluence += 1;   // strong momentum
+    if (r.earningsDays != null && r.earningsDays <= 20)    confluence += 0.5; // earnings soon
+    if (r.priceChange1D > 2)                               confluence += 0.5; // price up today (noisy)
 
-    // ── Trend health: penalise broken charts ──
-    // pct52High = % below 52-week high. If stock is down >40% from high
-    // AND negative today, it's in a downtrend — discard as a pick
-    // brokenTrend: down a lot from 52w high AND negative today AND underperforming sector
-    const brokenTrend = (r.pct52High != null && r.pct52High < -40 && r.priceChange1D < 0
-      && (r.relStrength === null || r.relStrength < 0));
+    // ── Trend health: tighter filter ──
+    // Stocks >35% below 52w high are structurally broken regardless of today's move
+    const brokenTrend = r.pct52High != null && r.pct52High < -35;
 
     return {
       ...r,
@@ -1217,116 +1215,102 @@ function selectPicks(results, excludeSyms = new Set()) {
     };
   }).filter(r => !r.brokenTrend); // drop broken-trend stocks globally
 
-  // ── Helper: fill remaining slots with best multi-signal stocks ──
-  function fillSlots(filterFn, sortFn, limit) {
-    norm.filter(r => filterFn(r) && !used.has(r.sym))
-        .sort(sortFn)
-        .slice(0, limit)
-        .forEach(r => { picks.push(r); used.add(r.sym); });
+  // ── Helper: fill slots with sector diversification ──
+  function fillSlots(filterFn, sortFn, limit, pickType) {
+    const candidates = norm
+      .filter(r => filterFn(r) && !used.has(r.sym))
+      .sort(sortFn);
+
+    let added = 0;
+    for (const r of candidates) {
+      if (added >= limit) break;
+      const sec = r.sector || 'Unknown';
+      if ((sectorCount[sec] || 0) >= MAX_PER_SECTOR) continue; // sector cap
+      r.pickType = pickType;
+      picks.push(r);
+      used.add(r.sym);
+      sectorCount[sec] = (sectorCount[sec] || 0) + 1;
+      added++;
+    }
   }
 
-  // ── 1. EARNINGS CATALYST ─────────────────────────────────
-  // Tight window (≤ 14 days) + beat streak + decent score
+  // Global minimum: all categories require fund >= 10 and confluence >= 2
+  const BASE_FILTER = r => r.fund >= 10 && r.confluence >= 2;
+
+  // ── 1. EARNINGS CATALYST (1 slot — was 2, rebalanced) ───
   fillSlots(
-    r => r.earningsDays != null && r.earningsDays <= 14
-      && r.streak >= 2 && r.total >= 48 && r.fund >= 12,
+    r => BASE_FILTER(r) && r.earningsDays != null && r.earningsDays <= 14
+      && r.streak >= 2 && r.total >= 50 && r.fund >= 14,
     (a, b) => (b.streak * 8 + b.total + b.confluence * 4)
             - (a.streak * 8 + a.total + a.confluence * 4),
-    2
+    1, 'catalyst'
   );
-  // Fallback: looser window (≤ 30 days) if not enough candidates
-  if (picks.filter(p => p.pickType === undefined).length < 2) {
-    fillSlots(
-      r => r.earningsDays != null && r.earningsDays <= 30
-        && r.streak >= 1 && r.total >= 50 && r.fund >= 14,
-      (a, b) => (b.total + b.confluence * 3) - (a.total + a.confluence * 3),
-      2 - picks.length
-    );
-  }
-  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'catalyst'; });
 
-  // ── 2. VOLUME ANOMALY ────────────────────────────────────
-  // Volume spike + price MUST be positive + solid score
+  // ── 2. INSIDER BUYING (fresh or recent) ──────────────────
+  // Moved up: insider buying is highest-conviction signal
   fillSlots(
-    r => r.volRatio > 2.5 && r.priceChange1D > 0
-      && r.total >= 48 && r.fund >= 12,
-    (a, b) => (b.volRatio * 2 + b.total + b.confluence * 5 + (b.relStrength||0))
-            - (a.volRatio * 2 + a.total + a.confluence * 5 + (a.relStrength||0)),
-    1
-  );
-  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'volume'; });
-
-  // ── 3. SHORT SQUEEZE ─────────────────────────────────────
-  // Real squeeze: shortPct data when available, OR use proxy
-  // (high volRatio + strong upward price + bearish sentiment divergence)
-  fillSlots(
-    r => ((r.shortPct > 15) || (r.volRatio > 3 && r.priceChange1D > 3 && r.sent < 8))
-      && r.priceChange1D > 0 && r.total >= 48 && !r.pickType,
-    (a, b) => {
-      const scoreA = (a.shortPct || 0) * 1.5 + a.volRatio * 2 + a.total + a.confluence * 4;
-      const scoreB = (b.shortPct || 0) * 1.5 + b.volRatio * 2 + b.total + b.confluence * 4;
-      return scoreB - scoreA;
-    },
-    1
-  );
-  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'squeeze'; });
-
-  // ── 4a. FRESH INSIDER — significant buy in last 7 days ───
-  fillSlots(
-    r => r.freshInsiderDays !== null && r.freshInsiderDays <= 7
-      && r.freshInsiderValue > 50000 && r.total >= 45,
+    r => BASE_FILTER(r) && r.freshInsiderDays !== null && r.freshInsiderDays <= 14
+      && r.freshInsiderValue > 50000 && r.total >= 48,
     (a, b) => {
       const sa = (a.freshInsiderValue||0)/1000 + a.total + a.confluence * 4;
       const sb = (b.freshInsiderValue||0)/1000 + b.total + b.confluence * 4;
       return sb - sa;
     },
-    1
+    1, 'insider'
   );
-  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'fresh_insider'; });
 
-  // ── 4b. INSIDER BUYING (last 90 days) ────────────────────
+  // ── 3. VOLUME ANOMALY ────────────────────────────────────
   fillSlots(
-    r => r.flags?.some(f => f.label?.includes('INSIDER') || f.label?.includes('BIG'))
-      && r.total >= 45 && r.fund >= 12,
-    (a, b) => (b.total + b.confluence * 5) - (a.total + a.confluence * 5),
-    1
+    r => BASE_FILTER(r) && r.volRatio > 2.5 && r.priceChange1D > 0
+      && r.total >= 50 && r.fund >= 12,
+    (a, b) => (b.volRatio * 2 + b.total + b.confluence * 5 + (b.relStrength||0))
+            - (a.volRatio * 2 + a.total + a.confluence * 5 + (a.relStrength||0)),
+    1, 'volume'
   );
-  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'insider'; });
+
+  // ── 4. SHORT SQUEEZE — real data only, no proxy ──────────
+  // Only select when we have actual short float data > 20%
+  fillSlots(
+    r => BASE_FILTER(r) && r.shortPct > 20 && r.priceChange1D > 0
+      && r.volRatio > 1.5 && r.total >= 48,
+    (a, b) => {
+      const scoreA = a.shortPct * 2 + a.volRatio * 2 + a.total + a.confluence * 4;
+      const scoreB = b.shortPct * 2 + b.volRatio * 2 + b.total + b.confluence * 4;
+      return scoreB - scoreA;
+    },
+    1, 'squeeze'
+  );
 
   // ── 5. TECHNICAL BREAKOUT ───────────────────────────────
-  // Price above both MAs + recovering from 52w low + volume confirmation
   fillSlots(
-    r => r.goldenCross && r.pct52Low > 25 && r.priceChange1D >= 0
-      && r.total >= 50 && r.fund >= 12,
+    r => BASE_FILTER(r) && r.goldenCross && r.pct52Low > 25
+      && r.priceChange1D >= 0 && r.total >= 50 && r.fund >= 12,
     (a, b) => (b.pct52Low + b.total + b.confluence * 5)
             - (a.pct52Low + a.total + a.confluence * 5),
-    1
+    1, 'breakout'
   );
-  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'breakout'; });
 
   // ── 6. MOMENTUM BREAKOUT ─────────────────────────────────
   fillSlots(
-    r => r.momentum >= 11 && r.fund >= 14 && r.total >= 55
-      && r.priceChange1D >= 0,
+    r => BASE_FILTER(r) && r.momentum >= 11 && r.fund >= 14
+      && r.total >= 55 && r.priceChange1D >= 0,
     (a, b) => (b.momentum + b.fund + b.confluence * 4)
             - (a.momentum + a.fund + a.confluence * 4),
-    1
+    1, 'momentum'
   );
-  picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'momentum'; });
 
-  // ── 7. FILL remaining slots with best confluence stocks ──
-  // If we still have < 6 picks, fill with top multi-signal stocks
+  // ── 7. FILL remaining with best multi-signal stocks ──────
   const target = 4;
   if (picks.length < target) {
     fillSlots(
-      r => r.total >= 52 && r.confluence >= 3 && r.priceChange1D >= 0,
+      r => r.total >= 52 && r.confluence >= 3 && r.fund >= 12
+        && r.priceChange1D >= 0,
       (a, b) => (b.total + b.confluence * 6) - (a.total + a.confluence * 6),
-      target - picks.length
+      target - picks.length, 'confluence'
     );
-    picks.filter(p => !p.pickType).forEach(p => { p.pickType = 'momentum'; });
   }
 
-  // Final quality check: remove any that snuck through with bad price action
+  // Final quality check: remove any with bad price action
   return picks
     .filter(p => p.priceChange1D === null || p.priceChange1D > -5)
     .slice(0, 4);

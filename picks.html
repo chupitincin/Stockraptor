@@ -691,42 +691,77 @@ async function generatePicksFromCache() {
 
 // ── SELECT TOP PICKS FROM RESULTS ────────────────────────
 function selectPicks(results) {
+  // Client-side fallback — mirrors server-side selectPicks v4
+  // Max 4 picks, max 2 per sector, all categories require fund >= 10
   const picks = [];
   const used = new Set();
+  const sectorCount = {};
+  const MAX_PER_SECTOR = 2;
 
-  const norm = results.map(r => ({
-    ...r,
-    revenueGrowth: r.revenueGrowth ?? r.revGrowth ?? null,
-    epsHistory: Array.isArray(r.epsHistory) ? r.epsHistory : [],
-    flags: Array.isArray(r.flags) ? r.flags : [],
-  }));
+  const norm = results.filter(r => !r._stale).map(r => {
+    const revGrowth = r.revenueGrowth ?? r.revGrowth ?? null;
+    let confluence = 0;
+    if (r.flags?.some(f => f.label?.includes('INSIDER')))  confluence += 2;
+    if (r.fund >= 20)                                      confluence += 2;
+    if (revGrowth > 15)                                    confluence += 1.5;
+    if (r.streak >= 3)                                     confluence += 1.5;
+    if (r.upside > 25)                                     confluence += 1;
+    if (r.volRatio > 2)                                    confluence += 1;
+    if (r.momentum >= 12)                                  confluence += 1;
+    const brokenTrend = r.pct52High != null && r.pct52High < -35;
+    return { ...r, revGrowth, revenueGrowth: revGrowth,
+      epsHistory: Array.isArray(r.epsHistory) ? r.epsHistory : [],
+      flags: Array.isArray(r.flags) ? r.flags : [],
+      confluence, brokenTrend };
+  }).filter(r => !r.brokenTrend);
 
-  // 1. SHORT SQUEEZE setups
-  norm.filter(r => r.shortPct > 15 && r.priceChange1D > 0 && r.total >= 45 && !used.has(r.sym))
-    .sort((a,b) => (b.shortPct * b.total) - (a.shortPct * a.total))
-    .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'squeeze' }); used.add(r.sym); });
+  function fillSlots(filterFn, sortFn, limit, pickType) {
+    const cands = norm.filter(r => filterFn(r) && !used.has(r.sym)).sort(sortFn);
+    let added = 0;
+    for (const r of cands) {
+      if (added >= limit) break;
+      const sec = r.sector || 'Unknown';
+      if ((sectorCount[sec] || 0) >= MAX_PER_SECTOR) continue;
+      r.pickType = pickType;
+      picks.push(r); used.add(r.sym);
+      sectorCount[sec] = (sectorCount[sec] || 0) + 1;
+      added++;
+    }
+  }
 
-  // 2. EARNINGS CATALYST (≤14 days + EPS streak)
-  norm.filter(r => r.earningsDays != null && r.earningsDays <= 14 && r.streak >= 2 && !used.has(r.sym))
-    .sort((a,b) => (b.streak * 10 + b.total) - (a.streak * 10 + a.total))
-    .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'catalyst' }); used.add(r.sym); });
+  const BASE = r => r.fund >= 10 && r.confluence >= 2;
 
-  // 3. VOLUME ANOMALY (volRatio > 3 + good score)
-  norm.filter(r => r.volRatio > 3 && r.total >= 40 && !used.has(r.sym))
-    .sort((a,b) => b.volRatio - a.volRatio)
-    .slice(0, 2).forEach(r => { picks.push({ ...r, pickType: 'volume' }); used.add(r.sym); });
+  // 1. Earnings catalyst (1 slot)
+  fillSlots(r => BASE(r) && r.earningsDays != null && r.earningsDays <= 14
+    && r.streak >= 2 && r.total >= 50 && r.fund >= 14,
+    (a,b) => (b.streak*8+b.total+b.confluence*4) - (a.streak*8+a.total+a.confluence*4), 1, 'catalyst');
 
-  // 4. INSIDER BUYING
-  norm.filter(r => r.flags?.some(f => f.label?.includes('INSIDER') || f.label?.includes('BIG')) && r.total >= 40 && !used.has(r.sym))
-    .sort((a,b) => b.total - a.total)
-    .slice(0, 1).forEach(r => { picks.push({ ...r, pickType: 'insider' }); used.add(r.sym); });
+  // 2. Insider buying
+  fillSlots(r => BASE(r) && r.flags?.some(f => f.label?.includes('INSIDER'))
+    && r.total >= 48,
+    (a,b) => b.total+b.confluence*5 - (a.total+a.confluence*5), 1, 'insider');
 
-  // 5. MOMENTUM BREAKOUT (high momentum score + strong fundamentals)
-  norm.filter(r => r.momentum >= 12 && r.fund >= 14 && r.total >= 55 && !used.has(r.sym))
-    .sort((a,b) => (b.momentum + b.fund) - (a.momentum + a.fund))
-    .slice(0, 1).forEach(r => { picks.push({ ...r, pickType: 'momentum' }); used.add(r.sym); });
+  // 3. Volume anomaly
+  fillSlots(r => BASE(r) && r.volRatio > 2.5 && r.priceChange1D > 0
+    && r.total >= 50 && r.fund >= 12,
+    (a,b) => (b.volRatio*2+b.total+b.confluence*5) - (a.volRatio*2+a.total+a.confluence*5), 1, 'volume');
 
-  return picks.slice(0, 8);
+  // 4. Short squeeze — real data only
+  fillSlots(r => BASE(r) && r.shortPct > 20 && r.priceChange1D > 0
+    && r.volRatio > 1.5 && r.total >= 48,
+    (a,b) => (b.shortPct*2+b.total) - (a.shortPct*2+a.total), 1, 'squeeze');
+
+  // 5. Momentum breakout
+  fillSlots(r => BASE(r) && r.momentum >= 11 && r.fund >= 14 && r.total >= 55,
+    (a,b) => (b.momentum+b.fund+b.confluence*4) - (a.momentum+a.fund+a.confluence*4), 1, 'momentum');
+
+  // 6. Fill remaining
+  if (picks.length < 4) {
+    fillSlots(r => r.total >= 52 && r.confluence >= 3 && r.fund >= 12,
+      (a,b) => (b.total+b.confluence*6) - (a.total+a.confluence*6), 4-picks.length, 'confluence');
+  }
+
+  return picks.filter(p => p.priceChange1D == null || p.priceChange1D > -5).slice(0, 4);
 }
 
 // ── RENDER PICKS ─────────────────────────────────────────
