@@ -1,0 +1,38 @@
+name: StockRaptor Alert Monitor
+
+on:
+  schedule:
+    # Hourly during US market hours (14:30-21:00 UTC = 9:30-16:00 ET)
+    # Weekdays only
+    - cron: '30 14-20 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install @supabase/supabase-js
+
+      - name: Run alert monitor
+        env:
+          FMP_KEY:              ${{ secrets.FMP_KEY }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          RESEND_API_KEY:       ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM:          ${{ secrets.RESEND_FROM }}
+          ALERT_EMAIL_TO:       ${{ secrets.ALERT_EMAIL_TO }}
+          TELEGRAM_BOT_TOKEN:   ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:     ${{ secrets.TELEGRAM_CHAT_ID }}
+          SITE_URL:             ${{ secrets.SITE_URL }}
+        run: node scripts/alert-monitor.js

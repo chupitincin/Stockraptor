@@ -243,3 +243,30 @@ create policy "Anyone can read insider_cache"
 
 create policy "Service role can manage insider_cache"
   on public.insider_cache for all using (auth.role() = 'service_role');
+
+
+-- ══════════════════════════════════════════════════════════════
+-- ALERT LOG — historial de alertas intraweek y exit signals
+-- ══════════════════════════════════════════════════════════════
+create table if not exists public.alert_log (
+  id          bigint generated always as identity primary key,
+  alert_type  text not null,        -- 'entry_insider', 'entry_volume', 'entry_rankjump', 'entry_8k', 'exit_stoploss', 'exit_thesis', 'exit_trend'
+  sym         text not null,
+  headline    text,
+  details     jsonb,
+  sent_email  boolean default false,
+  sent_tg     boolean default false,
+  created_at  timestamptz default now()
+);
+
+-- Index for fast dedup lookups
+create index if not exists idx_alert_log_dedup
+  on public.alert_log(alert_type, sym, created_at);
+
+alter table public.alert_log enable row level security;
+
+create policy "Anyone can read alert_log"
+  on public.alert_log for select using (true);
+
+create policy "Service role can manage alert_log"
+  on public.alert_log for all using (auth.role() = 'service_role');
