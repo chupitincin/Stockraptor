@@ -1628,9 +1628,10 @@ function renderTable(){
     const flagsHtml = d.flags.length
       ? `<div style="display:flex;gap:3px;flex-wrap:nowrap;align-items:center;">${d.flags.slice(0,3).map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('')}${d.flags.length>3?`<span style="font-size:9px;color:#686868;font-family:var(--font);">+${d.flags.length-3}</span>`:''}</div>`
       : '<span class="cd" style="font-size:8px">—</span>';
-    return`<tr class="mr" onclick="toggleDet('${d.sym}')">
+    const staleTag = d._stale ? `<span class="tt" data-tip="Data from ${d._lastSeen||'previous day'} — company was not in today's scan (${d._staleReason==='api_error'?'API error':'not in screener'})" style="font-size:8px;color:#ff9800;background:#ff980015;border:1px solid #ff980033;border-radius:3px;padding:1px 4px;margin-left:4px;font-family:var(--mono);">STALE</span>` : '';
+    return`<tr class="mr" onclick="toggleDet('${d.sym}')"${d._stale?' style="opacity:0.7"':''}>
       <td><span class="arr" id="ar-${d.sym}">▶</span></td>
-      <td><div class="tsym">${d.sym}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div>${d.website?`<a href="${d.website}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:9px;font-family:var(--mono);color:#2a4a6a;text-decoration:none;letter-spacing:.3px;display:inline-flex;align-items:center;gap:3px;margin-top:2px;transition:color .15s;" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='#2a4a6a'">↗ website</a>`:''}</td>
+      <td><div class="tsym">${d.sym}${staleTag}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div>${d.website?`<a href="${d.website}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:9px;font-family:var(--mono);color:#2a4a6a;text-decoration:none;letter-spacing:.3px;display:inline-flex;align-items:center;gap:3px;margin-top:2px;transition:color .15s;" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='#2a4a6a'">↗ website</a>`:''}</td>
       <td style="text-align:center">${deltaHtml}</td>
       <td><span class="badge" style="color:${c};border-color:${c}44">${(window._sigLabel||function(s){return s;})(d.signal)}</span></td>
       <td><div class="sw"><span class="sv" style="color:${c}">${d.total}</span><div>${bkd}</div></div></td>

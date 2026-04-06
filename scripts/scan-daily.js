@@ -120,19 +120,22 @@ async function getUniverse() {
   console.log('📡 Phase 1: Fetching small cap universe...');
   const allTickers = new Map();
 
+  // Buffer: ranges overlap slightly at boundaries to catch companies that float in/out
+  // Volume floor lowered from 100K to 20K to avoid excluding stocks on quiet days
   const ranges = [
-    { min: 80000000,   max: 250000000  },
-    { min: 250000000,  max: 500000000  },
-    { min: 500000000,  max: 1000000000 },
-    { min: 1000000000, max: 3000000000 },
+    { min: 70000000,   max: 260000000  },
+    { min: 240000000,  max: 520000000  },
+    { min: 480000000,  max: 1050000000 },
+    { min: 950000000,  max: 3200000000 },
   ];
 
   for (const exchange of ['NASDAQ', 'NYSE', 'AMEX']) {
     for (const range of ranges) {
       for (let page = 0; page < 20; page++) {
         const data = await fmp(
-          `/company-screener?marketCapMoreThan=${range.min}&marketCapLowerThan=${range.max}&exchange=${exchange}&volumeMoreThan=100000&isActivelyTrading=true&limit=500&page=${page}`
+          `/company-screener?marketCapMoreThan=${range.min}&marketCapLowerThan=${range.max}&exchange=${exchange}&volumeMoreThan=20000&isActivelyTrading=true&limit=500&page=${page}`
         );
+        if (data === null) { console.warn(`   ⚠ Screener page ${page} failed — continuing`); continue; }
         if (!Array.isArray(data) || data.length === 0) break;
         for (const s of data) {
           if (!isRealStock(s)) continue;
@@ -896,23 +899,71 @@ async function main() {
   const results = [];
   let errors = 0;
 
+  // Track which symbols failed analysis so we can retain their previous data
+  const failedSyms = new Set();
   for (let i = 0; i < tickers.length; i++) {
     const sym = tickers[i];
     if (i % 10 === 0) process.stdout.write(`\r[${i+1}/${tickers.length}] ${Math.round((i/tickers.length)*100)}% | ${Math.round((Date.now()-t0)/1000)}s | ${results.length} scored`);
     const r = await analyzeTicker(sym, universe.get(sym), insiderCache);
-    if (r) results.push(r); else errors++;
+    if (r) results.push(r);
+    else { errors++; failedSyms.add(sym); }
   }
 
   const elapsed = Math.round((Date.now() - t0) / 1000);
+
+  // ── MERGE with previous results: retain companies missing today for up to 3 days ──
+  console.log('\n🔄 Merging with previous scan results...');
+  const todayScanDate = new Date().toISOString().substring(0, 10);
+  const todaySyms = new Set(results.map(r => r.sym));
+  let retained = 0;
+
+  try {
+    const { data: prevCache } = await sb.from('scan_cache')
+      .select('results, scan_date').eq('id', 'daily').single();
+
+    if (prevCache?.results && Array.isArray(prevCache.results)) {
+      for (const old of prevCache.results) {
+        if (todaySyms.has(old.sym)) continue; // already in today's results
+
+        // Calculate how many days since this company was last freshly scanned
+        const lastSeen = old._lastSeen || prevCache.scan_date || todayScanDate;
+        const daysSinceLastSeen = Math.floor(
+          (new Date(todayScanDate) - new Date(lastSeen)) / 86400000
+        );
+
+        // Keep for up to 3 days, then drop
+        // Also retain companies that were in today's universe but failed API analysis
+        const wasInUniverse = failedSyms.has(old.sym);
+        const maxStaleDays = wasInUniverse ? 5 : 3; // more patience for known-good companies
+
+        if (daysSinceLastSeen <= maxStaleDays) {
+          old._stale = true;
+          old._lastSeen = old._lastSeen || prevCache.scan_date;
+          old._staleDays = daysSinceLastSeen + (wasInUniverse ? 0 : 1);
+          old._staleReason = wasInUniverse ? 'api_error' : 'not_in_universe';
+          results.push(old);
+          todaySyms.add(old.sym);
+          retained++;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('   ⚠ Could not load previous results for merge:', e.message);
+  }
+
+  if (retained > 0) console.log(`   ✅ Retained ${retained} companies from previous days`);
+
   results.sort((a, b) => b.total - a.total);
 
   const signals = results.reduce((acc, r) => { acc[r.signal] = (acc[r.signal]||0)+1; return acc; }, {});
-  console.log(`\n\n✅ Done in ${elapsed}s | ${results.length} results | ${errors} errors`);
+  const freshCount = results.filter(r => !r._stale).length;
+  const staleCount = results.filter(r => r._stale).length;
+  console.log(`\n✅ Done in ${elapsed}s | ${freshCount} fresh + ${staleCount} retained = ${results.length} total | ${errors} errors`);
   console.log(`   Signals:`, signals);
 
   const { error } = await sb.from('scan_cache').upsert({
     id: 'daily',
-    scan_date: new Date().toISOString().substring(0, 10),
+    scan_date: todayScanDate,
     scanned_at: new Date().toISOString(),
     results, total_count: results.length, errors,
   });
@@ -990,7 +1041,7 @@ async function main() {
   // Update scan_cache with deltas included
   await sb.from('scan_cache').upsert({
     id: 'daily',
-    scan_date: new Date().toISOString().substring(0, 10),
+    scan_date: todayScanDate,
     scanned_at: new Date().toISOString(),
     results, total_count: results.length, errors,
     top_movers: topMovers.map(r => ({
@@ -1129,7 +1180,10 @@ function selectPicks(results, excludeSyms = new Set()) {
   const picks = [];
   const used  = new Set([...excludeSyms]); // exclude last week's picks
 
-  const norm = results.map(r => {
+  // Never select stale stocks as picks — their data is outdated
+  const freshResults = results.filter(r => !r._stale);
+
+  const norm = freshResults.map(r => {
     const revGrowth = r.revenueGrowth ?? r.revGrowth ?? null;
 
     // ── Confluence score: count how many strong signals fire ──
