@@ -86,7 +86,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .tr-stat-l{font-size:9px;letter-spacing:1.5px;color:var(--txt);font-family:var(--font);}
 .tr-week{margin-bottom:32px;}
 .tr-week-title{font-size:9px;letter-spacing:2px;color:var(--txt);font-family:var(--font);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bord2);}
-.tr-row{display:grid;grid-template-columns:80px 1fr 90px 72px 72px 72px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord);font-size:12px;}
+.tr-row{display:grid;grid-template-columns:80px 1fr 90px 64px 64px 64px 72px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bord);font-size:12px;}
 .tr-row-head{font-size:9px;letter-spacing:1.2px;color:var(--txt);font-family:var(--font);}
 .tr-sym{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--white);}
 .tr-name{font-size:11px;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -494,6 +494,31 @@ const CONFIG = {
     <div class="picks-loading">
       <div class="picks-loading-icon">🔍</div>
       <div class="picks-loading-text">LOADING TODAY'S SIGNALS...</div>
+    </div>
+  </div>
+
+  <!-- TRACK RECORD CONTENT (hidden by default, shown via tab) -->
+  <div id="trackContent">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;">
+      <div class="tr-stat">
+        <div class="tr-stat-n" id="trWinRate" style="color:var(--green)">—</div>
+        <div class="tr-stat-l">WIN RATE (30D)</div>
+      </div>
+      <div class="tr-stat">
+        <div class="tr-stat-n" id="trAvgReturn">—</div>
+        <div class="tr-stat-l">AVG RETURN (30D)</div>
+      </div>
+      <div class="tr-stat">
+        <div class="tr-stat-n" id="trTotalPicks" style="color:var(--blue)">—</div>
+        <div class="tr-stat-l">TOTAL PICKS</div>
+      </div>
+      <div class="tr-stat">
+        <div class="tr-stat-n" id="trBestPick" style="color:var(--gold)">—</div>
+        <div class="tr-stat-l">BEST PICK</div>
+      </div>
+    </div>
+    <div id="trackRows">
+      <div class="tr-empty">Click TRACK RECORD to load historical performance.</div>
     </div>
   </div>
 
@@ -1011,23 +1036,32 @@ async function loadTrackRecord() {
       return;
     }
 
-    // Calculate stats
-    const withPerf = data.filter(d => d.perf_1w !== null);
-    const winners  = withPerf.filter(d => d.perf_1w > 0);
+    // Calculate stats — use 30d performance (most meaningful for weekly picks)
+    // Fall back to 1w if 30d not available yet
+    const with30d = data.filter(d => d.perf_30d !== null);
+    const with1w  = data.filter(d => d.perf_1w !== null);
+    const withPerf = with30d.length > 0 ? with30d : with1w;
+    const perfKey  = with30d.length > 0 ? 'perf_30d' : 'perf_1w';
+    const beatKey  = 'beat_30d';
+
+    const winners  = with30d.length > 0
+      ? withPerf.filter(d => d.beat_30d === true)   // beat Russell at 30d
+      : withPerf.filter(d => d[perfKey] > 0);       // positive return fallback
     const winRate  = withPerf.length > 0 ? Math.round((winners.length / withPerf.length) * 100) : null;
     const avgReturn = withPerf.length > 0
-      ? Math.round(withPerf.reduce((s,d) => s + d.perf_1w, 0) / withPerf.length * 10) / 10
+      ? Math.round(withPerf.reduce((s,d) => s + Number(d[perfKey] || 0), 0) / withPerf.length * 10) / 10
       : null;
     const bestPick = withPerf.length > 0
-      ? withPerf.reduce((best, d) => d.perf_1w > (best?.perf_1w || -Infinity) ? d : best, null)
+      ? withPerf.reduce((best, d) => Number(d[perfKey]||0) > Number(best?.[perfKey]||-Infinity) ? d : best, null)
       : null;
 
     // Update summary stats
     document.getElementById('trWinRate').textContent   = winRate !== null ? winRate + '%' : '—';
+    document.getElementById('trWinRate').style.color    = winRate > 55 ? 'var(--green)' : winRate > 45 ? 'var(--gold)' : 'var(--red)';
     document.getElementById('trAvgReturn').textContent = avgReturn !== null ? (avgReturn > 0 ? '+' : '') + avgReturn + '%' : '—';
     document.getElementById('trAvgReturn').style.color = avgReturn > 0 ? 'var(--green)' : avgReturn < 0 ? 'var(--red)' : 'var(--txt)';
     document.getElementById('trTotalPicks').textContent = data.length;
-    document.getElementById('trBestPick').textContent  = bestPick ? bestPick.sym + ' +' + bestPick.perf_1w + '%' : '—';
+    document.getElementById('trBestPick').textContent  = bestPick ? bestPick.sym + ' +' + Number(bestPick[perfKey]).toFixed(1) + '%' : '—';
 
     // Group by week
     const byWeek = {};
@@ -1056,20 +1090,28 @@ async function loadTrackRecord() {
       const wkWinners = rows.filter(r => r.perf_1w > 0).length;
       const wkWith    = rows.filter(r => r.perf_1w !== null).length;
 
+      const wkBeat30 = rows.filter(r => r.beat_30d === true).length;
+      const wkWith30 = rows.filter(r => r.beat_30d !== null).length;
+      const wkSuffix = wkWith30 > 0 ? ` &nbsp;·&nbsp; ${wkBeat30}/${wkWith30} beat Russell` : wkWith > 0 ? ` &nbsp;·&nbsp; ${wkWinners}/${wkWith} positive` : '';
+
       html += `<div class="tr-week">
-        <div class="tr-week-title">WEEK OF ${fmt(wkDate)} – ${fmt(wkEnd)} &nbsp;·&nbsp; ${rows.length} picks${wkWith > 0 ? ' &nbsp;·&nbsp; ' + wkWinners + '/' + wkWith + ' winners' : ''}</div>
+        <div class="tr-week-title">WEEK OF ${fmt(wkDate)} – ${fmt(wkEnd)} &nbsp;·&nbsp; ${rows.length} picks${wkSuffix}</div>
         <div class="tr-row tr-row-head" style="padding:4px 0;">
           <div>DATE</div><div>STOCK</div><div>TYPE</div>
-          <div style="text-align:right">1D</div>
-          <div style="text-align:right">5D</div>
           <div style="text-align:right">1W</div>
+          <div style="text-align:right">30D</div>
+          <div style="text-align:right">90D</div>
+          <div style="text-align:center">vs RUSSELL</div>
         </div>`;
 
       for (const r of rows) {
         const color = PICK_COLORS[r.pick_type] || 'var(--txt)';
         const fmtP = v => v !== null
-          ? `<span class="tr-perf ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${v > 0 ? '+' : ''}${v}%</span>`
+          ? `<span class="tr-perf ${v > 0 ? 'pos' : v < 0 ? 'neg' : ''}">${v > 0 ? '+' : ''}${Number(v).toFixed(1)}%</span>`
           : `<span class="tr-perf pending">—</span>`;
+        const beatBadge = r.beat_30d === true ? '<span style="color:var(--green);font-size:10px;font-weight:700;">BEAT</span>'
+          : r.beat_30d === false ? '<span style="color:var(--red);font-size:10px;font-weight:700;">MISS</span>'
+          : '<span style="color:var(--txt);font-size:10px;">PENDING</span>';
         const scanDt = new Date(r.scan_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         html += `<div class="tr-row" onclick="goToScanner('${r.sym}')" style="cursor:pointer;transition:background .15s;" onmouseover="this.style.background='#0d0d2a'" onmouseout="this.style.background=''">
           <div style="color:var(--txt);font-size:11px;">${scanDt}</div>
@@ -1078,9 +1120,10 @@ async function loadTrackRecord() {
             <div class="tr-name">${r.company_name || ''}</div>
           </div>
           <div><span class="tr-type-badge" style="color:${color};border-color:${color}44;background:${color}12">${r.pick_type?.replace('_',' ').toUpperCase() || '—'}</span></div>
-          ${fmtP(r.perf_1d)}
-          ${fmtP(r.perf_5d)}
           ${fmtP(r.perf_1w)}
+          ${fmtP(r.perf_30d)}
+          ${fmtP(r.perf_90d)}
+          <div style="text-align:center">${beatBadge}</div>
         </div>`;
       }
       html += '</div>';
