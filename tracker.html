@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CryptoRaptor — Performance Tracker</title>
+<title>StockRaptor — Performance Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -130,7 +130,7 @@ td.neu{color:var(--text-dim)}
   <div class="logo">
     <div class="logo-icon">🦖</div>
     <div>
-      <div class="logo-text">CRYPTORAPTOR</div>
+      <div class="logo-text">STOCKRAPTOR</div>
       <div class="logo-sub">PERFORMANCE TRACKER</div>
     </div>
   </div>
@@ -219,21 +219,21 @@ td.neu{color:var(--text-dim)}
 <div class="table-wrap">
   <div class="table-head">
     <div class="table-title"><strong>HISTORIAL DE TRADES</strong></div>
-    <input class="search-box" type="text" placeholder="Buscar coin..." id="search" oninput="filterTable()">
+    <input class="search-box" type="text" placeholder="Buscar ticker..." id="search" oninput="filterTable()">
   </div>
   <div class="table-overflow">
     <table>
       <thead>
         <tr>
-          <th onclick="sortBy('detected_at')">Fecha ↕</th>
-          <th onclick="sortBy('symbol')">Par ↕</th>
-          <th onclick="sortBy('price')">Precio entrada</th>
-          <th onclick="sortBy('price_change_pct')">Señal ↕</th>
-          <th onclick="sortBy('volume_ratio')">Volumen ↕</th>
-          <th onclick="sortBy('rsi')">RSI ↕</th>
+          <th onclick="sortBy('scan_date')">Fecha ↕</th>
+          <th onclick="sortBy('sym')">Ticker ↕</th>
+          <th onclick="sortBy('pick_type')">Tipo ↕</th>
+          <th onclick="sortBy('entry_price')">Entrada</th>
           <th onclick="sortBy('score')">Score ↕</th>
-          <th onclick="sortBy('result_pct')">Resultado ↕</th>
-          <th onclick="sortBy('status')">Estado ↕</th>
+          <th onclick="sortBy('perf_1w')">1W ↕</th>
+          <th onclick="sortBy('perf_30d')">30D ↕</th>
+          <th onclick="sortBy('perf_90d')">90D ↕</th>
+          <th onclick="sortBy('beat_30d')">vs Russell ↕</th>
         </tr>
       </thead>
       <tbody id="trades-tbody">
@@ -247,36 +247,41 @@ td.neu{color:var(--text-dim)}
 </div>
 
 <script>
-// ── CONFIG — RELLENA ESTO ─────────────────────────────────────
+// ── CONFIG ───────────────────────────────────────────────────
 const SUPABASE_URL  = 'https://ruqcgyctwlpjrlzmietj.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1cWNneWN0d2xwanJsem1pZXRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzQwMTAsImV4cCI6MjA4ODkxMDAxMH0.tkhdkbPOZqQI7brgIo24zWftVbEr6EXLSF3jAmog6YM';
-// ─────────────────────────────────────────────────────────────
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON);
 
 let allData       = [];
 let filtered      = [];
-let sortKey       = 'detected_at';
+let sortKey       = 'scan_date';
 let sortDir       = -1;
-let currentPeriod = 7;
+let currentPeriod = 90;
 let currentPage   = 1;
 const PAGE_SIZE   = 20;
 let equityChart   = null;
 let wrChart       = null;
 
+const PICK_LABELS = {
+  catalyst:'Earnings Catalyst', volume:'Volume Anomaly', squeeze:'Short Squeeze',
+  insider:'Insider Buy', fresh_insider:'Fresh Insider', breakout:'Breakout',
+  momentum:'Momentum', confluence:'Multi-Signal'
+};
+
 // ── Helpers ───────────────────────────────────────────────────
 function fmtDate(iso) {
-  const d = new Date(iso);
-  return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'}) +
-    ' ' + d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'2-digit'});
 }
 function fmtPrice(p) {
-  return p < 0.01 ? '$'+p.toFixed(6) : p < 1 ? '$'+p.toFixed(4) : '$'+p.toFixed(2);
+  if (p == null) return '—';
+  return '$' + Number(p).toFixed(2);
 }
 function fmtPct(v) {
   if (v == null) return '—';
-  return (v > 0 ? '+' : '') + v.toFixed(2) + '%';
+  return (v > 0 ? '+' : '') + Number(v).toFixed(2) + '%';
 }
 
 // ── Period filter ─────────────────────────────────────────────
@@ -295,8 +300,9 @@ function applyFilter() {
   const search = document.getElementById('search').value.toLowerCase();
 
   filtered = allData.filter(r => {
-    const inPeriod = new Date(r.detected_at) >= cutoff;
-    const matchSearch = !search || r.symbol.toLowerCase().includes(search);
+    const inPeriod = new Date(r.scan_date) >= cutoff;
+    const matchSearch = !search || (r.sym||'').toLowerCase().includes(search)
+      || (r.company_name||'').toLowerCase().includes(search);
     return inPeriod && matchSearch;
   });
 
@@ -305,6 +311,8 @@ function applyFilter() {
   renderCharts();
   renderTable();
 }
+
+function filterTable() { currentPage = 1; applyFilter(); }
 
 // ── Sort ──────────────────────────────────────────────────────
 function sortBy(key) {
@@ -318,47 +326,42 @@ function sortData() {
   filtered.sort((a, b) => {
     const va = a[sortKey] ?? '';
     const vb = b[sortKey] ?? '';
-    if (va < vb) return sortDir;
-    if (va > vb) return -sortDir;
-    return 0;
+    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * sortDir;
+    if (typeof va === 'boolean' && typeof vb === 'boolean') return ((va?1:0) - (vb?1:0)) * sortDir;
+    return String(va).localeCompare(String(vb)) * sortDir;
   });
 }
 
-// ── Filter from search ────────────────────────────────────────
-function filterTable() {
-  currentPage = 1;
-  applyFilter();
-}
-
-// ── KPIs ──────────────────────────────────────────────────────
+// ── KPIs ─────────────────────────────────────────────────────
 function renderKPIs() {
-  const closed = filtered.filter(r => r.status === 'WIN' || r.status === 'LOSS');
-  const wins   = filtered.filter(r => r.status === 'WIN');
-  const losses = filtered.filter(r => r.status === 'LOSS');
-  const open   = filtered.filter(r => r.status === 'OPEN' || r.status === 'ACTIVE');
+  const with30d = filtered.filter(r => r.perf_30d != null);
+  const wins    = with30d.filter(r => r.beat_30d === true);
+  const losses  = with30d.filter(r => r.beat_30d === false);
+  const open    = filtered.filter(r => r.perf_30d == null);
 
-  const wr     = closed.length > 0 ? (wins.length / closed.length * 100) : 0;
-  const totalPnlPct = closed.reduce((s, r) => s + (r.result_pct || 0), 0);
-  const avgWin  = wins.length   > 0 ? wins.reduce((s,r)=>s+(r.result_pct||0),0)/wins.length : 0;
-  const avgLoss = losses.length > 0 ? losses.reduce((s,r)=>s+(r.result_pct||0),0)/losses.length : 0;
-  const best    = wins.sort((a,b)=>(b.result_pct||0)-(a.result_pct||0))[0];
+  const avgReturn = with30d.length
+    ? with30d.reduce((s,r) => s + Number(r.perf_30d||0), 0) / with30d.length : 0;
+  const avgWin    = wins.length
+    ? wins.reduce((s,r) => s + Number(r.perf_30d||0), 0) / wins.length : 0;
+  const avgLoss   = losses.length
+    ? losses.reduce((s,r) => s + Number(r.perf_30d||0), 0) / losses.length : 0;
+  const wr = with30d.length ? (wins.length / with30d.length * 100) : 0;
+  const best = with30d.reduce((b,r) => (!b || Number(r.perf_30d||0) > Number(b.perf_30d||0)) ? r : b, null);
 
-  const pnlEl = document.getElementById('kpi-pnl');
-  pnlEl.textContent = fmtPct(totalPnlPct);
-  pnlEl.className   = 'kpi-value ' + (totalPnlPct >= 0 ? 'green' : 'red');
+  document.getElementById('kpi-pnl').textContent     = fmtPct(avgReturn);
+  document.getElementById('kpi-pnl').className        = 'kpi-value ' + (avgReturn >= 0 ? 'green' : 'red');
+  document.getElementById('kpi-pnl-pct').textContent  = 'avg return 30d (' + with30d.length + ' picks)';
+  document.getElementById('kpi-wr').textContent       = with30d.length ? wr.toFixed(1)+'%' : '—';
+  document.getElementById('kpi-wr').className         = 'kpi-value ' + (wr >= 55 ? 'green' : wr >= 45 ? 'yellow' : 'red');
+  document.getElementById('kpi-wr-sub').textContent   = wins.length + 'W / ' + losses.length + 'L vs Russell 2000';
+  document.getElementById('kpi-trades').textContent   = filtered.length;
+  document.getElementById('kpi-trades-sub').textContent = open.length + ' pending';
+  document.getElementById('kpi-avgwin').textContent   = wins.length ? fmtPct(avgWin) : '—';
+  document.getElementById('kpi-avgloss').textContent  = losses.length ? fmtPct(avgLoss) : '—';
+  document.getElementById('kpi-best').textContent     = best ? fmtPct(best.perf_30d) : '—';
+  document.getElementById('kpi-best-sym').textContent = best ? best.sym : '—';
 
-  document.getElementById('kpi-pnl-pct').textContent = closed.length + ' trades cerrados';
-  document.getElementById('kpi-wr').textContent      = wr > 0 ? wr.toFixed(1) + '%' : '—';
-  document.getElementById('kpi-wr').className        = 'kpi-value ' + (wr >= 55 ? 'green' : wr >= 45 ? 'yellow' : 'red');
-  document.getElementById('kpi-wr-sub').textContent  = wins.length + 'W / ' + losses.length + 'L';
-  document.getElementById('kpi-trades').textContent  = filtered.length;
-  document.getElementById('kpi-trades-sub').textContent = open.length + ' abiertas';
-  document.getElementById('kpi-avgwin').textContent  = avgWin  ? '+' + avgWin.toFixed(2)  + '%' : '—';
-  document.getElementById('kpi-avgloss').textContent = avgLoss ? avgLoss.toFixed(2) + '%' : '—';
-  document.getElementById('kpi-best').textContent    = best ? '+' + best.result_pct.toFixed(2) + '%' : '—';
-  document.getElementById('kpi-best-sym').textContent= best ? best.symbol : '—';
-
-  document.getElementById('wr-big').textContent      = wr > 0 ? wr.toFixed(0) + '%' : '—';
+  document.getElementById('wr-big').textContent      = with30d.length ? wr.toFixed(0) + '%' : '—';
   document.getElementById('wr-wins').textContent     = wins.length;
   document.getElementById('wr-losses').textContent   = losses.length;
   document.getElementById('wr-open').textContent     = open.length;
@@ -366,18 +369,18 @@ function renderKPIs() {
 
 // ── Charts ────────────────────────────────────────────────────
 function renderCharts() {
-  const closed = filtered
-    .filter(r => (r.status==='WIN'||r.status==='LOSS') && r.closed_at)
-    .sort((a,b) => new Date(a.closed_at)-new Date(b.closed_at));
+  const with30d = filtered
+    .filter(r => r.perf_30d != null)
+    .sort((a,b) => new Date(a.scan_date) - new Date(b.scan_date));
 
-  // Equity curve
-  let cumulative = 0;
+  // Equity curve (cumulative return)
+  let cum = 0;
   const labels = ['Inicio'];
   const data   = [0];
-  closed.forEach(r => {
-    cumulative += (r.result_pct || 0);
-    labels.push(new Date(r.closed_at).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'}));
-    data.push(parseFloat(cumulative.toFixed(2)));
+  with30d.forEach(r => {
+    cum += Number(r.perf_30d || 0);
+    labels.push(fmtDate(r.scan_date));
+    data.push(parseFloat(cum.toFixed(2)));
   });
 
   if (equityChart) equityChart.destroy();
@@ -387,65 +390,36 @@ function renderCharts() {
       labels,
       datasets: [{
         data,
-        borderColor:     cumulative >= 0 ? '#00e57a' : '#ff3b5c',
-        backgroundColor: cumulative >= 0 ? 'rgba(0,229,122,0.06)' : 'rgba(255,59,92,0.06)',
-        borderWidth: 2,
-        pointRadius: data.length > 20 ? 0 : 3,
-        pointBackgroundColor: '#00e57a',
-        fill: true,
-        tension: 0.4,
+        borderColor: cum >= 0 ? '#00e57a' : '#ff3b5c',
+        backgroundColor: cum >= 0 ? 'rgba(0,229,122,0.06)' : 'rgba(255,59,92,0.06)',
+        borderWidth: 2, pointRadius: data.length > 20 ? 0 : 3,
+        pointBackgroundColor: '#00e57a', fill: true, tension: 0.4,
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: { label: ctx => ' PnL acum.: ' + (ctx.parsed.y > 0 ? '+' : '') + ctx.parsed.y + '%' }
-        }
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ' PnL acum.: ' + fmtPct(ctx.parsed.y) } }
       },
       scales: {
-        x: {
-          grid: { color: '#1e1e36' },
-          ticks: { color: '#5a5a7a', font: { size: 10 }, maxTicksLimit: 8 }
-        },
-        y: {
-          grid: { color: '#1e1e36' },
-          ticks: {
-            color: '#5a5a7a', font: { size: 10 },
-            callback: v => (v > 0 ? '+' : '') + v + '%'
-          }
-        }
+        x: { grid: { color: '#1e1e36' }, ticks: { color: '#5a5a7a', font: { size: 10 }, maxTicksLimit: 8 } },
+        y: { grid: { color: '#1e1e36' }, ticks: { color: '#5a5a7a', font: { size: 10 }, callback: v => (v>0?'+':'')+v+'%' } }
       }
     }
   });
 
   // Win rate donut
-  const wins   = filtered.filter(r => r.status==='WIN').length;
-  const losses = filtered.filter(r => r.status==='LOSS').length;
-  const open   = filtered.filter(r => r.status==='OPEN'||r.status==='ACTIVE').length;
+  const wins   = with30d.filter(r => r.beat_30d === true).length;
+  const losses = with30d.filter(r => r.beat_30d === false).length;
+  const open   = filtered.filter(r => r.perf_30d == null).length;
 
   if (wrChart) wrChart.destroy();
   wrChart = new Chart(document.getElementById('wrChart'), {
     type: 'doughnut',
-    data: {
-      datasets: [{
-        data: [wins || 0.001, losses || 0.001, open || 0.001],
-        backgroundColor: ['#00e57a', '#ff3b5c', '#4d8cff'],
-        borderWidth: 0,
-        hoverOffset: 4,
-      }]
-    },
-    options: {
-      responsive: true,
-      cutout: '70%',
-      plugins: { legend: { display: false }, tooltip: {
-        callbacks: {
-          label: ctx => [' Wins', ' Losses', ' Abiertas'][ctx.dataIndex] + ': ' + [wins,losses,open][ctx.dataIndex]
-        }
-      }}
-    }
+    data: { datasets: [{ data: [wins||0.001, losses||0.001, open||0.001], backgroundColor: ['#00e57a','#ff3b5c','#4d8cff'], borderWidth: 0, hoverOffset: 4 }] },
+    options: { responsive: true, cutout: '70%', plugins: { legend: { display: false },
+      tooltip: { callbacks: { label: ctx => [' Beat Russell',' Missed',' Pending'][ctx.dataIndex]+': '+[wins,losses,open][ctx.dataIndex] } }
+    }}
   });
 }
 
@@ -455,35 +429,29 @@ function renderTable() {
   const start = (currentPage - 1) * PAGE_SIZE;
   const page  = filtered.slice(start, start + PAGE_SIZE);
 
-  if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9"><div class="empty">Sin trades en este período</div></td></tr>';
+  if (!page.length) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty">No hay picks en este periodo</div></td></tr>';
     document.getElementById('pagination').innerHTML = '';
     return;
   }
 
   tbody.innerHTML = page.map(r => {
-    const resCls = r.result_pct > 0 ? 'up' : r.result_pct < 0 ? 'dn' : 'neu';
-    const sigCls = r.price_change_pct > 0 ? 'up' : 'dn';
-    return `
-      <tr>
-        <td class="neu">${fmtDate(r.detected_at)}</td>
-        <td class="sym">${r.symbol}<span style="color:var(--text-dim);font-size:10px">/USDT</span></td>
-        <td>${fmtPrice(r.price)}</td>
-        <td class="${sigCls}">+${r.price_change_pct}%</td>
-        <td>${r.volume_ratio}x</td>
-        <td>${r.rsi || '—'}</td>
-        <td>
-          <div style="display:flex;align-items:center;gap:6px">
-            ${r.score}
-            <div style="width:40px;height:3px;background:var(--border2);border-radius:2px;overflow:hidden">
-              <div style="height:100%;width:${r.score}%;background:${r.score>=70?'var(--green)':r.score>=50?'var(--yellow)':'var(--red)'};border-radius:2px"></div>
-            </div>
-          </div>
-        </td>
-        <td class="${resCls}">${r.result_pct != null ? (r.result_pct > 0 ? '+' : '') + r.result_pct.toFixed(2) + '%' : '—'}</td>
-        <td><span class="badge ${r.status}">${r.status}</span></td>
-      </tr>
-    `;
+    const pctColor = v => v > 0 ? 'var(--green)' : v < 0 ? 'var(--red)' : 'var(--text-dim)';
+    const beat = r.beat_30d === true ? '<span class="badge WIN">BEAT</span>'
+               : r.beat_30d === false ? '<span class="badge LOSS">MISS</span>'
+               : '<span class="badge OPEN">PENDING</span>';
+    const typeLabel = PICK_LABELS[r.pick_type] || r.pick_type || '—';
+    return `<tr>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">${fmtDate(r.scan_date)}</td>
+      <td><span style="font-weight:600;color:var(--text-bright)">${r.sym}</span>${r.company_name?'<br><span style="font-size:10px;color:var(--text-dim)">'+r.company_name.substring(0,20)+'</span>':''}</td>
+      <td style="font-family:var(--mono);font-size:10px;color:var(--blue)">${typeLabel}</td>
+      <td style="font-family:var(--mono)">${fmtPrice(r.entry_price)}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><span style="font-family:var(--mono);font-weight:700">${r.score??'—'}</span><div style="width:40px;height:3px;background:var(--border2);border-radius:2px;overflow:hidden"><div style="height:100%;width:${r.score||0}%;background:${(r.score||0)>=68?'var(--green)':(r.score||0)>=52?'var(--yellow)':'var(--red)'};border-radius:2px"></div></div></div></td>
+      <td style="font-family:var(--mono);font-weight:600;color:${pctColor(r.perf_1w)}">${fmtPct(r.perf_1w)}</td>
+      <td style="font-family:var(--mono);font-weight:700;color:${pctColor(r.perf_30d)}">${fmtPct(r.perf_30d)}</td>
+      <td style="font-family:var(--mono);font-weight:600;color:${pctColor(r.perf_90d)}">${fmtPct(r.perf_90d)}</td>
+      <td>${beat}</td>
+    </tr>`;
   }).join('');
 
   renderPagination();
@@ -492,18 +460,16 @@ function renderTable() {
 function renderPagination() {
   const total = Math.ceil(filtered.length / PAGE_SIZE);
   if (total <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
-
   let html = '';
-  if (currentPage > 1)  html += `<button class="page-btn" onclick="goPage(${currentPage-1})">←</button>`;
+  if (currentPage > 1) html += '<button class="page-btn" onclick="goPage('+(currentPage-1)+')">←</button>';
   for (let i = 1; i <= total; i++) {
-    if (i === 1 || i === total || Math.abs(i - currentPage) <= 1) {
-      html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
-    } else if (Math.abs(i - currentPage) === 2) {
-      html += `<span class="page-info">...</span>`;
-    }
+    if (i === 1 || i === total || Math.abs(i - currentPage) <= 1)
+      html += '<button class="page-btn '+(i===currentPage?'active':'')+'" onclick="goPage('+i+')">'+i+'</button>';
+    else if (Math.abs(i - currentPage) === 2)
+      html += '<span class="page-info">...</span>';
   }
-  if (currentPage < total) html += `<button class="page-btn" onclick="goPage(${currentPage+1})">→</button>`;
-  html += `<span class="page-info">${filtered.length} trades</span>`;
+  if (currentPage < total) html += '<button class="page-btn" onclick="goPage('+(currentPage+1)+')">→</button>';
+  html += '<span class="page-info">' + filtered.length + ' picks</span>';
   document.getElementById('pagination').innerHTML = html;
 }
 
@@ -513,13 +479,13 @@ function goPage(p) {
   window.scrollTo({ top: document.querySelector('.table-wrap').offsetTop - 80, behavior: 'smooth' });
 }
 
-// ── Load & Realtime ───────────────────────────────────────────
+// ── Load from picks_history ──────────────────────────────────
 async function loadData() {
   const { data, error } = await db
-    .from('crypto_signals')
+    .from('picks_history')
     .select('*')
-    .order('detected_at', { ascending: false })
-    .limit(1000);
+    .order('scan_date', { ascending: false })
+    .limit(500);
 
   if (error) { console.error('Supabase error:', error); return; }
   allData = data || [];
@@ -528,7 +494,7 @@ async function loadData() {
 
 function subscribeRealtime() {
   db.channel('tracker_live')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'crypto_signals' }, payload => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'picks_history' }, payload => {
       if (payload.eventType === 'INSERT') {
         allData.unshift(payload.new);
       } else if (payload.eventType === 'UPDATE') {

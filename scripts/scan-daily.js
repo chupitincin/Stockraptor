@@ -717,29 +717,53 @@ async function savePicksHistory(sb, picks, scanDate) {
 }
 
 // ── UPDATE PAST PICKS PERFORMANCE ─────────────────────────────
-// Called each day to fill perf columns and Russell benchmark
-async function updatePicksPerformance(sb, currentPrices) {
+// Called each day to fill perf columns and Russell benchmark.
+// Fetches its own current prices for all symbols in picks_history.
+async function updatePicksPerformance(sb) {
   try {
     const today = new Date();
+    console.log('\n📊 Phase 4: Updating past picks performance...');
 
-    // Fetch Russell 2000 (IWM ETF) price as benchmark
+    // Load all picks with incomplete performance data (no limit — process all)
+    const { data: rows, error } = await sb
+      .from('picks_history')
+      .select('id, sym, scan_date, entry_price, perf_1d, perf_5d, perf_1w, perf_30d, perf_60d, perf_90d, beat_30d, beat_60d, beat_90d')
+      .or('perf_1d.is.null,perf_5d.is.null,perf_1w.is.null,perf_30d.is.null,perf_60d.is.null,perf_90d.is.null')
+      .order('scan_date', { ascending: false })
+      .limit(500);
+
+    if (error || !rows?.length) {
+      console.log('   No picks pending performance update');
+      return;
+    }
+
+    console.log(`   ${rows.length} picks need performance updates`);
+
+    // ── Fetch current prices for all unique symbols in pending picks ──
+    const uniqueSyms = [...new Set(rows.map(r => r.sym))];
+    const currentPrices = {};
+
+    // Batch fetch quotes (FMP supports comma-separated symbols)
+    for (let i = 0; i < uniqueSyms.length; i += 50) {
+      const batch = uniqueSyms.slice(i, i + 50).join(',');
+      const quotes = await fmp(`/quote/${batch}`);
+      if (Array.isArray(quotes)) {
+        quotes.forEach(q => { if (q?.symbol && q?.price) currentPrices[q.symbol] = q.price; });
+      }
+      if (i + 50 < uniqueSyms.length) await sleep(200);
+    }
+
+    console.log(`   Fetched prices for ${Object.keys(currentPrices).length}/${uniqueSyms.length} symbols`);
+
+    // ── Fetch Russell 2000 (IWM) for benchmark ──
     let russellPrice = null;
     try {
       const iwmData = await fmp(`/quote/IWM`);
       russellPrice = iwmData?.[0]?.price ?? null;
     } catch(e) {}
 
-    // Load all picks with incomplete performance data
-    const { data: rows, error } = await sb
-      .from('picks_history')
-      .select('id, sym, scan_date, entry_price, perf_1d, perf_5d, perf_1w, perf_30d, perf_60d, perf_90d, beat_30d, beat_60d, beat_90d')
-      .or('perf_1d.is.null,perf_5d.is.null,perf_1w.is.null,perf_30d.is.null,perf_60d.is.null,perf_90d.is.null')
-      .limit(200);
-
-    if (error || !rows?.length) return;
-
-    // Get Russell historical prices for benchmark comparison
-    let russellHistory = {};
+    // Get Russell historical prices (120 trading days ≈ 6 months)
+    const russellHistory = {};
     try {
       const hist = await fmp(`/historical-price-full/IWM?timeseries=120`);
       if (hist?.historical) {
@@ -747,66 +771,88 @@ async function updatePicksPerformance(sb, currentPrices) {
       }
     } catch(e) {}
 
+    // Helper: find closest trading day price (handles weekends/holidays)
+    function findRussellPrice(dateStr) {
+      if (russellHistory[dateStr]) return russellHistory[dateStr];
+      // Try previous 5 days to find nearest trading day
+      const d = new Date(dateStr);
+      for (let offset = 1; offset <= 5; offset++) {
+        const prev = new Date(d);
+        prev.setDate(prev.getDate() - offset);
+        const key = prev.toISOString().substring(0, 10);
+        if (russellHistory[key]) return russellHistory[key];
+      }
+      return null;
+    }
+
+    // ── Process each pick ──
     const updates = [];
+    const WINDOWS = [
+      { field: 'perf_1d',  days: 1 },
+      { field: 'perf_5d',  days: 5 },
+      { field: 'perf_1w',  days: 7 },
+      { field: 'perf_30d', days: 30,  benchmark: true },
+      { field: 'perf_60d', days: 60,  benchmark: true },
+      { field: 'perf_90d', days: 90,  benchmark: true },
+    ];
+
     for (const row of rows) {
       const currentPrice = currentPrices[row.sym];
-      if (!currentPrice || !row.entry_price) continue;
+      if (!currentPrice || !row.entry_price || row.entry_price <= 0) continue;
 
       const perf = pct(row.entry_price, currentPrice);
+      if (perf === null) continue;
+
       const scanDate = new Date(row.scan_date);
       const daysAgo  = Math.floor((today - scanDate) / 86400000);
 
-      // Find Russell price on the scan date for benchmark
-      const scanDateStr = row.scan_date.substring(0, 10);
-      const russellEntry = russellHistory[scanDateStr] ?? null;
-      const russellPerf  = russellEntry && russellPrice
-        ? pct(russellEntry, russellPrice)
-        : null;
-
       const update = { id: row.id };
 
-      if (row.perf_1d  === null && daysAgo >= 1)  update.perf_1d  = perf;
-      if (row.perf_5d  === null && daysAgo >= 5)  update.perf_5d  = perf;
-      if (row.perf_1w  === null && daysAgo >= 7)  update.perf_1w  = perf;
+      for (const w of WINDOWS) {
+        if (row[w.field] !== null) continue; // already filled
+        if (daysAgo < w.days) continue;      // not enough time elapsed
 
-      if (row.perf_30d === null && daysAgo >= 30) {
-        update.perf_30d   = perf;
-        update.russell_30d = russellPerf;
-        update.beat_30d   = russellPerf !== null ? perf > russellPerf : null;
-      }
-      if (row.perf_60d === null && daysAgo >= 60) {
-        update.perf_60d   = perf;
-        update.russell_60d = russellPerf;
-        update.beat_60d   = russellPerf !== null ? perf > russellPerf : null;
-      }
-      if (row.perf_90d === null && daysAgo >= 90) {
-        update.perf_90d   = perf;
-        update.russell_90d = russellPerf;
-        update.beat_90d   = russellPerf !== null ? perf > russellPerf : null;
+        update[w.field] = perf;
+
+        // Add Russell benchmark for 30d/60d/90d windows
+        if (w.benchmark) {
+          const scanDateStr = row.scan_date.substring(0, 10);
+          const russellEntry = findRussellPrice(scanDateStr);
+          const russellPerf = russellEntry && russellPrice
+            ? pct(russellEntry, russellPrice)
+            : null;
+
+          const daysField = w.field.replace('perf_', '');
+          update[`russell_${daysField}`] = russellPerf;
+          update[`beat_${daysField}`] = russellPerf !== null ? perf > russellPerf : null;
+        }
       }
 
       if (Object.keys(update).length > 1) updates.push(update);
     }
 
+    // ── Write updates to Supabase ──
     if (updates.length > 0) {
       for (const upd of updates) {
         const { id, ...fields } = upd;
         await sb.from('picks_history').update(fields).eq('id', id);
       }
-      console.log(`✅ Updated performance for ${updates.length} past picks (1d/5d/1w/30d/60d/90d)`);
+      console.log(`   ✅ Updated performance for ${updates.length} past picks`);
 
-      // After updating, log summary stats to feedback_log
+      // Log summary stats to feedback_log for ML analysis
       await logFeedbackSummary(sb);
+    } else {
+      console.log('   No updates needed (all within time windows)');
     }
   } catch (e) {
     console.warn('⚠ updatePicksPerformance failed:', e.message);
   }
 }
 
-// Helper: % change between two prices
+// Helper: % change between two prices (2 decimal precision)
 function pct(entry, current) {
-  if (!entry || !current) return null;
-  return Math.round(((current - entry) / entry) * 1000) / 10;
+  if (!entry || entry <= 0 || !current || current <= 0) return null;
+  return Math.round(((current - entry) / entry) * 10000) / 100;
 }
 
 // ── LOG FEEDBACK SUMMARY ──────────────────────────────────────
@@ -1170,6 +1216,14 @@ async function main() {
 
     await savePicksHistory(sb, picks, scanDateStr);
   }
+
+  // ── PHASE 4: UPDATE PAST PICKS PERFORMANCE ──────────────
+  // Runs every day (not just on pick generation days) to fill
+  // perf_1d, perf_5d, perf_1w, perf_30d, perf_60d, perf_90d
+  await updatePicksPerformance(sb);
+
+  const totalElapsed = Math.round((Date.now() - t0) / 1000);
+  console.log(`\n🏁 StockRaptor Daily Scan complete in ${totalElapsed}s`);
 }
 
 // ── SELECT TOP PICKS ──────────────────────────────────────
