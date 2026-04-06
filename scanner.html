@@ -1366,66 +1366,97 @@ const futD=d=>{const t=new Date();t.setDate(t.getDate()+d);return t.toISOString(
 const pasD=d=>{const t=new Date();t.setDate(t.getDate()-d);return t.toISOString().slice(0,10);}
 
 function computeScores(d){
-  // Scoring v3 — sincronizado con scan-daily fixes compatibles con Finnhub
-  const sPE=SECTOR_PE[d.sector]||SECTOR_PE.default;
-  let fund=0;
-  if(d.pe>0){const r=d.pe/sPE;if(r<0.5)fund+=12;else if(r<0.8)fund+=9;else if(r<1.0)fund+=6;else if(r<1.3)fund+=3;}
-  if(d.pb>0&&d.pb<1.5)fund+=5;else if(d.pb>0&&d.pb<3)fund+=3;else if(d.pb>0&&d.pb<5)fund+=1;
-  if(d.currentRatio>=2)fund+=4;else if(d.currentRatio>=1.5)fund+=2;else if(d.currentRatio<1)fund-=3;
-  if(d.roe>20)fund+=4;else if(d.roe>10)fund+=2;
-  fund=Math.max(0,Math.min(25,fund));
-  let revQ=0;
-  if(d.revenueGrowth>30)revQ=5;else if(d.revenueGrowth>15)revQ=4;else if(d.revenueGrowth>5)revQ=2;else if(d.revenueGrowth>0)revQ=1;
-  if(d.grossMargin>50)revQ=Math.min(5,revQ+1);
-  let dilPenalty=0;
-  if(d.sharesDilution>15)dilPenalty=-10;else if(d.sharesDilution>8)dilPenalty=-6;else if(d.sharesDilution>3)dilPenalty=-3;
-  let debtPenalty=0;
-  if(d.de>1.5&&d.revenueGrowth<0)debtPenalty=-5;else if(d.de>2&&d.revenueGrowth<5)debtPenalty=-3;
-  const fcfBonus=(d.grossMargin>30&&d.revenueGrowth>0&&d.roa>0)?3:0;
+  // Scoring v3 — ALIGNED with scan-daily.js (same max scores per factor)
+  // Max points: fund:32 sent:8 analyst:15 momentum:17 earPts:15 volShort:11 insider:8 = 106
+  // Normalized to 0-100 at the end
+  const MAX={fund:32,sent:8,analyst:15,momentum:17,earPts:15,volShort:11,insider:8};
+  const MAX_TOTAL=Object.values(MAX).reduce((a,b)=>a+b,0); // 106
 
-  // FIX 1: Sentiment max 8 pts, mínimo 4 noticias para contar
+  const sPE=SECTOR_PE[d.sector]||SECTOR_PE.default;
+
+  // ── 1. FUNDAMENTALS (0-32 pts) — matches scan-daily.js ──
+  let fund=0;
+  if(d.pe>0){const r=d.pe/sPE;if(r<0.6)fund+=6;else if(r<0.85)fund+=4;else if(r<1.0)fund+=2;else if(r<1.3)fund+=1;}
+  if(d.pb>0){if(d.pb<1)fund+=4;else if(d.pb<2)fund+=3;else if(d.pb<3)fund+=2;else if(d.pb<5)fund+=1;}
+  if(d.grossMargin!=null){if(d.grossMargin>60)fund+=4;else if(d.grossMargin>40)fund+=3;else if(d.grossMargin>25)fund+=2;else if(d.grossMargin>10)fund+=1;}
+  if(d.ebitdaMargin!=null){if(d.ebitdaMargin>25)fund+=4;else if(d.ebitdaMargin>15)fund+=3;else if(d.ebitdaMargin>8)fund+=2;else if(d.ebitdaMargin>0)fund+=1;}
+  if(d.currentRatio>=2)fund+=3;else if(d.currentRatio>=1.5)fund+=2;else if(d.currentRatio>=1)fund+=1;
+  if(d.roe>20)fund+=4;else if(d.roe>12)fund+=3;else if(d.roe>8)fund+=2;else if(d.roe>0)fund+=1;
+  if(d.revenueGrowth>25)fund+=4;else if(d.revenueGrowth>15)fund+=3;else if(d.revenueGrowth>5)fund+=2;else if(d.revenueGrowth>0)fund+=1;
+  // Penalties
+  let dilPenalty=0;
+  if(d.sharesDilution>10)dilPenalty=-10;else if(d.sharesDilution>5)dilPenalty=-5;else if(d.sharesDilution>2)dilPenalty=-2;
+  let debtPenalty=0;
+  if(d.de!=null&&d.de>2.5&&(d.revenueGrowth==null||d.revenueGrowth<5))debtPenalty=-5;
+  else if(d.de!=null&&d.de>4)debtPenalty=-3;
+  fund+=dilPenalty+debtPenalty;
+  fund=Math.max(0,Math.min(MAX.fund,fund));
+
+  // ── 2. SENTIMENT (0-8 pts) ──
   let sent=0;
   if(d.newsSent!==null&&d.newsItems&&d.newsItems.length>=4)
-    sent=Math.min(8,Math.round(((Math.max(-1,Math.min(1,d.newsSent))+1)/2)*8));
+    sent=Math.min(MAX.sent,Math.round(((Math.max(-1,Math.min(1,d.newsSent))+1)/2)*MAX.sent));
 
-  // FIX 2: Insider separado, bug corregido (sin actividad=0, no 2), penaliza ventas
+  // ── 3. ANALYST (0-15 pts) ──
+  let analyst=0;
+  if(d.upside!=null){const cu=Math.min(d.upside,100);analyst+=cu>40?8:cu>25?6:cu>15?4:cu>5?2:cu<-10?-2:0;}
+  const _totalAn=(d.recBuy||0)+(d.recHold||0)+(d.recSell||0);
+  if(d.recMean!=null&&_totalAn>0){
+    analyst+=d.recMean<=1.5?5:d.recMean<=2.2?3:d.recMean<=2.8?1:0;
+    const buyRatio=_totalAn>3?(d.recBuy||0)/_totalAn:0;
+    analyst+=buyRatio>0.75?3:buyRatio>0.55?2:buyRatio>0.40?1:0;
+  }
+  analyst=Math.min(MAX.analyst,Math.max(0,analyst));
+
+  // ── 4. MOMENTUM (0-17 pts) ──
+  let momentum=0;
+  if(d.pct52Low!=null&&d.pct52High!=null){
+    const range52=d.pct52Low-d.pct52High;
+    const pos=range52>0?(d.pct52Low/(d.pct52Low-d.pct52High)):0;
+    momentum+=pos>0.85?8:pos>0.65?6:pos>0.45?4:pos>0.25?2:0;
+  }
+  if(d.priceChange1D!=null){momentum+=d.priceChange1D>3?2:d.priceChange1D>1?1:d.priceChange1D<-3?-1:0;}
+  if(d.beta){momentum+=d.beta>1.8?3:d.beta>1.3?2:d.beta>0.9?1:0;}
+  if(d.ma50&&d.price>d.ma50*1.05)momentum+=2;else if(d.ma50&&d.price>d.ma50)momentum+=1;
+  if(d.ma200&&d.price>d.ma200*1.05)momentum+=2;else if(d.ma200&&d.price>d.ma200)momentum+=1;
+  if(d.ma50&&d.ma200&&d.ma50>d.ma200*1.02)momentum+=2;
+  if(d.volRatio)momentum+=d.volRatio>3?2:d.volRatio>2?1:0;
+  const momentumTrap=(d.pct52High!=null&&d.pct52High<-40&&d.revenueGrowth!=null&&d.revenueGrowth<0)?-5:0;
+  momentum+=momentumTrap;
+  momentum=Math.max(0,Math.min(MAX.momentum,momentum));
+
+  // ── 5. EARNINGS (0-15 pts) ──
+  let earPts=0;
+  const streak=d.epsHistory?d.epsHistory.filter(e=>(e.surprise||0)>0).length:0;
+  earPts+=streak>=4?8:streak>=3?6:streak>=2?4:streak>=1?2:0;
+  if(d.epsHistory&&d.epsHistory.length>0){
+    const avgSurp=d.epsHistory.reduce((a,e)=>a+(e.surprise||0),0)/d.epsHistory.length;
+    earPts+=avgSurp>15?4:avgSurp>8?3:avgSurp>2?2:0;
+  }
+  if(d.earningsDays!=null)earPts+=d.earningsDays<=7?3:d.earningsDays<=20?2:d.earningsDays<=45?1:0;
+  earPts=Math.min(MAX.earPts,earPts);
+
+  // ── 6. VOL/SHORT (0-11 pts) ──
+  let volShort=0;
+  if(d.volRatio!=null){volShort+=d.volRatio>5?5:d.volRatio>3?4:d.volRatio>2?3:0;}
+  if(d.shortPct!=null){volShort+=d.shortPct>20?5:d.shortPct>15?4:d.shortPct>10?2:0;}
+  volShort=Math.min(MAX.volShort,volShort);
+
+  // ── 7. INSIDER (0-8 pts) ──
   let insider=0;
-  if(d.mspr!==null){
+  if(d.mspr!=null){
     if(d.mspr>50)insider=8;else if(d.mspr>20)insider=6;else if(d.mspr>0)insider=3;
     else if(d.mspr<-20)insider=-2;
-    // else mspr entre -20 y 0 → 0 (neutral)
   }
-  // Bonus por volumen de compra real
-  if(d.insiderChange>5)insider=Math.min(8,insider+2);
-  insider=Math.max(-2,Math.min(8,insider));
+  if(d.insiderChange>5)insider=Math.min(MAX.insider,insider+2);
+  insider=Math.max(-2,Math.min(MAX.insider,insider));
 
-  // FIX 3: Analyst requiere mínimo 2 analistas, valida upside negativo
-  let analyst=0;
-  const _totalAn=(d.recBuy||0)+(d.recHold||0)+(d.recSell||0);
-  if(d.recMean!==null&&_totalAn>=2){if(d.recMean<=1.5)analyst=10;else if(d.recMean<=2.2)analyst=7;else if(d.recMean<=2.8)analyst=4;else if(d.recMean<=3.5)analyst=2;}
-  let upsideScore=0;
-  if(d.upside>40)upsideScore=5;else if(d.upside>25)upsideScore=4;else if(d.upside>15)upsideScore=2;else if(d.upside>5)upsideScore=1;else if(d.upside<-10)upsideScore=-1;
+  // ── NORMALIZE to 0-100 ──
+  const rawTotal=fund+sent+analyst+momentum+earPts+volShort+insider;
+  const effectiveMax=d.shortPct==null?MAX_TOTAL-5:MAX_TOTAL;
+  const total=Math.max(0,Math.min(100,Math.round((rawTotal/effectiveMax)*100)));
 
-  // FIX 4: Momentum diario max 2 pts (era hasta 6 con trend), trampa -5 pts
-  let momentum=0;
-  if(d.pct52Low!==null){if(d.pct52Low>=15&&d.pct52Low<=50)momentum+=8;else if(d.pct52Low<15)momentum+=4;else if(d.pct52Low<=80)momentum+=3;else momentum+=1;}
-  let trend=0;
-  if(d.priceChange4W>15)trend=4;else if(d.priceChange4W>5)trend=3;else if(d.priceChange4W>0)trend=2;else if(d.priceChange4W>-10)trend=1;
-  let betaB=0;
-  if(d.beta>=0.7&&d.beta<=1.6)betaB=3;else if(d.beta>0&&d.beta<2.2)betaB=1;
-  // FIX 5: Trampa momentum — >40% bajo máximo + revenue negativo
-  const momentumTrap=(d.pct52High!==null&&d.pct52High<-40&&d.revenueGrowth<0)?-5:0;
-
-  let earPts=0;
-  if(d.earningsDays!==null){if(d.earningsDays<=14)earPts=10;else if(d.earningsDays<=30)earPts=8;else if(d.earningsDays<=60)earPts=5;else if(d.earningsDays<=90)earPts=3;}
-  const streak=d.epsHistory.filter(e=>e.surprise>3).length;
-  let epsStreak=streak>=4?5:streak>=3?4:streak>=2?2:streak>=1?1:0;
-  let volScore=0;
-  if(d.volRatio!==null){if(d.volRatio>4)volScore=8;else if(d.volRatio>2.5)volScore=6;else if(d.volRatio>1.5)volScore=4;else if(d.volRatio>1.2)volScore=2;}
-  let shortSq=0;
-  if(d.shortPct!==null){if(d.shortPct>20&&d.priceChange4W>5)shortSq=5;else if(d.shortPct>15&&d.priceChange4W>0)shortSq=3;else if(d.shortPct>10)shortSq=1;}
-  const total=Math.max(0,Math.min(100,fund+revQ+fcfBonus+dilPenalty+debtPenalty+sent+insider+analyst+upsideScore+momentum+trend+betaB+momentumTrap+earPts+epsStreak+volScore+shortSq));
-  return{total,fund:Math.max(0,fund+revQ+fcfBonus+dilPenalty+debtPenalty),sent:Math.max(0,sent),insider:Math.max(0,insider),analyst:Math.max(0,analyst+upsideScore),momentum:Math.max(0,momentum+trend+betaB+momentumTrap),earPts:Math.max(0,earPts+epsStreak),volShort:Math.max(0,volScore+shortSq),dilPenalty,debtPenalty,fcfBonus,epsStreak,streak,momentumTrap};
+  return{total,fund,sent,insider,analyst,momentum,earPts,volShort,dilPenalty,debtPenalty,fcfBonus:0,epsStreak:0,streak,momentumTrap};
 }
 function toSig(s){return s>=68?'STRONG BUY':s>=52?'INTERESTING':s>=33?'WATCH':'WEAK';}
 

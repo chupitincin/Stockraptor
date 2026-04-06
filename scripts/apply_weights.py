@@ -51,6 +51,28 @@ def main():
 def apply_weights(sb, log, log_id):
     new_weights = json.loads(log["new_weights"])
 
+    # Validate weights before applying
+    weight_keys = ["w_fund", "w_sent", "w_analyst", "w_momentum", "w_earnings", "w_volume", "w_insider"]
+    for k in weight_keys:
+        v = new_weights.get(k)
+        if v is None or not isinstance(v, (int, float)) or v <= 0:
+            print(f"❌ Invalid weight {k}={v} — must be a positive number")
+            send_telegram(f"❌ *Pesos rechazados automáticamente*\n\nValor inválido: {k}={v}")
+            return
+
+    total = sum(new_weights.get(k, 0) for k in weight_keys)
+    if total < 60 or total > 150:
+        print(f"❌ Total weight {total} out of safe range [60-150]")
+        send_telegram(f"❌ *Pesos rechazados automáticamente*\n\nTotal {total:.1f} fuera de rango seguro [60-150]")
+        return
+
+    max_weight = max(new_weights.get(k, 0) for k in weight_keys)
+    if max_weight / total > 0.45:
+        dominant = max(weight_keys, key=lambda k: new_weights.get(k, 0))
+        print(f"❌ Single factor {dominant}={max_weight} dominates ({max_weight/total*100:.0f}% of total)")
+        send_telegram(f"❌ *Pesos rechazados automáticamente*\n\n{dominant}={max_weight} domina con {max_weight/total*100:.0f}% del total (máx 45%)")
+        return
+
     # Update scoring_weights table
     sb.table("scoring_weights").update({
         **new_weights,

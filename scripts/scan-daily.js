@@ -156,22 +156,35 @@ async function getUniverse() {
 // ── SHORT FLOAT SCRAPER (Finviz — free, updates bi-monthly) ──────────────
 // Returns shortPct as a number (e.g. 24.3 for 24.3%) or null
 async function getShortFloat(sym) {
-  try {
-    const res = await fetch(`https://finviz.com/quote.ashx?t=${sym}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html',
-      },
-      signal: AbortSignal.timeout(6000),
-    });
-    if (!res.ok) return null;
-    const html = await res.text();
-    // Finviz table cell: "Short Float" label followed by the % value
-    const match = html.match(/Short Float[^<]*<\/td><td[^>]*>([0-9.]+)%/i)
-                || html.match(/Short Float.*?([0-9]+\.[0-9]+)%/i);
-    if (match) return parseFloat(match[1]);
-    return null;
-  } catch { return null; }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(`https://finviz.com/quote.ashx?t=${sym}`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (res.status === 429) { await sleep(2000); continue; } // rate limited, retry
+      if (!res.ok) return null;
+      const html = await res.text();
+      // Multiple regex patterns to handle Finviz layout changes
+      const match = html.match(/Short Float[^<]*<\/td>\s*<td[^>]*>\s*([0-9.]+)%/i)
+                  || html.match(/Short Float.*?<b[^>]*>([0-9.]+)%/i)
+                  || html.match(/Short Float[^%]*?([0-9]+\.[0-9]+)%/i)
+                  || html.match(/"shortFloat"\s*:\s*"?([0-9.]+)/i);
+      if (match) {
+        const val = parseFloat(match[1]);
+        if (val > 0 && val < 100) return val; // sanity check
+      }
+      return null;
+    } catch {
+      if (attempt === 0) { await sleep(1000); continue; }
+      return null;
+    }
+  }
+  return null;
 }
 
 
@@ -329,21 +342,43 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     let sent = 0, newsSent = null, newsItems = [];
     if (Array.isArray(news) && news.length >= 4) {
       const recent = news.slice(0, 10);
-      const POS_WORDS = ['beat','beats','surge','surges','jumps','rises','gains','record','upgrade','upgraded','strong','growth','profit','revenue','bullish','buy','outperform','raises','raised','exceeds','positive','wins','award','partnership','deal','launch','launches'];
-      const NEG_WORDS = ['miss','misses','falls','drops','decline','declines','loss','losses','downgrade','downgraded','weak','cut','cuts','lawsuit','investigation','recall','warning','disappoints','below','concern','risk','sell','underperform','layoffs','bankruptcy'];
-      let posCount = 0, negCount = 0;
+      // Weighted keywords: high-confidence words score more, common/ambiguous words score less
+      const POS_WEIGHTED = {
+        // Strong signals (0.15)
+        'beat earnings':0.15,'fda approval':0.15,'raised guidance':0.15,'record revenue':0.15,
+        'strong results':0.15,'upgraded to buy':0.15,
+        // Medium signals (0.10)
+        'beat':0.10,'beats':0.10,'surge':0.10,'surges':0.10,'upgrade':0.10,'upgraded':0.10,
+        'outperform':0.10,'bullish':0.10,'record':0.08,'exceeds':0.10,'raises guidance':0.12,
+        // Weak signals (0.05) — common/ambiguous
+        'growth':0.05,'profit':0.05,'gains':0.05,'rises':0.05,'jumps':0.05,
+        'partnership':0.05,'deal':0.05,'launch':0.05,'launches':0.05,'award':0.05,
+      };
+      const NEG_WEIGHTED = {
+        // Strong signals (0.15)
+        'missed earnings':0.15,'lowered guidance':0.15,'downgraded to sell':0.15,
+        'bankruptcy':0.15,'fraud':0.15,'sec investigation':0.15,
+        // Medium signals (0.10)
+        'miss':0.10,'misses':0.10,'downgrade':0.10,'downgraded':0.10,'underperform':0.10,
+        'layoffs':0.10,'recall':0.10,'disappoints':0.10,'lawsuit':0.10,
+        // Weak signals (0.05)
+        'decline':0.05,'declines':0.05,'falls':0.05,'drops':0.05,'loss':0.05,
+        'losses':0.05,'weak':0.05,'warning':0.05,'concern':0.05,'cut':0.05,'cuts':0.05,
+      };
+      let totalScore = 0;
       newsItems = recent.slice(0, 6).map(n => {
         const title = (n.title || '').toLowerCase();
-        const isPos = POS_WORDS.some(w => title.includes(w));
-        const isNeg = NEG_WORDS.some(w => title.includes(w));
-        const sentiment = isPos && !isNeg ? 'positive' : isNeg && !isPos ? 'negative' : 'neutral';
-        if (sentiment === 'positive') posCount++;
-        if (sentiment === 'negative') negCount++;
+        let posScore = 0, negScore = 0;
+        for (const [w, weight] of Object.entries(POS_WEIGHTED)) { if (title.includes(w)) posScore += weight; }
+        for (const [w, weight] of Object.entries(NEG_WEIGHTED)) { if (title.includes(w)) negScore += weight; }
+        const net = posScore - negScore;
+        const sentiment = net > 0.05 ? 'positive' : net < -0.05 ? 'negative' : 'neutral';
+        totalScore += net;
         return { headline: (n.title || '').substring(0, 90), source: n.site || '', time: (n.publishedDate || '').substring(0, 10), sentiment };
       });
-      const total = recent.length;
-      newsSent = total > 0 ? (posCount - negCount) / total : 0;
-      sent = Math.min(8, Math.round(((newsSent + 1) / 2) * 8));
+      // Normalize: totalScore typically ranges from -0.6 to +0.6
+      newsSent = Math.max(-1, Math.min(1, totalScore / 0.4));
+      sent = Math.min(MAX_SCORES.sent, Math.round(((newsSent + 1) / 2) * MAX_SCORES.sent));
     }
 
     // ── SEC 8-K BONUS ──────────────────────────────────────────────────────────
@@ -354,7 +389,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       recent8K = await getRecent8K(profileCik, sym);
       if (recent8K) {
         const boost = recent8K.daysAgo <= 2 ? 3 : recent8K.daysAgo <= 5 ? 2 : 1;
-        sent = Math.min(8, sent + boost);
+        sent = Math.min(MAX_SCORES.sent, sent + boost);
       }
     }
 
@@ -417,11 +452,16 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       momentum += pos > 0.85 ? 8 : pos > 0.65 ? 6 : pos > 0.45 ? 4 : pos > 0.25 ? 2 : 0;
     }
 
-    // Stale target detection: if stock is >50% below 52w high AND upside >150%
-    // the analyst target was almost certainly set at a much higher price and never updated
-    if (upside !== null && pct52High !== null && pct52High < -50 && upside > 150) {
-      upside = null;      // null out — unreliable
-      targetPrice = null; // null out price target too
+    // Stale target detection: analyst targets set when price was much higher are unreliable
+    // Tier 1: >50% below high + >150% upside → certainly stale, null out completely
+    // Tier 2: >30% below high + >80% upside → likely stale, cap upside to reduce noise
+    if (upside !== null && pct52High !== null) {
+      if (pct52High < -50 && upside > 150) {
+        upside = null;
+        targetPrice = null;
+      } else if (pct52High < -30 && upside > 80) {
+        upside = Math.min(upside, 40); // cap at 40% — don't trust the full target
+      }
     }
 
     // FIX: máximo 2 pts por movimiento diario (era 4 — demasiado ruidoso)
@@ -453,7 +493,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       momentum += momentumTrap;
     }
 
-    momentum = Math.max(0, Math.min(17, momentum));
+    momentum = Math.max(0, Math.min(MAX_SCORES.momentum, momentum));
 
     // ── 5. EARNINGS (0-15 pts) ────────────────────────────────
     let earPts = 0, epsHistory = [], streak = 0;
@@ -479,7 +519,7 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
         if (earningsDays != null) earPts += earningsDays <= 7 ? 3 : earningsDays <= 20 ? 2 : earningsDays <= 45 ? 1 : 0;
       }
     }
-    earPts = Math.min(15, earPts);
+    earPts = Math.min(MAX_SCORES.earPts, earPts);
 
     // ── 6. VOL/SHORT (0-11 pts) ───────────────────────────────
     let volShort = 0;
@@ -493,12 +533,12 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
       shortPct = Math.round((shortInterest / floatShares) * 1000) / 10;
     }
     // Fallback: scrape Finviz (free, updates bi-monthly)
-    // Only fetch for high-potential squeeze candidates to avoid rate limits
-    if (shortPct == null && volRatio > 2 && priceChange1D > 0) {
+    // Fetch for stocks with notable volume OR positive momentum — broader coverage
+    if (shortPct == null && ((volRatio > 1.5 && priceChange1D > 0) || (momentum >= 8))) {
       shortPct = await getShortFloat(sym);
     }
     if (shortPct != null) volShort += shortPct > 20 ? 5 : shortPct > 15 ? 4 : shortPct > 10 ? 2 : 0;
-    volShort = Math.min(11, volShort);
+    volShort = Math.min(MAX_SCORES.volShort, volShort);
 
     // ── 7. INSIDER (0-8 pts) ──────────────────────────────────
     // FIX: corregido bug — 0 pts cuando no hay actividad (era 2 erróneamente)
@@ -523,20 +563,21 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
           .reduce((s, t) => s + (t.value || 0), 0);
       }
 
-      // Recency multiplier: buys this week worth 2x, this month 1.5x, older 1x
-      const recencyMult = freshInsiderDays !== null
-        ? (freshInsiderDays <= 7 ? 2 : freshInsiderDays <= 30 ? 1.5 : 1)
-        : 1;
-
-      if (insider.buys > 3)        insiderScore = Math.round(8 * recencyMult);
-      else if (insider.buys > 1)   insiderScore = Math.round(6 * recencyMult);
-      else if (insider.buys === 1) insiderScore = Math.round(4 * recencyMult);
+      // Base score by number of buys
+      if (insider.buys > 3)        insiderScore = 5;
+      else if (insider.buys > 1)   insiderScore = 4;
+      else if (insider.buys === 1) insiderScore = 3;
       else if (insider.sells > 2)  insiderScore = -2; // FIX: penaliza ventas netas
       else                         insiderScore = 0;  // FIX: era 2, ahora 0
 
+      // Recency bonus: recent buys are more meaningful (additive, not multiplicative)
+      if (freshInsiderDays !== null && insider.buys > 0) {
+        insiderScore += freshInsiderDays <= 7 ? 2 : freshInsiderDays <= 30 ? 1 : 0;
+      }
+
       // Bonus por volumen de compra significativo
-      if (insider.totalBuyValue > 1000000) insiderScore = Math.min(8, insiderScore + 2);
-      else if (insider.totalBuyValue > 500000) insiderScore = Math.min(8, insiderScore + 1);
+      if (insider.totalBuyValue > 1000000) insiderScore += 2;
+      else if (insider.totalBuyValue > 500000) insiderScore += 1;
     }
     // Sin actividad insider → 0 (neutral, no penaliza ni bonifica)
     insiderScore = Math.max(-2, Math.min(MAX_SCORES.insider, insiderScore));

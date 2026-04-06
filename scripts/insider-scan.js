@@ -105,7 +105,7 @@ async function parseForm4(filename, companyCik) {
     const accNoDashes   = accWithDashes.replace(/-/g, '');
     const xmlUrl = `${SEC}/Archives/edgar/data/${parseInt(companyCik)}/${accNoDashes}/ownership.xml`;
 
-    await sleep(110); // SEC rate limit
+    // Rate limiting handled by secThrottle() in main loop
 
     // AbortSignal.timeout cancels the TCP connection — prevents infinite hangs
     const signal = () => AbortSignal.timeout(10000);
@@ -227,18 +227,32 @@ async function main() {
   const results = {};
   let parsed = 0, withActivity = 0;
 
+  // SEC rate limiter: max 8 requests/second with sliding window
+  let secRequestTimes = [];
+  const SEC_MAX_RPS = 8; // stay under SEC's 10 req/s limit with margin
+
+  async function secThrottle() {
+    const now = Date.now();
+    secRequestTimes = secRequestTimes.filter(t => now - t < 1000);
+    if (secRequestTimes.length >= SEC_MAX_RPS) {
+      const waitMs = 1000 - (now - secRequestTimes[0]) + 50;
+      await sleep(waitMs);
+    }
+    secRequestTimes.push(Date.now());
+  }
+
   for (const [cik, filings] of Object.entries(byCik)) {
     const ticker = cikToTicker[cik];
     const allTx = [];
     const insiderNames = new Set();
 
     for (const f of filings.slice(0, 8)) {
+      await secThrottle();
       const parsed = await parseForm4(f.filename, cik);
       if (parsed) {
         allTx.push(...parsed.txs.map(t => ({ ...t, date: t.date || f.dateFiled })));
         insiderNames.add(parsed.name);
       }
-      await sleep(80);
     }
 
     if (allTx.length > 0) {
