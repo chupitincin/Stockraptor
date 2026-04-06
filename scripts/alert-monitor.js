@@ -128,20 +128,118 @@ function emailHtml(title, color, body, sym) {
 </div></body></html>`;
 }
 
-// ── ENTRY ALERTS: scan_cache for high-conviction signals ───
+// ── ENTRY ALERTS: real-time intraday detection ─────────────
 async function checkEntryAlerts() {
-  console.log('\n🔍 Checking entry alerts...');
+  console.log('\n🔍 Checking entry alerts (live intraday data)...');
   const alerts = [];
 
-  // Load latest scan results
+  // Load cached baseline (yesterday's prices, volumes, scores)
   const { data: cache } = await sb.from('scan_cache').select('*').eq('id','daily').single();
-  if (!cache?.results) { console.log('   No scan_cache data'); return alerts; }
+  if (!cache?.results) { console.log('   No scan_cache baseline'); return alerts; }
 
-  const fresh = cache.results.filter(r => !r._stale);
-  console.log(`   Analyzing ${fresh.length} fresh stocks`);
+  // Top 250 by score from cached scan = our watchlist for live monitoring
+  const watchlist = cache.results
+    .filter(r => !r._stale && r.total >= 40 && r.fund >= 10)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 250);
 
-  for (const r of fresh) {
-    // 1. FRESH INSIDER BUY > $500K (last 7 days)
+  console.log(`   Live monitoring ${watchlist.length} stocks`);
+  const cacheMap = {};
+  watchlist.forEach(r => { cacheMap[r.sym] = r; });
+
+  // ── Step 1: Fetch live quotes (batched) ──
+  // FMP /quote endpoint accepts comma-separated symbols, ~50 per call
+  const liveQuotes = {};
+  const symbols = watchlist.map(r => r.sym);
+  for (let i = 0; i < symbols.length; i += 50) {
+    const batch = symbols.slice(i, i + 50).join(',');
+    const data = await fmp(`/quote/${batch}`);
+    if (Array.isArray(data)) {
+      data.forEach(q => {
+        if (q?.symbol) liveQuotes[q.symbol] = q;
+      });
+    }
+    if (i + 50 < symbols.length) await sleep(150);
+  }
+  console.log(`   Fetched live quotes for ${Object.keys(liveQuotes).length}/${symbols.length} stocks`);
+
+  // ── Step 2: Detect intraday signals ──
+  for (const sym of symbols) {
+    const cached = cacheMap[sym];
+    const live   = liveQuotes[sym];
+    if (!live || !cached) continue;
+
+    const livePrice  = live.price;
+    const liveVolume = live.volume;
+    const avgVolume  = live.avgVolume || cached.volRatio && cached.volRatio > 0
+      ? (cached.volRatio ? liveVolume / cached.volRatio : null)
+      : null;
+    const liveVolRatio = avgVolume && avgVolume > 0 ? liveVolume / avgVolume : null;
+
+    // Compare to cached (yesterday's close) to compute today's intraday move
+    const priceJump = cached.price && cached.price > 0
+      ? ((livePrice - cached.price) / cached.price) * 100
+      : null;
+
+    // ── 1. INTRADAY PRICE BREAKOUT — stock up >5% live with volume confirmation ──
+    if (priceJump != null && priceJump >= 5
+        && liveVolRatio != null && liveVolRatio >= 2
+        && cached.total >= 50) {
+      if (!(await alreadySent('entry_breakout', sym))) {
+        alerts.push({
+          type: 'entry_breakout',
+          sym, name: cached.companyName,
+          color: '#00e57a',
+          title: '🚀 INTRADAY BREAKOUT',
+          headline: `${sym} up ${priceJump.toFixed(1)}% intraday on ${liveVolRatio.toFixed(1)}x volume`,
+          body: `<strong>${cached.companyName} (${sym})</strong> — $${livePrice.toFixed(2)} <span style="color:#00e57a;">(+${priceJump.toFixed(1)}% today)</span><br>
+            Score: ${cached.total} · Volume: <strong>${liveVolRatio.toFixed(1)}x average</strong><br><br>
+            🚀 Live intraday breakout. Strong upward move backed by ${liveVolRatio.toFixed(1)}x normal volume — institutional accumulation likely.`,
+          data: { livePrice, priceJump, liveVolRatio, cached },
+        });
+      }
+    }
+
+    // ── 2. EXTREME LIVE VOLUME SPIKE >5x on quality stock ──
+    if (liveVolRatio != null && liveVolRatio >= 5
+        && livePrice > cached.price && cached.total >= 50 && cached.fund >= 12) {
+      if (!(await alreadySent('entry_volume', sym))) {
+        alerts.push({
+          type: 'entry_volume',
+          sym, name: cached.companyName,
+          color: '#00b4ff',
+          title: '⚡ EXTREME VOLUME SPIKE',
+          headline: `${sym} live volume ${liveVolRatio.toFixed(1)}x average`,
+          body: `<strong>${cached.companyName} (${sym})</strong> — $${livePrice.toFixed(2)} ${priceJump?`(+${priceJump.toFixed(1)}%)`:''}<br>
+            Score: ${cached.total} · Live Volume: <strong>${liveVolRatio.toFixed(1)}x</strong><br><br>
+            ⚡ Unusual volume detected in real time. Often signals institutional accumulation or imminent news catalyst.`,
+          data: { livePrice, priceJump, liveVolRatio, cached },
+        });
+      }
+    }
+
+    // ── 3. INTRADAY DUMP — quality stock down >7% (potential dip-buy or warning) ──
+    if (priceJump != null && priceJump <= -7 && cached.total >= 55) {
+      if (!(await alreadySent('entry_dip', sym))) {
+        alerts.push({
+          type: 'entry_dip',
+          sym, name: cached.companyName,
+          color: '#ff7040',
+          title: '📉 QUALITY STOCK DUMPING',
+          headline: `${sym} down ${priceJump.toFixed(1)}% intraday — was high quality (score ${cached.total})`,
+          body: `<strong>${cached.companyName} (${sym})</strong> — $${livePrice.toFixed(2)} <span style="color:#ff3b5c;">(${priceJump.toFixed(1)}% today)</span><br>
+            Score: ${cached.total} · Sector: ${cached.sector}<br><br>
+            📉 This is a flagged quality stock taking heavy intraday damage. Could be either a buying opportunity (overreaction) or a warning sign (material news pending). Worth investigating.`,
+          data: { livePrice, priceJump, cached },
+        });
+      }
+    }
+  }
+
+  // ── Step 3: Cache-based signals (don't change intraday) ──
+  // These come from yesterday's scan but are still valuable to surface
+  for (const r of watchlist) {
+    // Fresh insider buy > $500K (data from weekly insider scan)
     if (r.freshInsiderDays !== null && r.freshInsiderDays <= 7
         && r.freshInsiderValue > 500000 && r.total >= 45) {
       if (!(await alreadySent('entry_insider', r.sym))) {
@@ -150,8 +248,8 @@ async function checkEntryAlerts() {
           sym: r.sym, name: r.companyName,
           color: '#00e57a',
           title: '🔥 FRESH INSIDER BUY',
-          headline: `Insider bought $${(r.freshInsiderValue/1000).toFixed(0)}K of ${r.sym} in the last ${r.freshInsiderDays}d`,
-          body: `<strong>${r.companyName} (${r.sym})</strong> — $${r.price?.toFixed(2)}<br>
+          headline: `Insider bought $${(r.freshInsiderValue/1000).toFixed(0)}K of ${r.sym} in last ${r.freshInsiderDays}d`,
+          body: `<strong>${r.companyName} (${r.sym})</strong> — $${liveQuotes[r.sym]?.price?.toFixed(2) || r.price?.toFixed(2)}<br>
             Score: ${r.total} · Signal: ${r.signal}<br><br>
             👤 An insider purchased <strong>$${(r.freshInsiderValue/1000).toFixed(0)}K</strong> of shares ${r.freshInsiderDays<=1?'today':r.freshInsiderDays+' days ago'}.<br><br>
             <em style="color:#7b5cf0;">Why it matters: insiders rarely buy with their own money unless they believe the stock is significantly undervalued.</em>`,
@@ -160,42 +258,7 @@ async function checkEntryAlerts() {
       }
     }
 
-    // 2. VOLUME ANOMALY > 5x on a quality stock (score >= 50)
-    if (r.volRatio > 5 && r.priceChange1D > 0 && r.total >= 50 && r.fund >= 12) {
-      if (!(await alreadySent('entry_volume', r.sym))) {
-        alerts.push({
-          type: 'entry_volume',
-          sym: r.sym, name: r.companyName,
-          color: '#00b4ff',
-          title: '⚡ EXTREME VOLUME SPIKE',
-          headline: `${r.sym} trading at ${r.volRatio}x average volume`,
-          body: `<strong>${r.companyName} (${r.sym})</strong> — $${r.price?.toFixed(2)} (+${r.priceChange1D}%)<br>
-            Score: ${r.total} · Volume: <strong>${r.volRatio}x average</strong><br><br>
-            ⚡ Unusual volume often signals institutional accumulation or imminent news. Combined with positive price action and a strong fundamental score (${r.fund}/32), this warrants attention.`,
-          data: r,
-        });
-      }
-    }
-
-    // 3. RANK JUMP > 5 positions
-    if (r.rankDelta != null && r.rankDelta >= 5 && r.total >= 55) {
-      if (!(await alreadySent('entry_rankjump', r.sym))) {
-        alerts.push({
-          type: 'entry_rankjump',
-          sym: r.sym, name: r.companyName,
-          color: '#ffcc00',
-          title: '📈 MAJOR RANK JUMP',
-          headline: `${r.sym} jumped ${r.rankDelta} positions to #${r.rankToday}`,
-          body: `<strong>${r.companyName} (${r.sym})</strong> — $${r.price?.toFixed(2)}<br>
-            New rank: #${r.rankToday} (▲${r.rankDelta} positions)<br>
-            Score: ${r.total} · Signal: ${r.signal}<br><br>
-            📈 Multiple signals improved simultaneously to push this stock up the rankings. ${r.moverSummary || 'Check the detail panel for the breakdown.'}`,
-          data: r,
-        });
-      }
-    }
-
-    // 4. RECENT 8-K filing (within 2 days) on a quality stock
+    // Recent 8-K filing within 2 days
     if (r.recent8K && r.recent8K.daysAgo <= 2 && r.total >= 50) {
       if (!(await alreadySent('entry_8k', r.sym))) {
         alerts.push({
@@ -204,7 +267,7 @@ async function checkEntryAlerts() {
           color: '#bf5fff',
           title: '📋 SEC 8-K FILING',
           headline: `${r.sym} filed an 8-K ${r.recent8K.daysAgo<=1?'today':r.recent8K.daysAgo+'d ago'}`,
-          body: `<strong>${r.companyName} (${r.sym})</strong> — $${r.price?.toFixed(2)}<br>
+          body: `<strong>${r.companyName} (${r.sym})</strong> — $${liveQuotes[r.sym]?.price?.toFixed(2) || r.price?.toFixed(2)}<br>
             Score: ${r.total} · Signal: ${r.signal}<br><br>
             📋 8-K filings cover material corporate events: earnings surprises, FDA approvals, acquisitions, guidance changes, leadership transitions. Filed ${r.recent8K.date}.`,
           data: r,
@@ -232,27 +295,28 @@ async function checkExitAlerts() {
   if (!picks?.length) { console.log('   No recent picks to monitor'); return alerts; }
   console.log(`   Monitoring ${picks.length} picks from last 60 days`);
 
-  // Get current scores from latest scan
+  // Get current scores from latest scan (for thesis-broken check)
   const { data: cache } = await sb.from('scan_cache').select('results').eq('id','daily').single();
   const currentMap = {};
   (cache?.results || []).forEach(r => { currentMap[r.sym] = r; });
 
-  // Fetch current prices for symbols not in scan_cache
-  const missingSyms = picks.filter(p => !currentMap[p.sym]).map(p => p.sym);
-  const uniqueMissing = [...new Set(missingSyms)];
-  const externalPrices = {};
-  for (let i = 0; i < uniqueMissing.length; i += 50) {
-    const batch = uniqueMissing.slice(i, i+50).join(',');
+  // Fetch LIVE prices for ALL active picks (not just missing ones)
+  // Even if a pick is in scan_cache, that price is from yesterday's close
+  const uniquePickSyms = [...new Set(picks.map(p => p.sym))];
+  const livePrices = {};
+  for (let i = 0; i < uniquePickSyms.length; i += 50) {
+    const batch = uniquePickSyms.slice(i, i+50).join(',');
     const quotes = await fmp(`/quote/${batch}`);
     if (Array.isArray(quotes)) {
-      quotes.forEach(q => { if (q?.symbol && q?.price) externalPrices[q.symbol] = q.price; });
+      quotes.forEach(q => { if (q?.symbol && q?.price) livePrices[q.symbol] = q.price; });
     }
-    if (i+50 < uniqueMissing.length) await sleep(300);
+    if (i+50 < uniquePickSyms.length) await sleep(150);
   }
+  console.log(`   Fetched live prices for ${Object.keys(livePrices).length}/${uniquePickSyms.length} active picks`);
 
   for (const pick of picks) {
     const current = currentMap[pick.sym];
-    const currentPrice = current?.price ?? externalPrices[pick.sym];
+    const currentPrice = livePrices[pick.sym] ?? current?.price;
     if (!currentPrice || !pick.entry_price) continue;
 
     const perf = ((currentPrice - pick.entry_price) / pick.entry_price) * 100;
