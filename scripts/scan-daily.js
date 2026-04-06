@@ -1084,8 +1084,8 @@ async function main() {
     console.log(' done');
   }
 
-  // Update scan_cache with deltas included
-  await sb.from('scan_cache').upsert({
+  // Update scan_cache with deltas + top movers included
+  const { error: cacheError2 } = await sb.from('scan_cache').upsert({
     id: 'daily',
     scan_date: todayScanDate,
     scanned_at: new Date().toISOString(),
@@ -1100,6 +1100,7 @@ async function main() {
       moverSummary: r.moverSummary || null,
     })),
   });
+  if (cacheError2) console.warn('⚠ scan_cache update with top_movers failed:', cacheError2.message);
 
   console.log(`\n🔺 Top 10 Movers:`);
   topMovers.forEach((r, i) =>

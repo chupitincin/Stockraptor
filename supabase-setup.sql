@@ -56,7 +56,8 @@ create table if not exists public.scan_cache (
   scanned_at   timestamptz not null default now(),
   results      jsonb not null default '[]',
   total_count  int  not null default 0,
-  errors       int  not null default 0
+  errors       int  not null default 0,
+  top_movers   jsonb
 );
 
 -- Solo lectura pública (los usuarios pueden ver el caché)
