@@ -45,7 +45,7 @@ nav {
   height: 60px;
   background: rgba(2, 4, 8, 0.85);
   backdrop-filter: blur(16px);
-  border-bottom: 1px solid #0d1a28;
+  border-bottom: 1px solid var(--bord);
 }
 .nav-logo {
   display: flex;
@@ -61,7 +61,7 @@ nav {
 .nav-logo-icon {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, #00e57a, #0091ff);
+  background: linear-gradient(135deg, var(--green), var(--blue));
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -161,7 +161,7 @@ nav {
 }
 .hero-title em {
   font-style: normal;
-  background: linear-gradient(135deg, #00e57a 0%, #0099ff 60%, #8b5cf6 100%);
+  background: linear-gradient(135deg, var(--green) 0%, #0099ff 60%, #8b5cf6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1017,7 +1017,7 @@ footer {
 .auth-btn{width:100%;padding:12px;background:var(--green);color:#010d08;border:none;border-radius:8px;font-family:var(--display);font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;letter-spacing:.3px;}
 .auth-btn:hover{background:var(--green2);}
 .auth-btn:disabled{opacity:.5;cursor:not-allowed;}
-.auth-err{color:#ef4444;font-size:12px;margin-bottom:12px;display:none;font-family:var(--mono);}
+.auth-err{color:var(--red);font-size:12px;margin-bottom:12px;display:none;font-family:var(--mono);}
 .auth-ok{color:var(--green);font-size:12px;margin-bottom:12px;display:none;font-family:var(--mono);}
 .auth-foot{font-size:11px;font-family:var(--mono);color:var(--txt);text-align:center;margin-top:14px;letter-spacing:.3px;}
 
@@ -1025,7 +1025,7 @@ footer {
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:#0d1e30;border:1px solid var(--bord2);color:var(--txh);padding:12px 24px;border-radius:40px;font-size:13px;font-family:var(--mono);z-index:2000;transition:transform .3s ease,opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;letter-spacing:.3px;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 .toast.success{border-color:rgba(0,229,122,.3);color:var(--green);}
-.toast.error{border-color:rgba(239,68,68,.3);color:#ef4444;}
+.toast.error{border-color:rgba(239,68,68,.3);color:var(--red);}
 
 /* ── NAV LOGGED IN STATE ──────────────────────────── */
 .nav-plan-badge{font-size:9px;font-family:var(--mono);letter-spacing:1.5px;font-weight:700;padding:4px 10px;border-radius:20px;}
@@ -1112,7 +1112,7 @@ footer {
 .acc-btn-primary:hover{background:var(--green2);transform:translateY(-1px);}
 .acc-btn-outline{background:transparent;border:1px solid var(--bord2);color:var(--txb);}
 .acc-btn-outline:hover{border-color:#2a4a6a;color:var(--white);}
-.acc-btn-danger{background:transparent;border:1px solid rgba(239,68,68,.3);color:#ef4444;}
+.acc-btn-danger{background:transparent;border:1px solid rgba(239,68,68,.3);color:var(--red);}
 .acc-btn-danger:hover{background:rgba(239,68,68,.08);}
 
 /* Settings rows */
