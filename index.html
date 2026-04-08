@@ -5,29 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StockRaptor — AI-Powered Small Cap Scanner</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,200;12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/stockraptor.css">
 <style>
+/* Landing page — shared tokens come from stockraptor.css */
 :root {
-  --bg: #020408;
-  --s1: #050a10;
-  --s2: #0a1020;
-  --bord: #0d1a28;
-  --bord2: #152030;
-  --green: #00e57a;
-  --green2: #00ff94;
-  --teal: #00c9b1;
-  --blue: #2563eb;
-  --blue2: #60a5fa;
-  --gold: #f59e0b;
-  --red: #ef4444;
-  --purple: #8b5cf6;
-  --txt: #4a6080;
-  --txb: #8aa0bc;
-  --txh: #c8dced;
-  --white: #eef4ff;
-  --mono: 'DM Mono', monospace;
-  --display: 'Bricolage Grotesque', sans-serif;
+  --green2: var(--green);
+  --blue2: var(--blue);
+  --txh: var(--txw);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }

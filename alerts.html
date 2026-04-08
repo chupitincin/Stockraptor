@@ -4,84 +4,60 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StockRaptor — Alerts Feed</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/stockraptor.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#080810;--bg2:#0d0d1a;--bg3:#13132a;
-  --bord:#1e1e36;--bord2:#2a2a48;
-  --green:#00e57a;--red:#ff3b5c;--gold:#f5c542;--blue:#4d8cff;
-  --purple:#7b5cf0;--orange:#ff7040;--teal:#00e5cc;--pink:#ff4fa0;
-  --txt:#6a6a8a;--txb:#c8c8e8;--txw:#eeeef8;
-  --mono:'Space Mono',monospace;--sans:'Inter',sans-serif;--display:'Syne',sans-serif;
+/* Page-specific styles (inherit everything else from stockraptor.css) */
+header { margin-bottom: 32px; }
+.subtitle { font-size: 12px; color: var(--txt); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 6px; font-family: var(--font-mono); }
+
+.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 24px 0; }
+@media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+.filters { display: flex; gap: 6px; margin: 20px 0; flex-wrap: wrap; }
+.filter {
+  background: var(--bg-1); border: 1px solid var(--bord-2); color: var(--txt);
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .8px;
+  padding: 7px 12px; border-radius: var(--r-md); cursor: pointer;
+  transition: all var(--t-fast); text-transform: uppercase;
 }
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--txb);font-family:var(--sans);font-size:14px;min-height:100vh}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--bord) 1px,transparent 1px),linear-gradient(90deg,var(--bord) 1px,transparent 1px);background-size:48px 48px;opacity:.25;pointer-events:none;z-index:0}
+.filter:hover { border-color: var(--green); color: var(--txb); }
+.filter.active { background: var(--green-d); border-color: var(--green); color: var(--green); }
 
-/* Top nav */
-#nav{position:fixed;top:0;left:0;right:0;height:52px;background:#0a0a18ee;backdrop-filter:blur(12px);border-bottom:1px solid var(--bord);display:flex;align-items:center;padding:0 24px;z-index:100}
-.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--txw);font-family:var(--display);font-size:17px;font-weight:700;letter-spacing:.5px}
-.nav-logo-icon{width:30px;height:30px;background:linear-gradient(135deg,#00ff94,#00b4ff);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px}
-.nav-logo span{color:var(--green)}
-.nav-center{flex:1;display:flex;justify-content:center;gap:4px}
-.nav-item{padding:8px 14px;font-size:12px;letter-spacing:.3px;color:var(--txt);text-decoration:none;border-radius:7px;transition:all .15s;font-weight:500}
-.nav-item:hover{color:var(--txw);background:#ffffff08}
-.nav-item.active{color:var(--green);background:#00ff9415}
+.alerts { display: flex; flex-direction: column; gap: 10px; }
+.alert {
+  background: var(--bg-1); border: 1px solid var(--bord);
+  border-left: 3px solid; border-radius: var(--r-lg);
+  padding: 16px 18px; transition: all var(--t-fast); cursor: pointer;
+}
+.alert:hover { background: var(--bg-2); border-color: var(--bord-2); }
+.alert-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.alert-type { font-size: 9px; letter-spacing: 1.2px; font-family: var(--font-mono); text-transform: uppercase; font-weight: 700; }
+.alert-time { font-size: 10px; color: var(--txt); font-family: var(--font-mono); }
+.alert-title { font-size: 15px; font-weight: 600; color: var(--txw); margin-bottom: 4px; }
+.alert-sym { font-family: var(--font-mono); font-weight: 700; color: var(--green); margin-right: 8px; }
+.alert-headline { font-size: 12px; color: var(--txb); line-height: 1.5; }
 
-.wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:72px 24px 80px}
-
-/* Header */
-header{margin-bottom:32px}
-h1{font-family:var(--display);font-size:40px;font-weight:700;color:var(--txw);letter-spacing:-.5px;line-height:1}
-.subtitle{font-size:12px;color:var(--txt);letter-spacing:1.5px;text-transform:uppercase;margin-top:6px;font-family:var(--mono)}
-
-/* Stats row */
-.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:24px 0}
-@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
-.stat{background:var(--bg2);border:1px solid var(--bord2);border-radius:10px;padding:14px;text-align:center}
-.stat-n{font-family:var(--display);font-size:24px;font-weight:700;color:var(--txw);line-height:1}
-.stat-l{font-size:9px;letter-spacing:1.5px;color:var(--txt);font-family:var(--mono);text-transform:uppercase;margin-top:4px}
-
-/* Filters */
-.filters{display:flex;gap:6px;margin:20px 0;flex-wrap:wrap}
-.filter{background:var(--bg2);border:1px solid var(--bord2);color:var(--txt);font-family:var(--mono);font-size:10px;letter-spacing:.8px;padding:7px 12px;border-radius:6px;cursor:pointer;transition:all .15s;text-transform:uppercase}
-.filter:hover{border-color:var(--green);color:var(--txb)}
-.filter.active{background:#00ff9415;border-color:var(--green);color:var(--green)}
-
-/* Alert cards */
-.alerts{display:flex;flex-direction:column;gap:10px}
-.alert{background:var(--bg2);border:1px solid var(--bord);border-left:3px solid;border-radius:10px;padding:16px 18px;transition:all .15s;cursor:pointer}
-.alert:hover{background:var(--bg3);border-color:var(--bord2)}
-.alert-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.alert-type{font-size:9px;letter-spacing:1.2px;font-family:var(--mono);text-transform:uppercase;font-weight:700}
-.alert-time{font-size:10px;color:var(--txt);font-family:var(--mono)}
-.alert-title{font-size:15px;font-weight:600;color:var(--txw);margin-bottom:4px}
-.alert-sym{font-family:var(--mono);font-weight:700;color:var(--green);margin-right:8px}
-.alert-headline{font-size:12px;color:var(--txb);line-height:1.5}
-
-.empty{text-align:center;padding:60px 20px;color:var(--txt);font-family:var(--mono);font-size:12px}
-.loading{text-align:center;padding:60px 20px;color:var(--txt);font-family:var(--mono);font-size:11px;letter-spacing:2px;animation:blink 1.2s ease infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+.empty { text-align: center; padding: 60px 20px; color: var(--txt); font-family: var(--font-mono); font-size: 12px; }
 </style>
 </head>
 <body>
 
-<div id="nav">
-  <a class="nav-logo" href="/">
-    <div class="nav-logo-icon">🦅</div>
+<nav class="sr-nav">
+  <a class="sr-nav-logo" href="/">
+    <div class="sr-nav-logo-icon">🦅</div>
     Stock<span>Raptor</span>
   </a>
-  <div class="nav-center">
-    <a class="nav-item" href="/scanner.html">📊 Scanner</a>
-    <a class="nav-item" href="/picks.html">🎯 Weekly Picks</a>
-    <a class="nav-item" href="/watchlist.html">⭐ Watchlist</a>
-    <a class="nav-item active" href="/alerts.html">🔔 Alerts</a>
+  <div class="sr-nav-center">
+    <a class="sr-nav-item" href="/scanner.html">📊 Scanner</a>
+    <a class="sr-nav-item" href="/picks.html">🎯 Weekly Picks</a>
+    <a class="sr-nav-item" href="/watchlist.html">⭐ Watchlist</a>
+    <a class="sr-nav-item active" href="/alerts.html">🔔 Alerts</a>
+    <a class="sr-nav-item" href="/tracker.html">📈 Tracker</a>
   </div>
-</div>
+</nav>
 
-<div class="wrap">
+<div class="sr-wrap narrow">
 
 <header>
   <h1>🔔 ALERTS FEED</h1>
@@ -89,25 +65,25 @@ h1{font-family:var(--display);font-size:40px;font-weight:700;color:var(--txw);le
 </header>
 
 <div class="stats">
-  <div class="stat">
-    <div class="stat-n" id="statTotal" style="color:var(--txw)">—</div>
-    <div class="stat-l">Last 7 Days</div>
+  <div class="sr-stat">
+    <div class="sr-stat-n" id="statTotal">—</div>
+    <div class="sr-stat-l">Last 7 Days</div>
   </div>
-  <div class="stat">
-    <div class="stat-n" id="statToday" style="color:var(--green)">—</div>
-    <div class="stat-l">Today</div>
+  <div class="sr-stat">
+    <div class="sr-stat-n sr-text-green" id="statToday">—</div>
+    <div class="sr-stat-l">Today</div>
   </div>
-  <div class="stat">
-    <div class="stat-n" id="statInsider" style="color:var(--green)">—</div>
-    <div class="stat-l">Insider</div>
+  <div class="sr-stat">
+    <div class="sr-stat-n sr-text-green" id="statInsider">—</div>
+    <div class="sr-stat-l">Insider</div>
   </div>
-  <div class="stat">
-    <div class="stat-n" id="statSec" style="color:var(--purple)">—</div>
-    <div class="stat-l">SEC Filings</div>
+  <div class="sr-stat">
+    <div class="sr-stat-n" id="statSec" style="color:var(--purple)">—</div>
+    <div class="sr-stat-l">SEC Filings</div>
   </div>
-  <div class="stat">
-    <div class="stat-n" id="statFda" style="color:var(--teal)">—</div>
-    <div class="stat-l">FDA Events</div>
+  <div class="sr-stat">
+    <div class="sr-stat-n" id="statFda" style="color:var(--teal)">—</div>
+    <div class="sr-stat-l">FDA Events</div>
   </div>
 </div>
 
@@ -129,7 +105,7 @@ h1{font-family:var(--display);font-size:40px;font-weight:700;color:var(--txw);le
 </div>
 
 <div class="alerts" id="alertsList">
-  <div class="loading">LOADING ALERTS...</div>
+  <div class="sr-loading">LOADING ALERTS...</div>
 </div>
 
 </div>

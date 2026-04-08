@@ -4,27 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StockRaptor — Performance Tracker</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/stockraptor.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#080810;--bg2:#0e0e1a;--bg3:#141426;
-  --border:#1e1e36;--border2:#2a2a48;
-  --green:#00e57a;--green-dim:#00e57a18;
-  --red:#ff3b5c;--red-dim:#ff3b5c18;
-  --yellow:#f5c542;--yellow-dim:#f5c54218;
-  --blue:#4d8cff;--blue-dim:#4d8cff18;
-  --purple:#7b5cf0;--purple-dim:#7b5cf018;
-  --text:#c8c8e8;--text-dim:#5a5a7a;--text-bright:#eeeef8;
-  --mono:'Space Mono',monospace;
-  --sans:'DM Sans',sans-serif;
-  --display:'Bebas Neue',sans-serif;
+/* Legacy aliases for tracker-specific names */
+:root {
+  --green-dim:  var(--green-d);
+  --red-dim:    var(--red-d);
+  --yellow-dim: var(--gold-d);
+  --blue-dim:   var(--blue-d);
+  --purple-dim: var(--purple-d);
+  --text:        var(--txb);
+  --text-dim:    var(--txt);
+  --text-bright: var(--txw);
 }
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;opacity:0.3;pointer-events:none;z-index:0}
 
 .wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 24px 80px}
 
@@ -124,17 +118,26 @@ td.neu{color:var(--text-dim)}
 </style>
 </head>
 <body>
-<div class="wrap">
 
-<header>
-  <div class="logo">
-    <div class="logo-icon">🦖</div>
-    <div>
-      <div class="logo-text">STOCKRAPTOR</div>
-      <div class="logo-sub">PERFORMANCE TRACKER</div>
-    </div>
+<nav class="sr-nav">
+  <a class="sr-nav-logo" href="/">
+    <div class="sr-nav-logo-icon">🦅</div>
+    Stock<span>Raptor</span>
+  </a>
+  <div class="sr-nav-center">
+    <a class="sr-nav-item" href="/scanner.html">📊 Scanner</a>
+    <a class="sr-nav-item" href="/picks.html">🎯 Weekly Picks</a>
+    <a class="sr-nav-item" href="/watchlist.html">⭐ Watchlist</a>
+    <a class="sr-nav-item" href="/alerts.html">🔔 Alerts</a>
+    <a class="sr-nav-item active" href="/tracker.html">📈 Tracker</a>
   </div>
-  <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+</nav>
+
+<div class="sr-wrap">
+
+<header style="margin-bottom:24px;padding-top:8px;">
+  <h1>📈 PERFORMANCE TRACKER</h1>
+  <div style="font-family:var(--font-mono);font-size:11px;color:var(--txt);letter-spacing:1.5px;margin-top:6px;text-transform:uppercase;">Pick history · Win rate · vs Russell 2000</div>
 </header>
 
 <div class="period-tabs">
