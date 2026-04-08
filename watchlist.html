@@ -11,22 +11,6 @@
 
 /* NAV */
 nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;gap:16px;background:rgba(6,6,15,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--bord-2);}
-.sn-logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--txw);display:flex;align-items:center;gap:8px;cursor:pointer;text-decoration:none;flex-shrink:0;}
-.sn-logo span{color:var(--green);}
-.sn-logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--green),#00996a);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;}
-.sn-center{display:flex;align-items:center;gap:4px;}
-.sn-nav-item{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;color:#707090;cursor:pointer;text-decoration:none;transition:all .15s;border:1px solid transparent;white-space:nowrap;}
-.sn-nav-item:hover{color:var(--txb);background:var(--bord);}
-.sn-nav-item.active{color:var(--txw);background:var(--bord);border-color:var(--bord);}
-.sn-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.sn-plan{font-size:9px;font-family:'Geist Mono',monospace;letter-spacing:1.5px;font-weight:700;padding:4px 10px;border-radius:20px;}
-.sn-plan.free{background:#ffffff10;color:#707090;border:1px solid var(--bord);}
-.sn-plan.pro{background:color-mix(in srgb, var(--green) 13%, transparent);color:var(--green);border:1px solid color-mix(in srgb, var(--green) 19%, transparent);}
-.sn-plan.elite{background:#ffcc0020;color:#ffcc00;border:1px solid #ffcc0030;}
-.sn-user-btn{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 5px;background:transparent;border:1px solid var(--bord);border-radius:20px;cursor:pointer;transition:all .15s;text-decoration:none;}
-.sn-user-btn:hover{border-color:#3a3a55;background:var(--bord);}
-.sn-user-avatar{width:22px;height:22px;border-radius:50%;background:color-mix(in srgb, var(--green) 13%, transparent);border:1px solid color-mix(in srgb, var(--green) 25%, transparent);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--green);font-family:'Geist Mono',monospace;font-weight:700;flex-shrink:0;}
-.sn-user-name{font-size:11px;color:#9090b0;font-family:'Geist Mono',monospace;letter-spacing:.3px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 /* PAGE */
 .spage{font-family:var(--font);}  /* width from stockraptor.css */
@@ -134,36 +118,6 @@ body {
 body::before { display: none !important; }
 
 /* NAV */
-nav, #scannerNav {
-  height: 60px !important;
-  background: rgba(6,6,15,0.92) !important;
-  border-bottom: 1px solid var(--bord-2) !important;
-  backdrop-filter: blur(16px) !important;
-}
-.sn-logo, .nav-logo {
-  font-family: 'Inter', sans-serif !important;
-  font-size: 17px !important; font-weight: 700 !important;
-  color: var(--txw) !important; letter-spacing: -0.3px !important;
-}
-.sn-logo span, .nav-logo span { color: var(--green) !important; }
-.sn-logo-icon, .nav-logo-icon {
-  background: linear-gradient(135deg, var(--green), var(--blue)) !important;
-  border-radius: 8px !important;
-}
-.sn-nav-item {
-  font-family: 'Geist Mono', monospace !important;
-  font-size: 11px !important; letter-spacing: .3px !important;
-  color: var(--txt) !important; border-radius: 6px !important;
-}
-.sn-nav-item:hover { color: #c8dced !important; background: var(--bg-2) !important; }
-.sn-nav-item.active { color: var(--txw) !important; background: var(--bg-2) !important; border-color: var(--bord-2) !important; }
-.sn-plan.free { background: rgba(255,255,255,.07) !important; color: #8aa0bc !important; border-color: var(--bord-2) !important; }
-.sn-plan.pro  { background: rgba(0,229,122,.12) !important; color: var(--green) !important; border-color: rgba(0,229,122,.25) !important; }
-.sn-plan.elite{ background: rgba(245,158,11,.12) !important; color: #f59e0b !important; border-color: rgba(245,158,11,.25) !important; }
-.sn-user-btn  { border-color: var(--bord-2) !important; border-radius: 20px !important; }
-.sn-user-btn:hover { border-color: #2a4a6a !important; background: var(--bg-2) !important; }
-.sn-user-avatar { background: rgba(0,229,122,.12) !important; border-color: rgba(0,229,122,.3) !important; color: var(--green) !important; font-family: 'Geist Mono', monospace !important; }
-.sn-user-name { color: #8aa0bc !important; font-family: 'Geist Mono', monospace !important; }
 
 /* TABLE SHARED */
 table { font-family: 'Inter', sans-serif !important; }
@@ -235,23 +189,23 @@ const CONFIG = {
 </script>
 
 <!-- NAV -->
-<nav>
-  <a class="sn-logo" href="/">
-    <div class="sn-logo-icon">🦅</div>
+<nav class="sr-nav">
+  <a class="sr-nav-logo" href="/">
+    <div class="sr-nav-logo-icon">🦅</div>
     Stock<span>Raptor</span>
   </a>
-  <div class="sn-center">
-    <a class="sn-nav-item" href="/scanner.html">📊 Scanner</a>
-    <a class="sn-nav-item" href="/picks.html">🎯 Weekly Picks</a>
-    <a class="sn-nav-item active" href="/watchlist.html">⭐ Watchlist</a>
-    <a class="sn-nav-item" href="/alerts.html">🔔 Alerts</a>
-    <a class="sn-nav-item" href="/tracker.html">📈 Tracker</a>
+  <div class="sr-nav-center">
+    <a class="sr-nav-item" href="/scanner.html">📊 Scanner</a>
+    <a class="sr-nav-item" href="/picks.html">🎯 Weekly Picks</a>
+    <a class="sr-nav-item active" href="/watchlist.html">⭐ Watchlist</a>
+    <a class="sr-nav-item" href="/alerts.html">🔔 Alerts</a>
+    <a class="sr-nav-item" href="/tracker.html">📈 Tracker</a>
   </div>
-  <div class="sn-right">
-    <span class="sn-plan free" id="snPlan">FREE</span>
-    <a class="sn-user-btn" href="/" id="snUserBtn">
-      <div class="sn-user-avatar" id="snUserAvatar">?</div>
-      <span class="sn-user-name" id="snUser"></span>
+  <div class="sr-nav-right">
+    <span class="sr-plan-badge free" id="snPlan">FREE</span>
+    <a class="sr-user-btn" href="/" id="snUserBtn">
+      <div class="sr-user-avatar" id="snUserAvatar">?</div>
+      <span class="sr-user-name" id="snUser"></span>
     </a>
   </div>
 </nav>
@@ -265,7 +219,7 @@ const CONFIG = {
       document.getElementById('snUserAvatar').textContent = u.charAt(0).toUpperCase();
       const el = document.getElementById('snPlan');
       el.textContent = p.toUpperCase();
-      el.className = 'sn-plan ' + p;
+      el.className = 'sr-plan-badge ' + p;
     }
   } catch(e) {}
 })();

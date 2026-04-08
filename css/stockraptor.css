@@ -254,6 +254,59 @@ a:hover { opacity: 0.8; }
 .sr-plan-badge.pro   { color: var(--green); border-color: var(--green); background: var(--green-d); }
 .sr-plan-badge.elite { color: var(--gold); border-color: var(--gold); background: var(--gold-d); }
 
+/* User button in nav right area */
+.sr-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 5px;
+  background: var(--bg-2);
+  border: 1px solid var(--bord-2);
+  border-radius: var(--r-md);
+  text-decoration: none;
+  transition: all var(--t-fast);
+  cursor: pointer;
+}
+.sr-user-btn:hover {
+  border-color: var(--bord-3);
+  background: var(--bg-3);
+  opacity: 1;
+}
+.sr-user-avatar {
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, var(--green), var(--blue));
+  color: var(--bg);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.sr-user-name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--txb);
+  letter-spacing: 0.3px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Hide user menu text on narrow screens */
+@media (max-width: 900px) {
+  .sr-nav-center .sr-nav-item { padding: 6px 10px; font-size: 11px; }
+}
+@media (max-width: 760px) {
+  .sr-user-name { display: none; }
+  .sr-plan-badge { display: none; }
+}
+
 /* ── Page wrapper (content below fixed nav) ───────────────── */
 /* All content pages share the SAME max-width for visual consistency.
    Only .sr-wrap.wide is allowed to go wider (for data tables). */

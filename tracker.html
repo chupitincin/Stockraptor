@@ -131,7 +131,29 @@ td.neu{color:var(--text-dim)}
     <a class="sr-nav-item" href="/alerts.html">🔔 Alerts</a>
     <a class="sr-nav-item active" href="/tracker.html">📈 Tracker</a>
   </div>
+  <div class="sr-nav-right">
+    <span class="sr-plan-badge free" id="navPlan">FREE</span>
+    <a class="sr-user-btn" href="/" id="navUserBtn">
+      <div class="sr-user-avatar" id="navUserAvatar">?</div>
+      <span class="sr-user-name" id="navUser"></span>
+    </a>
+  </div>
 </nav>
+<script>
+(function(){
+  try {
+    const u = localStorage.getItem('sr_user');
+    const p = localStorage.getItem('sr_plan') || 'free';
+    if (u) {
+      document.getElementById('navUser').textContent = u;
+      document.getElementById('navUserAvatar').textContent = u.charAt(0).toUpperCase();
+      const el = document.getElementById('navPlan');
+      el.textContent = p.toUpperCase();
+      el.className = 'sr-plan-badge ' + p;
+    }
+  } catch(e) {}
+})();
+</script>
 
 <div class="sr-wrap">
 
