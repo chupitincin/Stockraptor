@@ -5,6 +5,12 @@
 // for active picks. Sends via Resend email + Telegram bot.
 // ══════════════════════════════════════════════════════════════
 import { createClient } from '@supabase/supabase-js';
+import {
+  checkRedditMentions,
+  checkGdeltNews,
+  checkSecLatestFilings,
+  checkFdaSignals,
+} from './intraday-signals.js';
 
 const FMP_KEY        = process.env.FMP_KEY;
 const SB_URL         = process.env.SUPABASE_URL;
@@ -379,14 +385,36 @@ async function checkExitAlerts() {
   return alerts;
 }
 
+// ── Build cacheMap for alternative signal checks ────────────
+async function getCacheMap() {
+  const { data: cache } = await sb.from('scan_cache').select('results').eq('id','daily').single();
+  const cacheMap = {};
+  (cache?.results || []).filter(r => !r._stale).forEach(r => { cacheMap[r.sym] = r; });
+  return cacheMap;
+}
+
 // ── MAIN ─────────────────────────────────────────────────────
 async function main() {
   console.log('🦅 StockRaptor Alert Monitor starting...');
   const t0 = Date.now();
 
+  // Load universe once for alternative signal checks
+  const cacheMap = await getCacheMap();
+  console.log(`📋 Universe: ${Object.keys(cacheMap).length} fresh stocks`);
+
+  // Core alerts (price/volume/insider from scan data)
   const entries = await checkEntryAlerts();
   const exits   = await checkExitAlerts();
-  const all = [...entries, ...exits];
+
+  // Alternative data signals — run in parallel to save time
+  const [reddit, gdelt, sec, fda] = await Promise.all([
+    checkRedditMentions(cacheMap, alreadySent).catch(e => { console.warn('reddit failed:', e.message); return []; }),
+    checkGdeltNews(cacheMap, alreadySent).catch(e => { console.warn('gdelt failed:', e.message); return []; }),
+    checkSecLatestFilings(cacheMap, alreadySent).catch(e => { console.warn('sec failed:', e.message); return []; }),
+    checkFdaSignals(cacheMap, alreadySent).catch(e => { console.warn('fda failed:', e.message); return []; }),
+  ]);
+
+  const all = [...entries, ...exits, ...reddit, ...gdelt, ...sec, ...fda];
 
   if (all.length === 0) {
     console.log('\n✅ No alerts to send');
