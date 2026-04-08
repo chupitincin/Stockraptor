@@ -121,7 +121,7 @@ async function getUniverse() {
   const allTickers = new Map();
 
   // Buffer: ranges overlap slightly at boundaries to catch companies that float in/out
-  // Volume floor lowered from 100K to 20K to avoid excluding stocks on quiet days
+  // Volume floor: 50K — balance between catching quiet-day stocks and keeping universe manageable
   const ranges = [
     { min: 70000000,   max: 260000000  },
     { min: 240000000,  max: 520000000  },
@@ -133,7 +133,7 @@ async function getUniverse() {
     for (const range of ranges) {
       for (let page = 0; page < 20; page++) {
         const data = await fmp(
-          `/company-screener?marketCapMoreThan=${range.min}&marketCapLowerThan=${range.max}&exchange=${exchange}&volumeMoreThan=20000&isActivelyTrading=true&limit=500&page=${page}`
+          `/company-screener?marketCapMoreThan=${range.min}&marketCapLowerThan=${range.max}&exchange=${exchange}&volumeMoreThan=50000&isActivelyTrading=true&limit=500&page=${page}`
         );
         if (data === null) { console.warn(`   ⚠ Screener page ${page} failed — continuing`); continue; }
         if (!Array.isArray(data) || data.length === 0) break;
@@ -940,20 +940,37 @@ async function main() {
     console.warn('  ⚠ Could not load insider cache:', e.message);
   }
 
-  console.log(`\n🔬 Phase 2: Analyzing ${tickers.length} tickers...`);
+  console.log(`\n🔬 Phase 2: Analyzing ${tickers.length} tickers (concurrency=4)...`);
 
   const results = [];
   let errors = 0;
-
-  // Track which symbols failed analysis so we can retain their previous data
   const failedSyms = new Set();
-  for (let i = 0; i < tickers.length; i++) {
-    const sym = tickers[i];
-    if (i % 10 === 0) process.stdout.write(`\r[${i+1}/${tickers.length}] ${Math.round((i/tickers.length)*100)}% | ${Math.round((Date.now()-t0)/1000)}s | ${results.length} scored`);
+
+  // Parallel processing with concurrency limit — 4x faster than sequential
+  // Concurrency 4 = ~240 calls/min, under FMP Starter limit of 300/min
+  const CONCURRENCY = 4;
+  let processed = 0;
+
+  async function processTicker(sym) {
     const r = await analyzeTicker(sym, universe.get(sym), insiderCache);
     if (r) results.push(r);
     else { errors++; failedSyms.add(sym); }
+    processed++;
+    if (processed % 50 === 0 || processed === tickers.length) {
+      process.stdout.write(`\r[${processed}/${tickers.length}] ${Math.round((processed/tickers.length)*100)}% | ${Math.round((Date.now()-t0)/1000)}s | ${results.length} scored`);
+    }
   }
+
+  // Worker pool pattern: maintain N parallel in-flight requests
+  const queue = [...tickers];
+  const workers = Array.from({ length: CONCURRENCY }, async () => {
+    while (queue.length > 0) {
+      const sym = queue.shift();
+      if (!sym) break;
+      await processTicker(sym);
+    }
+  });
+  await Promise.all(workers);
 
   const elapsed = Math.round((Date.now() - t0) / 1000);
 
