@@ -10,7 +10,7 @@
 /* Scanner page overrides — shared tokens come from stockraptor.css */
 *{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
-body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;min-height:100vh;overflow-x:hidden;}
+body{background:var(--bg);color:var(--txb);font-family:var(--sans);font-size:15px;min-height:100vh;overflow-x:hidden;}
 .bg-grid{display:none;}
 
 /* NAV */
@@ -354,27 +354,7 @@ body { background: #0a0a0a; }
    ════════════════════════════════════════════════════ */
 
 /* ── DESIGN TOKENS ── */
-:root {
-  --bg: var(--bg);
-  --s1: var(--bg-1);
-  --s2: var(--bg-2);
-  --bord: var(--bord);
-  --bord2: var(--bord-2);
-  --green: var(--green);
-  --green2: var(--green);
-  --teal: #00c9b1;
-  --blue: var(--blue);
-  --blue2: #60a5fa;
-  --gold: #f59e0b;
-  --red: var(--red);
-  --purple: #8b5cf6;
-  --txt: var(--txt);
-  --txb: #8aa0bc;
-  --txh: #c8dced;
-  --white: var(--txw);
-  --mono: 'DM Mono', monospace;
-  --display: 'Bricolage Grotesque', sans-serif;
-}
+/* broken :root override removed — uses stockraptor.css */
 
 body {
   background: var(--bg) !important;
@@ -387,7 +367,7 @@ body {
 /* ── NAV UPGRADE ── */
 #scannerNav {
   height: 60px !important;
-  background: rgba(2, 4, 8, 0.92) !important;
+  background: rgba(6,6,15,0.92) !important;
   border-bottom: 1px solid var(--bord2) !important;
   backdrop-filter: blur(16px) !important;
   padding: 0 32px !important;
@@ -551,7 +531,7 @@ table {
   font-family: var(--display) !important;
 }
 thead {
-  background: rgba(2, 4, 8, 0.95) !important;
+  background: rgba(6,6,15,0.95) !important;
   backdrop-filter: blur(12px) !important;
 }
 th {
@@ -619,7 +599,7 @@ tbody tr.dr > td { padding: 0 !important; border: none !important; background: t
   margin-bottom: 4px !important;
 }
 .det-card {
-  background: rgba(2,4,8,.6) !important;
+  background: rgba(6,6,15,.6) !important;
   border: 1px solid var(--bord2) !important;
   border-radius: 8px !important;
 }
@@ -710,7 +690,7 @@ tbody tr.dr > td { padding: 0 !important; border: none !important; background: t
 #scrollTopBtn {
   border-color: var(--green) !important;
   color: var(--green) !important;
-  background: rgba(2,4,8,.9) !important;
+  background: rgba(6,6,15,.9) !important;
 }
 
 /* ── TOOLTIP UPGRADE ── */
@@ -782,29 +762,10 @@ tbody tr.dr > td { padding: 0 !important; border: none !important; background: t
 /* ═══════════════════════════════════════
    SHARED DESIGN SYSTEM — matches index-new
    ═══════════════════════════════════════ */
-:root {
-  --bg: var(--bg) !important;
-  --s1: var(--bg-1) !important;
-  --s2: var(--bg-2) !important;
-  --bord: var(--bord) !important;
-  --bord2: var(--bord-2) !important;
-  --green: var(--green) !important;
-  --green2: var(--green) !important;
-  --teal: #00c9b1 !important;
-  --blue2: #60a5fa !important;
-  --gold: #f59e0b !important;
-  --red: var(--red) !important;
-  --purple: #8b5cf6 !important;
-  --txt: var(--txt) !important;
-  --txb: #8aa0bc !important;
-  --txh: #c8dced !important;
-  --white: var(--txw) !important;
-  --mono: 'DM Mono', monospace !important;
-  --display: 'Bricolage Grotesque', sans-serif !important;
-}
+/* broken :root override removed — uses stockraptor.css */
 body {
   background: var(--bg) !important;
-  font-family: 'Bricolage Grotesque', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
 }
 /* NO grid background — clean solid dark */
 .bg-grid { display: none !important; }
@@ -813,12 +774,12 @@ body::before { display: none !important; }
 /* NAV */
 nav, #scannerNav {
   height: 60px !important;
-  background: rgba(2,4,8,0.92) !important;
+  background: rgba(6,6,15,0.92) !important;
   border-bottom: 1px solid var(--bord-2) !important;
   backdrop-filter: blur(16px) !important;
 }
 .sn-logo, .nav-logo {
-  font-family: 'Bricolage Grotesque', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 17px !important; font-weight: 700 !important;
   color: var(--txw) !important; letter-spacing: -0.3px !important;
 }
@@ -828,7 +789,7 @@ nav, #scannerNav {
   border-radius: 8px !important;
 }
 .sn-nav-item {
-  font-family: 'DM Mono', monospace !important;
+  font-family: 'Geist Mono', monospace !important;
   font-size: 11px !important; letter-spacing: .3px !important;
   color: var(--txt) !important; border-radius: 6px !important;
 }
@@ -839,20 +800,20 @@ nav, #scannerNav {
 .sn-plan.elite{ background: rgba(245,158,11,.12) !important; color: #f59e0b !important; border-color: rgba(245,158,11,.25) !important; }
 .sn-user-btn  { border-color: var(--bord-2) !important; border-radius: 20px !important; }
 .sn-user-btn:hover { border-color: #2a4a6a !important; background: var(--bg-2) !important; }
-.sn-user-avatar { background: rgba(0,229,122,.12) !important; border-color: rgba(0,229,122,.3) !important; color: var(--green) !important; font-family: 'DM Mono', monospace !important; }
-.sn-user-name { color: #8aa0bc !important; font-family: 'DM Mono', monospace !important; }
+.sn-user-avatar { background: rgba(0,229,122,.12) !important; border-color: rgba(0,229,122,.3) !important; color: var(--green) !important; font-family: 'Geist Mono', monospace !important; }
+.sn-user-name { color: #8aa0bc !important; font-family: 'Geist Mono', monospace !important; }
 
 /* TABLE SHARED */
-table { font-family: 'Bricolage Grotesque', sans-serif !important; }
+table { font-family: 'Inter', sans-serif !important; }
 th {
-  font-family: 'DM Mono', monospace !important;
+  font-family: 'Geist Mono', monospace !important;
   font-size: 9px !important; letter-spacing: 1.5px !important;
   color: var(--txt) !important; font-weight: 400 !important;
   border-bottom: 1px solid var(--bord-2) !important;
   padding: 10px 10px !important;
 }
 th:hover { color: #c8dced !important; }
-thead { background: rgba(2,4,8,.97) !important; top: 60px !important; }
+thead { background: rgba(6,6,15,.97) !important; top: 60px !important; }
 tbody tr.mr td {
   background: var(--bg-1) !important;
   border-top: 1px solid var(--bord-2) !important;
@@ -864,12 +825,12 @@ tbody tr.mr td:first-child { border-left: 1px solid var(--bord-2) !important; bo
 tbody tr.mr td:last-child  { border-right: 1px solid var(--bord-2) !important; border-radius: 0 10px 10px 0 !important; padding-right: 14px !important; }
 tbody tr.mr:hover td { background: var(--bg-2) !important; }
 tbody tr.mr { border-bottom: none !important; }
-.tsym { font-family: 'DM Mono', monospace !important; font-size: 14px !important; font-weight: 500 !important; color: var(--txw) !important; }
-.tname { font-family: 'Bricolage Grotesque', sans-serif !important; font-size: 11px !important; color: var(--txt) !important; }
-.tsec  { font-family: 'DM Mono', monospace !important; font-size: 9px !important; color: #1e3a50 !important; letter-spacing: .5px !important; }
-.badge { font-family: 'DM Mono', monospace !important; font-size: 9px !important; letter-spacing: 1px !important; padding: 4px 10px !important; border-radius: 20px !important; font-weight: 500 !important; }
-.sv    { font-family: 'DM Mono', monospace !important; font-size: 18px !important; font-weight: 500 !important; letter-spacing: -.5px !important; }
-.flag  { font-family: 'DM Mono', monospace !important; font-size: 9px !important; padding: 3px 7px !important; border-radius: 5px !important; font-weight: 500 !important; }
+.tsym { font-family: 'Geist Mono', monospace !important; font-size: 14px !important; font-weight: 500 !important; color: var(--txw) !important; }
+.tname { font-family: 'Inter', sans-serif !important; font-size: 11px !important; color: var(--txt) !important; }
+.tsec  { font-family: 'Geist Mono', monospace !important; font-size: 9px !important; color: #1e3a50 !important; letter-spacing: .5px !important; }
+.badge { font-family: 'Geist Mono', monospace !important; font-size: 9px !important; letter-spacing: 1px !important; padding: 4px 10px !important; border-radius: 20px !important; font-weight: 500 !important; }
+.sv    { font-family: 'Geist Mono', monospace !important; font-size: 18px !important; font-weight: 500 !important; letter-spacing: -.5px !important; }
+.flag  { font-family: 'Geist Mono', monospace !important; font-size: 9px !important; padding: 3px 7px !important; border-radius: 5px !important; font-weight: 500 !important; }
 .arr   { color: var(--bord-2) !important; }
 .arr.op { color: var(--green) !important; }
 

@@ -8,16 +8,12 @@
 <link rel="stylesheet" href="/css/stockraptor.css">
 <style>
 /* Landing page — shared tokens come from stockraptor.css */
-:root {
-  --green2: var(--green);
-  --blue2: var(--blue);
-  --txh: var(--txw);
-}
+/* broken :root override removed — uses stockraptor.css */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
-  color: var(--txt);
+  color: var(--txb);
   font-family: var(--display);
   font-size: 16px;
   min-height: 100vh;
@@ -43,7 +39,7 @@ nav {
   justify-content: space-between;
   padding: 0 40px;
   height: 60px;
-  background: rgba(2, 4, 8, 0.85);
+  background: rgba(6,6,15,0.85);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--bord);
 }
