@@ -128,18 +128,13 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   font-weight: 700;
   color: var(--txw);
-  letter-spacing: -0.5px;
-  line-height: 1.1;
+  letter-spacing: -0.8px;
+  line-height: 1.05;
 }
-h1 { font-size: 34px; font-weight: 800; }
-h2 { font-size: 22px; }
-h3 { font-size: 18px; }
-h4 { font-size: 14px; }
-
-@media (max-width: 700px) {
-  h1 { font-size: 28px; }
-  h2 { font-size: 20px; }
-}
+h1 { font-size: clamp(32px, 4vw, 46px); font-weight: 700; }
+h2 { font-size: clamp(22px, 2.5vw, 28px); }
+h3 { font-size: 20px; }
+h4 { font-size: 15px; }
 
 /* ── Links ─────────────────────────────────────────────────── */
 a {
@@ -260,18 +255,24 @@ a:hover { opacity: 0.8; }
 .sr-plan-badge.elite { color: var(--gold); border-color: var(--gold); background: var(--gold-d); }
 
 /* ── Page wrapper (content below fixed nav) ───────────────── */
-.sr-wrap {
+/* All content pages share the SAME max-width for visual consistency.
+   Only .sr-wrap.wide is allowed to go wider (for data tables). */
+.sr-wrap,
+.page,        /* picks.html legacy wrapper */
+.spage {      /* watchlist.html legacy wrapper */
   position: relative;
   z-index: 1;
-  max-width: 1400px;
+  max-width: 1280px !important;
   margin: 0 auto;
   padding: 88px 32px 80px;
 }
-.sr-wrap.narrow { max-width: 1000px; }
-.sr-wrap.wide   { max-width: 1600px; }
+.sr-wrap.narrow { max-width: 1000px !important; }
+.sr-wrap.wide   { max-width: 1600px !important; }
 
 @media (max-width: 700px) {
-  .sr-wrap { padding: 76px 16px 60px; }
+  .sr-wrap,
+  .page,
+  .spage { padding: 76px 16px 60px; }
 }
 
 /* ── Page header (title + subtitle + optional actions) ──── */
