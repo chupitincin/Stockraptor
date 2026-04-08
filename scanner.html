@@ -905,6 +905,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
     <a class="sn-nav-item active" href="/scanner.html">📊 Scanner</a>
     <a class="sn-nav-item" href="/picks.html">🎯 Weekly Picks</a>
     <a class="sn-nav-item" href="/watchlist.html">⭐ Watchlist</a>
+    <a class="sn-nav-item" href="/alerts.html">🔔 Alerts</a>
   </div>
   <div class="sn-right">
     <span class="sn-plan free" id="snPlan">FREE</span>
@@ -939,6 +940,15 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
     <span id="marketStatus" style="margin-left:8px;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:10px;display:none;"></span>
   </div>
   <button id="btnRescan" onclick="triggerRescan()" style="background:transparent;border:1px solid #181828;color:#707070;font-size:10px;font-family:'Geist Mono',monospace;letter-spacing:1px;padding:4px 10px;border-radius:3px;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='#00ff94';this.style.color='#00ff94'" onmouseout="this.style.borderColor='#181828';this.style.color='#707070'">&#x21BB; RE-SCAN NOW</button>
+</div>
+
+<!-- Alerts feed banner — shows recent signals scrolling marquee-style -->
+<div id="alertsBanner" style="display:none;position:fixed;left:0;right:0;z-index:89;background:linear-gradient(90deg,#0a0a18 0%,#0e1420 100%);border-bottom:1px solid #152030;padding:7px 24px;align-items:center;gap:14px;overflow:hidden;">
+  <a href="/alerts.html" style="display:flex;align-items:center;gap:6px;font-size:10px;font-family:'Geist Mono',monospace;color:#00e57a;letter-spacing:1.2px;text-decoration:none;flex-shrink:0;font-weight:700;">🔔 <span id="alertsBannerCount">0</span> ALERTS</a>
+  <div style="flex:1;overflow:hidden;position:relative;white-space:nowrap;">
+    <div id="alertsBannerFeed" style="display:inline-flex;gap:24px;font-size:11px;font-family:'Geist Mono',monospace;color:#8090b0;"></div>
+  </div>
+  <a href="/alerts.html" style="flex-shrink:0;font-size:9px;color:#606070;text-decoration:none;letter-spacing:1px;font-family:'Geist Mono',monospace;">VIEW ALL →</a>
 </div>
 
 <!-- Loading indicator -->
@@ -1755,6 +1765,7 @@ function renderDet(d){
     ${sbr(d.fund,32,'var(--blue)','Fundamental')}${sbr(d.sent,8,'var(--purple)','Sentiment')}${sbr(d.analyst,15,'var(--green)','Analysts')}${sbr(d.momentum,17,'var(--gold)','Momentum')}${sbr(d.earPts,15,'var(--orange)','Earnings')}${sbr(d.volShort,11,'var(--teal)','Vol/Short')}
     ${d.dilPenalty<0?`<div style="font-size:8px;color:var(--red);margin-top:5px;">⚠ Dilution: ${d.dilPenalty}pts</div>`:''}${d.debtPenalty<0?`<div style="font-size:8px;color:var(--orange);">⚠ Debt+growth: ${d.debtPenalty}pts</div>`:''}
   </div>
+  ${(typeof renderAlertsForDetail === 'function') ? renderAlertsForDetail(d.sym) : ''}
   ${d.moverSummary ? `
   <div class="det-card" style="grid-column:1/-1;background:linear-gradient(135deg,#00ff9408,#00e5cc05);border-color:#00ff9420;">
     <div class="det-title" style="color:var(--green);">🔺 WHY IT MOVED TODAY
@@ -1823,13 +1834,18 @@ function updateStickyTop() {
   const nav    = document.getElementById('scannerNav');
   const banner = document.getElementById('cacheBanner');
   const loader = document.getElementById('cacheLoading');
+  const alerts = document.getElementById('alertsBanner');
   const navH   = nav    ? nav.offsetHeight : 52;
   const bannerVisible = banner && banner.style.display !== 'none';
   const loaderVisible = loader && loader.style.display !== 'none';
-  const extraH = bannerVisible ? banner.offsetHeight
-               : loaderVisible ? loader.offsetHeight
-               : 0;
-  document.documentElement.style.setProperty('--thead-top', (navH + extraH) + 'px');
+  const alertsVisible = alerts && alerts.style.display !== 'none';
+  const mainH = bannerVisible ? banner.offsetHeight
+              : loaderVisible ? loader.offsetHeight
+              : 0;
+  const alertsH = alertsVisible ? alerts.offsetHeight : 0;
+  // Position alerts banner directly below cacheBanner/loader
+  if (alerts) alerts.style.top = (navH + mainH) + 'px';
+  document.documentElement.style.setProperty('--thead-top', (navH + mainH + alertsH) + 'px');
 }
 
 async function runScan(){
@@ -2598,6 +2614,9 @@ async function loadDailyCache() {
     renderTable();
     if (typeof applyScannerLang === 'function') applyScannerLang();
 
+    // Load alerts (runs after table so badges can be attached)
+    loadAlerts();
+
     // Highlight stock from ?highlight=SYM param (e.g. coming from Weekly Picks)
     const _hlSym = new URLSearchParams(window.location.search).get('highlight');
     if (_hlSym) {
@@ -2629,6 +2648,148 @@ async function loadDailyCache() {
     if (cacheLoading) { cacheLoading.style.display = 'none'; updateStickyTop(); }
     if (emptyState)   emptyState.style.display   = 'block';
   }
+}
+
+// ══════════════════════════════════════════
+// ALERTS FEED — shared state for banner + badges + detail
+// ══════════════════════════════════════════
+window._alertsBySymbol = {}; // sym -> array of recent alerts
+window._alertsAll = [];
+
+const ALERT_META = {
+  entry_insider:      { label: 'INSIDER BUY',   color: '#00e57a', icon: '🔥' },
+  entry_volume:       { label: 'VOL SPIKE',     color: '#00b4ff', icon: '⚡' },
+  entry_breakout:     { label: 'BREAKOUT',      color: '#00e57a', icon: '🚀' },
+  entry_dip:          { label: 'QUALITY DIP',   color: '#ff7040', icon: '📉' },
+  entry_rankjump:     { label: 'RANK JUMP',     color: '#f5c542', icon: '📈' },
+  entry_8k:           { label: 'SEC 8-K',       color: '#bf5fff', icon: '📋' },
+  entry_sec_form4:    { label: 'FORM 4',        color: '#00e57a', icon: '👤' },
+  entry_sec_13d:      { label: 'ACTIVIST 13D',  color: '#bf5fff', icon: '🎯' },
+  entry_reddit:       { label: 'REDDIT BUZZ',   color: '#ff4500', icon: '💬' },
+  entry_news_spike:   { label: 'NEWS SPIKE',    color: '#00b4ff', icon: '📰' },
+  entry_fda_approval: { label: 'FDA APPROVAL',  color: '#00e5cc', icon: '💊' },
+  entry_fda_pdufa:    { label: 'PDUFA DATE',    color: '#f5c542', icon: '📅' },
+  exit_stoploss:      { label: 'STOP-LOSS',     color: '#ff3b5c', icon: '🔴' },
+  exit_thesis:        { label: 'THESIS BROKEN', color: '#ff7040', icon: '⚠️' },
+  exit_trend:         { label: 'TREND COLLAPSE',color: '#ff3b5c', icon: '📉' },
+};
+
+function fmtAlertTime(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'now';
+  if (mins < 60) return mins + 'm';
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return hours + 'h';
+  return Math.floor(hours / 24) + 'd';
+}
+
+async function loadAlerts() {
+  if (!sb2) return;
+  try {
+    const cutoff = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
+    const { data, error } = await sb2
+      .from('alert_log')
+      .select('id, alert_type, sym, headline, created_at')
+      .gte('created_at', cutoff)
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (error || !data) return;
+
+    window._alertsAll = data;
+    window._alertsBySymbol = {};
+    for (const a of data) {
+      if (!window._alertsBySymbol[a.sym]) window._alertsBySymbol[a.sym] = [];
+      window._alertsBySymbol[a.sym].push(a);
+    }
+
+    renderAlertsBanner();
+    renderAlertBadgesOnRows();
+  } catch (e) {
+    console.warn('loadAlerts failed:', e);
+  }
+}
+
+function renderAlertsBanner() {
+  const banner = document.getElementById('alertsBanner');
+  const feed   = document.getElementById('alertsBannerFeed');
+  const count  = document.getElementById('alertsBannerCount');
+  if (!banner || !feed) return;
+
+  // Today's alerts only for the banner marquee
+  const today = Date.now() - 24 * 3600 * 1000;
+  const recent = window._alertsAll.filter(a => new Date(a.created_at).getTime() > today).slice(0, 10);
+
+  if (!recent.length) {
+    banner.style.display = 'none';
+    updateStickyTop();
+    return;
+  }
+
+  count.textContent = recent.length;
+  feed.innerHTML = recent.map(a => {
+    const m = ALERT_META[a.alert_type] || { label: a.alert_type, color: '#888', icon: '●' };
+    return `<a href="#" onclick="event.preventDefault();toggleDet('${a.sym}');scrollToSym('${a.sym}');" style="text-decoration:none;color:inherit;flex-shrink:0;">
+      <span style="color:${m.color};margin-right:4px;">${m.icon}</span>
+      <span style="color:${m.color};font-weight:700;">${m.label}</span>
+      <span style="color:#c8c8e8;margin-left:6px;font-weight:700;">${a.sym}</span>
+      <span style="color:#606070;margin-left:6px;font-size:9px;">${fmtAlertTime(a.created_at)}</span>
+    </a>`;
+  }).join('');
+
+  banner.style.display = 'flex';
+  updateStickyTop();
+}
+
+function renderAlertBadgesOnRows() {
+  // Mark rows with alert badges based on window._alertsBySymbol
+  for (const sym of Object.keys(window._alertsBySymbol)) {
+    const arEl = document.getElementById('ar-' + sym);
+    if (!arEl) continue;
+    const row = arEl.closest('tr.mr');
+    if (!row) continue;
+    const count = window._alertsBySymbol[sym].length;
+    // Only add if not already present
+    if (row.querySelector('.alert-row-badge')) continue;
+    const tsymDiv = row.querySelector('.tsym');
+    if (tsymDiv) {
+      const badge = document.createElement('span');
+      badge.className = 'alert-row-badge';
+      badge.style.cssText = 'display:inline-block;margin-left:5px;background:#ff4500;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:6px;vertical-align:middle;font-family:var(--font);letter-spacing:.3px;';
+      badge.textContent = '🔔 ' + count;
+      badge.title = count + ' alert' + (count > 1 ? 's' : '') + ' in last 7 days';
+      tsymDiv.appendChild(badge);
+    }
+  }
+}
+
+function scrollToSym(sym) {
+  const arEl = document.getElementById('ar-' + sym);
+  const row = arEl?.closest('tr.mr');
+  if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function renderAlertsForDetail(sym) {
+  const alerts = window._alertsBySymbol[sym] || [];
+  if (!alerts.length) return '';
+
+  const items = alerts.slice(0, 8).map(a => {
+    const m = ALERT_META[a.alert_type] || { label: a.alert_type, color: '#888', icon: '●' };
+    return `<div style="padding:8px 10px;border-left:3px solid ${m.color};background:#0d0d1a;border-radius:6px;margin-bottom:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+        <span style="font-size:9px;font-weight:700;color:${m.color};letter-spacing:1px;font-family:var(--font);">${m.icon} ${m.label}</span>
+        <span style="font-size:9px;color:var(--txt);font-family:var(--font);">${fmtAlertTime(a.created_at)} ago</span>
+      </div>
+      <div style="font-size:11px;color:var(--txb);line-height:1.4;">${a.headline || ''}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="det-card" style="grid-column:1/-1;">
+    <div class="det-title">🔔 RECENT ALERTS (${alerts.length})</div>
+    ${items}
+    ${alerts.length > 8 ? `<a href="/alerts.html" style="display:block;text-align:center;margin-top:8px;font-size:10px;color:var(--green);text-decoration:none;letter-spacing:1px;font-family:var(--font);">View all ${alerts.length} alerts →</a>` : ''}
+  </div>`;
 }
 
 // ══════════════════════════════════════════

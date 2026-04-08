@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StockRaptor — Alerts Feed</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080810;--bg2:#0d0d1a;--bg3:#13132a;
+  --bord:#1e1e36;--bord2:#2a2a48;
+  --green:#00e57a;--red:#ff3b5c;--gold:#f5c542;--blue:#4d8cff;
+  --purple:#7b5cf0;--orange:#ff7040;--teal:#00e5cc;--pink:#ff4fa0;
+  --txt:#6a6a8a;--txb:#c8c8e8;--txw:#eeeef8;
+  --mono:'Space Mono',monospace;--sans:'Inter',sans-serif;--display:'Syne',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--txb);font-family:var(--sans);font-size:14px;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--bord) 1px,transparent 1px),linear-gradient(90deg,var(--bord) 1px,transparent 1px);background-size:48px 48px;opacity:.25;pointer-events:none;z-index:0}
+
+/* Top nav */
+#nav{position:fixed;top:0;left:0;right:0;height:52px;background:#0a0a18ee;backdrop-filter:blur(12px);border-bottom:1px solid var(--bord);display:flex;align-items:center;padding:0 24px;z-index:100}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--txw);font-family:var(--display);font-size:17px;font-weight:700;letter-spacing:.5px}
+.nav-logo-icon{width:30px;height:30px;background:linear-gradient(135deg,#00ff94,#00b4ff);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.nav-logo span{color:var(--green)}
+.nav-center{flex:1;display:flex;justify-content:center;gap:4px}
+.nav-item{padding:8px 14px;font-size:12px;letter-spacing:.3px;color:var(--txt);text-decoration:none;border-radius:7px;transition:all .15s;font-weight:500}
+.nav-item:hover{color:var(--txw);background:#ffffff08}
+.nav-item.active{color:var(--green);background:#00ff9415}
+
+.wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:72px 24px 80px}
+
+/* Header */
+header{margin-bottom:32px}
+h1{font-family:var(--display);font-size:40px;font-weight:700;color:var(--txw);letter-spacing:-.5px;line-height:1}
+.subtitle{font-size:12px;color:var(--txt);letter-spacing:1.5px;text-transform:uppercase;margin-top:6px;font-family:var(--mono)}
+
+/* Stats row */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:24px 0}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--bg2);border:1px solid var(--bord2);border-radius:10px;padding:14px;text-align:center}
+.stat-n{font-family:var(--display);font-size:24px;font-weight:700;color:var(--txw);line-height:1}
+.stat-l{font-size:9px;letter-spacing:1.5px;color:var(--txt);font-family:var(--mono);text-transform:uppercase;margin-top:4px}
+
+/* Filters */
+.filters{display:flex;gap:6px;margin:20px 0;flex-wrap:wrap}
+.filter{background:var(--bg2);border:1px solid var(--bord2);color:var(--txt);font-family:var(--mono);font-size:10px;letter-spacing:.8px;padding:7px 12px;border-radius:6px;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.filter:hover{border-color:var(--green);color:var(--txb)}
+.filter.active{background:#00ff9415;border-color:var(--green);color:var(--green)}
+
+/* Alert cards */
+.alerts{display:flex;flex-direction:column;gap:10px}
+.alert{background:var(--bg2);border:1px solid var(--bord);border-left:3px solid;border-radius:10px;padding:16px 18px;transition:all .15s;cursor:pointer}
+.alert:hover{background:var(--bg3);border-color:var(--bord2)}
+.alert-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.alert-type{font-size:9px;letter-spacing:1.2px;font-family:var(--mono);text-transform:uppercase;font-weight:700}
+.alert-time{font-size:10px;color:var(--txt);font-family:var(--mono)}
+.alert-title{font-size:15px;font-weight:600;color:var(--txw);margin-bottom:4px}
+.alert-sym{font-family:var(--mono);font-weight:700;color:var(--green);margin-right:8px}
+.alert-headline{font-size:12px;color:var(--txb);line-height:1.5}
+
+.empty{text-align:center;padding:60px 20px;color:var(--txt);font-family:var(--mono);font-size:12px}
+.loading{text-align:center;padding:60px 20px;color:var(--txt);font-family:var(--mono);font-size:11px;letter-spacing:2px;animation:blink 1.2s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+</style>
+</head>
+<body>
+
+<div id="nav">
+  <a class="nav-logo" href="/">
+    <div class="nav-logo-icon">🦅</div>
+    Stock<span>Raptor</span>
+  </a>
+  <div class="nav-center">
+    <a class="nav-item" href="/scanner.html">📊 Scanner</a>
+    <a class="nav-item" href="/picks.html">🎯 Weekly Picks</a>
+    <a class="nav-item" href="/watchlist.html">⭐ Watchlist</a>
+    <a class="nav-item active" href="/alerts.html">🔔 Alerts</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+<header>
+  <h1>🔔 ALERTS FEED</h1>
+  <div class="subtitle">Real-time signals · Insider buys · Reddit buzz · SEC filings · FDA events</div>
+</header>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-n" id="statTotal" style="color:var(--txw)">—</div>
+    <div class="stat-l">Last 7 Days</div>
+  </div>
+  <div class="stat">
+    <div class="stat-n" id="statToday" style="color:var(--green)">—</div>
+    <div class="stat-l">Today</div>
+  </div>
+  <div class="stat">
+    <div class="stat-n" id="statInsider" style="color:var(--green)">—</div>
+    <div class="stat-l">Insider</div>
+  </div>
+  <div class="stat">
+    <div class="stat-n" id="statSec" style="color:var(--purple)">—</div>
+    <div class="stat-l">SEC Filings</div>
+  </div>
+  <div class="stat">
+    <div class="stat-n" id="statFda" style="color:var(--teal)">—</div>
+    <div class="stat-l">FDA Events</div>
+  </div>
+</div>
+
+<div class="filters">
+  <button class="filter active" onclick="setFilter('all', this)">All</button>
+  <button class="filter" onclick="setFilter('entry_insider,entry_sec_form4', this)">👤 Insider</button>
+  <button class="filter" onclick="setFilter('entry_sec_13d', this)">🎯 Activist</button>
+  <button class="filter" onclick="setFilter('entry_8k,entry_news_spike', this)">📰 News</button>
+  <button class="filter" onclick="setFilter('entry_reddit', this)">💬 Reddit</button>
+  <button class="filter" onclick="setFilter('entry_fda_approval,entry_fda_pdufa', this)">💊 FDA</button>
+  <button class="filter" onclick="setFilter('entry_breakout,entry_volume,entry_dip', this)">⚡ Intraday</button>
+  <button class="filter" onclick="setFilter('exit_stoploss,exit_thesis,exit_trend', this)">🚪 Exits</button>
+</div>
+
+<div class="filters" style="margin-top:-10px">
+  <button class="filter active" onclick="setPeriod(7, this)">7D</button>
+  <button class="filter" onclick="setPeriod(30, this)">30D</button>
+  <button class="filter" onclick="setPeriod(9999, this)">All</button>
+</div>
+
+<div class="alerts" id="alertsList">
+  <div class="loading">LOADING ALERTS...</div>
+</div>
+
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://ruqcgyctwlpjrlzmietj.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1cWNneWN0d2xwanJsem1pZXRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzQwMTAsImV4cCI6MjA4ODkxMDAxMH0.tkhdkbPOZqQI7brgIo24zWftVbEr6EXLSF3jAmog6YM';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const TYPE_META = {
+  entry_insider:      { label: 'FRESH INSIDER',  color: 'var(--green)',  icon: '🔥' },
+  entry_volume:       { label: 'VOLUME SPIKE',   color: 'var(--blue)',   icon: '⚡' },
+  entry_breakout:     { label: 'BREAKOUT',       color: 'var(--green)',  icon: '🚀' },
+  entry_dip:          { label: 'QUALITY DIP',    color: 'var(--orange)', icon: '📉' },
+  entry_rankjump:     { label: 'RANK JUMP',      color: 'var(--gold)',   icon: '📈' },
+  entry_8k:           { label: 'SEC 8-K',        color: 'var(--purple)', icon: '📋' },
+  entry_sec_form4:    { label: 'FORM 4',         color: 'var(--green)',  icon: '👤' },
+  entry_sec_13d:      { label: 'ACTIVIST 13D',   color: 'var(--purple)', icon: '🎯' },
+  entry_reddit:       { label: 'REDDIT BUZZ',    color: '#ff4500',       icon: '💬' },
+  entry_news_spike:   { label: 'NEWS SPIKE',     color: 'var(--blue)',   icon: '📰' },
+  entry_fda_approval: { label: 'FDA APPROVAL',   color: 'var(--teal)',   icon: '💊' },
+  entry_fda_pdufa:    { label: 'PDUFA DATE',     color: 'var(--gold)',   icon: '📅' },
+  exit_stoploss:      { label: 'STOP-LOSS',      color: 'var(--red)',    icon: '🔴' },
+  exit_thesis:        { label: 'THESIS BROKEN',  color: 'var(--orange)', icon: '⚠️' },
+  exit_trend:         { label: 'TREND COLLAPSE', color: 'var(--red)',    icon: '📉' },
+};
+
+let allAlerts = [];
+let currentTypes = 'all';
+let currentPeriod = 7;
+
+async function loadAlerts() {
+  const cutoff = new Date(Date.now() - 30 * 86400 * 1000).toISOString();
+  const { data, error } = await sb
+    .from('alert_log')
+    .select('*')
+    .gte('created_at', cutoff)
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (error) {
+    document.getElementById('alertsList').innerHTML = '<div class="empty">Error loading alerts: ' + error.message + '</div>';
+    return;
+  }
+
+  allAlerts = data || [];
+  renderStats();
+  renderAlerts();
+}
+
+function renderStats() {
+  const now = Date.now();
+  const day7 = allAlerts.filter(a => (now - new Date(a.created_at).getTime()) < 7*86400000);
+  const today = allAlerts.filter(a => (now - new Date(a.created_at).getTime()) < 86400000);
+  const insider = day7.filter(a => a.alert_type === 'entry_insider' || a.alert_type === 'entry_sec_form4').length;
+  const sec = day7.filter(a => a.alert_type === 'entry_sec_form4' || a.alert_type === 'entry_sec_13d' || a.alert_type === 'entry_8k').length;
+  const fda = day7.filter(a => a.alert_type === 'entry_fda_approval' || a.alert_type === 'entry_fda_pdufa').length;
+
+  document.getElementById('statTotal').textContent = day7.length;
+  document.getElementById('statToday').textContent = today.length;
+  document.getElementById('statInsider').textContent = insider;
+  document.getElementById('statSec').textContent = sec;
+  document.getElementById('statFda').textContent = fda;
+}
+
+function setFilter(types, btn) {
+  currentTypes = types;
+  document.querySelectorAll('.filters')[0].querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAlerts();
+}
+
+function setPeriod(days, btn) {
+  currentPeriod = days;
+  document.querySelectorAll('.filters')[1].querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAlerts();
+}
+
+function fmtTime(iso) {
+  const d = new Date(iso);
+  const diff = Date.now() - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(mins / 60);
+  const days = Math.floor(hours / 24);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  if (hours < 24) return hours + 'h ago';
+  if (days < 7) return days + 'd ago';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function renderAlerts() {
+  const container = document.getElementById('alertsList');
+  const cutoff = Date.now() - currentPeriod * 86400 * 1000;
+  const typeSet = currentTypes === 'all' ? null : new Set(currentTypes.split(','));
+
+  const filtered = allAlerts.filter(a => {
+    if (new Date(a.created_at).getTime() < cutoff) return false;
+    if (typeSet && !typeSet.has(a.alert_type)) return false;
+    return true;
+  });
+
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty">No alerts in this period. The alert monitor runs hourly during market hours — new alerts will appear as signals are detected.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(a => {
+    const meta = TYPE_META[a.alert_type] || { label: a.alert_type, color: 'var(--txt)', icon: '●' };
+    return `<div class="alert" style="border-left-color:${meta.color}" onclick="window.location='/scanner.html?sym=${a.sym}'">
+      <div class="alert-head">
+        <span class="alert-type" style="color:${meta.color}">${meta.icon} ${meta.label}</span>
+        <span class="alert-time">${fmtTime(a.created_at)}</span>
+      </div>
+      <div class="alert-title"><span class="alert-sym">${a.sym}</span></div>
+      <div class="alert-headline">${a.headline || ''}</div>
+    </div>`;
+  }).join('');
+}
+
+loadAlerts();
+setInterval(loadAlerts, 60000); // refresh every minute
+</script>
+</body>
+</html>
