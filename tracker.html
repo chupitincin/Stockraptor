@@ -135,50 +135,52 @@ td.neu{color:var(--text-dim)}
 
 <div class="sr-wrap">
 
-<header style="margin-bottom:24px;padding-top:8px;">
-  <h1>📈 PERFORMANCE TRACKER</h1>
-  <div style="font-family:var(--font-mono);font-size:11px;color:var(--txt);letter-spacing:1.5px;margin-top:6px;text-transform:uppercase;">Pick history · Win rate · vs Russell 2000</div>
-</header>
+<div class="sr-page-header">
+  <div class="sr-page-header-left">
+    <h1>📈 Performance Tracker</h1>
+    <div class="sr-page-subtitle">Pick history · Win rate · vs Russell 2000</div>
+  </div>
+</div>
 
-<div class="period-tabs">
-  <button class="tab active" onclick="setPeriod(7,this)">7D</button>
-  <button class="tab" onclick="setPeriod(30,this)">30D</button>
-  <button class="tab" onclick="setPeriod(90,this)">90D</button>
-  <button class="tab" onclick="setPeriod(365,this)">1 AÑO</button>
-  <button class="tab" onclick="setPeriod(9999,this)">TODO</button>
+<div class="sr-tabs">
+  <button class="sr-tab tab active" onclick="setPeriod(7,this)">7D</button>
+  <button class="sr-tab tab" onclick="setPeriod(30,this)">30D</button>
+  <button class="sr-tab tab" onclick="setPeriod(90,this)">90D</button>
+  <button class="sr-tab tab" onclick="setPeriod(365,this)">1Y</button>
+  <button class="sr-tab tab" onclick="setPeriod(9999,this)">All</button>
 </div>
 
 <!-- KPIs -->
-<div class="kpi-grid">
-  <div class="kpi">
-    <div class="kpi-label">PnL Total</div>
-    <div class="kpi-value green" id="kpi-pnl">—</div>
-    <div class="kpi-sub" id="kpi-pnl-pct">—</div>
+<div class="sr-stats-grid">
+  <div class="sr-stat">
+    <div class="sr-stat-n kpi-value green" id="kpi-pnl">—</div>
+    <div class="sr-stat-l">Avg Return 30D</div>
+    <div class="sr-stat-sub" id="kpi-pnl-pct">—</div>
   </div>
-  <div class="kpi">
-    <div class="kpi-label">Win Rate</div>
-    <div class="kpi-value" id="kpi-wr">—</div>
-    <div class="kpi-sub" id="kpi-wr-sub">—</div>
+  <div class="sr-stat">
+    <div class="sr-stat-n kpi-value" id="kpi-wr">—</div>
+    <div class="sr-stat-l">Win Rate</div>
+    <div class="sr-stat-sub" id="kpi-wr-sub">—</div>
   </div>
-  <div class="kpi">
-    <div class="kpi-label">Trades</div>
-    <div class="kpi-value blue" id="kpi-trades">—</div>
-    <div class="kpi-sub" id="kpi-trades-sub">—</div>
+  <div class="sr-stat">
+    <div class="sr-stat-n kpi-value blue" id="kpi-trades">—</div>
+    <div class="sr-stat-l">Total Picks</div>
+    <div class="sr-stat-sub" id="kpi-trades-sub">—</div>
   </div>
-  <div class="kpi">
-    <div class="kpi-label">Avg Win</div>
-    <div class="kpi-value green" id="kpi-avgwin">—</div>
-    <div class="kpi-sub">por trade ganado</div>
+  <div class="sr-stat">
+    <div class="sr-stat-n kpi-value green" id="kpi-avgwin">—</div>
+    <div class="sr-stat-l">Avg Win</div>
+    <div class="sr-stat-sub">per winning pick</div>
   </div>
-  <div class="kpi">
-    <div class="kpi-label">Avg Loss</div>
-    <div class="kpi-value red" id="kpi-avgloss">—</div>
-    <div class="kpi-sub">por trade perdido</div>
+  <div class="sr-stat">
+    <div class="sr-stat-n kpi-value red" id="kpi-avgloss">—</div>
+    <div class="sr-stat-l">Avg Loss</div>
+    <div class="sr-stat-sub">per losing pick</div>
   </div>
-  <div class="kpi">
-    <div class="kpi-label">Mejor trade</div>
-    <div class="kpi-value yellow" id="kpi-best">—</div>
-    <div class="kpi-sub" id="kpi-best-sym">—</div>
+  <div class="sr-stat">
+    <div class="sr-stat-n kpi-value yellow" id="kpi-best">—</div>
+    <div class="sr-stat-l">Best Pick</div>
+    <div class="sr-stat-sub" id="kpi-best-sym">—</div>
   </div>
 </div>
 

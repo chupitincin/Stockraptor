@@ -7,38 +7,20 @@
 <link rel="stylesheet" href="/css/stockraptor.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-/* Page-specific styles (inherit everything else from stockraptor.css) */
-header { margin-bottom: 32px; }
-.subtitle { font-size: 12px; color: var(--txt); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 6px; font-family: var(--font-mono); }
-
-.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 24px 0; }
-@media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
-
-.filters { display: flex; gap: 6px; margin: 20px 0; flex-wrap: wrap; }
-.filter {
-  background: var(--bg-1); border: 1px solid var(--bord-2); color: var(--txt);
-  font-family: var(--font-mono); font-size: 10px; letter-spacing: .8px;
-  padding: 7px 12px; border-radius: var(--r-md); cursor: pointer;
-  transition: all var(--t-fast); text-transform: uppercase;
-}
-.filter:hover { border-color: var(--green); color: var(--txb); }
-.filter.active { background: var(--green-d); border-color: var(--green); color: var(--green); }
-
+/* Page-specific: alert cards (rest uses shared components) */
 .alerts { display: flex; flex-direction: column; gap: 10px; }
 .alert {
-  background: var(--bg-1); border: 1px solid var(--bord);
+  background: var(--bg-1); border: 1px solid var(--bord-2);
   border-left: 3px solid; border-radius: var(--r-lg);
-  padding: 16px 18px; transition: all var(--t-fast); cursor: pointer;
+  padding: 18px 20px; transition: border-color var(--t-fast); cursor: pointer;
 }
-.alert:hover { background: var(--bg-2); border-color: var(--bord-2); }
-.alert-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.alert-type { font-size: 9px; letter-spacing: 1.2px; font-family: var(--font-mono); text-transform: uppercase; font-weight: 700; }
+.alert:hover { border-color: var(--bord-3); }
+.alert-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.alert-type { font-size: 9px; letter-spacing: 1.5px; font-family: var(--font-mono); text-transform: uppercase; font-weight: 700; }
 .alert-time { font-size: 10px; color: var(--txt); font-family: var(--font-mono); }
 .alert-title { font-size: 15px; font-weight: 600; color: var(--txw); margin-bottom: 4px; }
 .alert-sym { font-family: var(--font-mono); font-weight: 700; color: var(--green); margin-right: 8px; }
 .alert-headline { font-size: 12px; color: var(--txb); line-height: 1.5; }
-
-.empty { text-align: center; padding: 60px 20px; color: var(--txt); font-family: var(--font-mono); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -59,12 +41,14 @@ header { margin-bottom: 32px; }
 
 <div class="sr-wrap narrow">
 
-<header>
-  <h1>🔔 ALERTS FEED</h1>
-  <div class="subtitle">Real-time signals · Insider buys · Reddit buzz · SEC filings · FDA events</div>
-</header>
+<div class="sr-page-header">
+  <div class="sr-page-header-left">
+    <h1>🔔 Alerts Feed</h1>
+    <div class="sr-page-subtitle">Real-time signals · Insider · Reddit · SEC · FDA</div>
+  </div>
+</div>
 
-<div class="stats">
+<div class="sr-stats-grid">
   <div class="sr-stat">
     <div class="sr-stat-n" id="statTotal">—</div>
     <div class="sr-stat-l">Last 7 Days</div>
@@ -87,21 +71,21 @@ header { margin-bottom: 32px; }
   </div>
 </div>
 
-<div class="filters">
-  <button class="filter active" onclick="setFilter('all', this)">All</button>
-  <button class="filter" onclick="setFilter('entry_insider,entry_sec_form4', this)">👤 Insider</button>
-  <button class="filter" onclick="setFilter('entry_sec_13d', this)">🎯 Activist</button>
-  <button class="filter" onclick="setFilter('entry_8k,entry_news_spike', this)">📰 News</button>
-  <button class="filter" onclick="setFilter('entry_reddit', this)">💬 Reddit</button>
-  <button class="filter" onclick="setFilter('entry_fda_approval,entry_fda_pdufa', this)">💊 FDA</button>
-  <button class="filter" onclick="setFilter('entry_breakout,entry_volume,entry_dip', this)">⚡ Intraday</button>
-  <button class="filter" onclick="setFilter('exit_stoploss,exit_thesis,exit_trend', this)">🚪 Exits</button>
+<div class="sr-tabs">
+  <button class="sr-tab active" onclick="setFilter('all', this)">All</button>
+  <button class="sr-tab" onclick="setFilter('entry_insider,entry_sec_form4', this)">👤 Insider</button>
+  <button class="sr-tab" onclick="setFilter('entry_sec_13d', this)">🎯 Activist</button>
+  <button class="sr-tab" onclick="setFilter('entry_8k,entry_news_spike', this)">📰 News</button>
+  <button class="sr-tab" onclick="setFilter('entry_reddit', this)">💬 Reddit</button>
+  <button class="sr-tab" onclick="setFilter('entry_fda_approval,entry_fda_pdufa', this)">💊 FDA</button>
+  <button class="sr-tab" onclick="setFilter('entry_breakout,entry_volume,entry_dip', this)">⚡ Intraday</button>
+  <button class="sr-tab" onclick="setFilter('exit_stoploss,exit_thesis,exit_trend', this)">🚪 Exits</button>
 </div>
 
-<div class="filters" style="margin-top:-10px">
-  <button class="filter active" onclick="setPeriod(7, this)">7D</button>
-  <button class="filter" onclick="setPeriod(30, this)">30D</button>
-  <button class="filter" onclick="setPeriod(9999, this)">All</button>
+<div class="sr-tabs" style="margin-top:-8px">
+  <button class="sr-tab active" onclick="setPeriod(7, this)">7D</button>
+  <button class="sr-tab" onclick="setPeriod(30, this)">30D</button>
+  <button class="sr-tab" onclick="setPeriod(9999, this)">All</button>
 </div>
 
 <div class="alerts" id="alertsList">
@@ -174,14 +158,14 @@ function renderStats() {
 
 function setFilter(types, btn) {
   currentTypes = types;
-  document.querySelectorAll('.filters')[0].querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sr-tabs')[0].querySelectorAll('.sr-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderAlerts();
 }
 
 function setPeriod(days, btn) {
   currentPeriod = days;
-  document.querySelectorAll('.filters')[1].querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sr-tabs')[1].querySelectorAll('.sr-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderAlerts();
 }

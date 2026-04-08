@@ -458,23 +458,21 @@ const CONFIG = {
 <div class="page">
 
   <!-- HEADER -->
-  <div class="picks-header">
-    <div class="picks-date">
-      <div class="picks-date-dot"></div>
-      <span id="picksDateLabel">THIS WEEK'S IDEAS</span>
-      <span id="picksDateLabel">TODAY'S SIGNALS</span>
+  <div class="sr-page-header">
+    <div class="sr-page-header-left">
+      <h1>🎯 Weekly Picks</h1>
+      <div class="sr-page-subtitle" id="picksDateLabel">This week's signals</div>
     </div>
-    <div class="picks-title">Weekly <span>Picks</span></div>
-    <div class="picks-sub">Companies with unusual signal confluence today — volume anomalies, insider activity, earnings setups and short squeeze potential identified by the scanner.</div>
   </div>
+  <p style="font-size:13px;color:var(--txb);line-height:1.6;margin-bottom:28px;max-width:720px;">Companies with unusual signal confluence this week — volume anomalies, insider activity, earnings setups and short squeeze potential identified by the scanner.</p>
 
-  <!-- STATS BAR -->
-  <div class="stats-bar" id="statsBar" style="display:none">
-    <div class="stat-item"><div class="stat-n" id="statTotal" style="color:var(--green)">—</div><div class="stat-l">PICKS TODAY</div></div>
-    <div class="stat-item"><div class="stat-n" id="statSqueeze" style="color:var(--teal)">—</div><div class="stat-l">SQUEEZE SETUPS</div></div>
-    <div class="stat-item"><div class="stat-n" id="statCatalyst" style="color:var(--gold)">—</div><div class="stat-l">EARNINGS CATALYST</div></div>
-    <div class="stat-item"><div class="stat-n" id="statVolume" style="color:var(--pink)">—</div><div class="stat-l">VOLUME SPIKES</div></div>
-    <div class="stat-item"><div class="stat-n" id="statInsider" style="color:var(--green)">—</div><div class="stat-l">INSIDER BUYING</div></div>
+  <!-- STATS -->
+  <div class="sr-stats-grid" id="statsBar" style="display:none">
+    <div class="sr-stat"><div class="sr-stat-n sr-text-green" id="statTotal">—</div><div class="sr-stat-l">Picks This Week</div></div>
+    <div class="sr-stat"><div class="sr-stat-n" id="statSqueeze" style="color:var(--teal)">—</div><div class="sr-stat-l">Squeeze Setups</div></div>
+    <div class="sr-stat"><div class="sr-stat-n sr-text-gold" id="statCatalyst">—</div><div class="sr-stat-l">Earnings Catalyst</div></div>
+    <div class="sr-stat"><div class="sr-stat-n" id="statVolume" style="color:var(--pink)">—</div><div class="sr-stat-l">Volume Spikes</div></div>
+    <div class="sr-stat"><div class="sr-stat-n sr-text-green" id="statInsider">—</div><div class="sr-stat-l">Insider Buying</div></div>
   </div>
 
   <!-- TABS -->
@@ -790,7 +788,7 @@ function renderPicks(picks, generatedAt, aiLoading = false) {
   document.getElementById('picksDateLabel').textContent = dateStr.toUpperCase() + ' · SIGNALS';
 
   // Stats bar
-  document.getElementById('statsBar').style.display = 'flex';
+  document.getElementById('statsBar').style.display = 'grid';
   document.getElementById('statTotal').textContent    = picks.length;
   document.getElementById('statSqueeze').textContent  = picks.filter(p => p.pickType === 'squeeze').length;
   document.getElementById('statCatalyst').textContent = picks.filter(p => p.pickType === 'catalyst').length;
