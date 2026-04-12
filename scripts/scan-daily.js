@@ -1236,9 +1236,20 @@ async function main() {
   }
 
   // ── PHASE 4: UPDATE PAST PICKS PERFORMANCE ──────────────
-  // Runs every day (not just on pick generation days) to fill
-  // perf_1d, perf_5d, perf_1w, perf_30d, perf_60d, perf_90d
   await updatePicksPerformance(sb);
+
+  // ── PHASE 5: DEEP ANALYSIS with Claude ─────────────────
+  // Re-evaluates STRONG BUY stocks qualitatively. Catches false positives,
+  // red flags, and nuances that quantitative scoring misses.
+  await runDeepAnalysis(results);
+
+  // Save updated results (now with deepAnalysis field)
+  await sb.from('scan_cache').upsert({
+    id: 'daily',
+    scan_date: todayScanDate,
+    scanned_at: new Date().toISOString(),
+    results, total_count: results.length, errors,
+  });
 
   const totalElapsed = Math.round((Date.now() - t0) / 1000);
   console.log(`\n🏁 StockRaptor Daily Scan complete in ${totalElapsed}s`);
@@ -1469,6 +1480,164 @@ Be specific and quantitative. No generic phrases. No disclaimers.`;
     console.warn(`  ⚠ AI summary failed for ${p.sym}:`, e.message);
     return null;
   }
+}
+
+// ── DEEP ANALYSIS: Claude re-evaluates top stocks ────────
+// Phase 5: For each STRONG BUY/high-score stock, Claude does a
+// qualitative deep dive — catching false positives, red flags,
+// and nuances the quantitative scoring can't detect.
+async function deepAnalyzeStock(r) {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+
+  const insiderCtx = r.insiderData
+    ? `Insider activity (90d): ${r.insiderData.buys} buys ($${Math.round((r.insiderData.totalBuyValue||0)/1000)}K) / ${r.insiderData.sells} sells ($${Math.round((r.insiderData.totalSellValue||0)/1000)}K). ${r.freshInsiderDays != null ? `Most recent buy: ${r.freshInsiderDays}d ago.` : 'No recent buys.'}`
+    : 'No insider data available.';
+
+  const newsCtx = r.newsItems?.length > 0
+    ? `Recent headlines:\n${r.newsItems.slice(0, 6).map(n => `- [${n.sentiment}] ${n.headline} (${n.source}, ${n.time})`).join('\n')}`
+    : 'No recent news.';
+
+  const prompt = `You are a senior equity analyst performing due diligence on a small-cap stock. Your job is to find what the quantitative scanner MISSED — red flags, thesis weaknesses, or confirmations that the numbers alone can't tell.
+
+STOCK: ${r.sym} — ${r.companyName}
+SECTOR: ${r.sector}
+PRICE: $${r.price} | MARKET CAP: $${Math.round((r.cap||0)/1e6)}M
+
+SCANNER SCORE: ${r.total}/100 (${r.signal})
+  Fundamentals: ${r.fund}/32 | Sentiment: ${r.sent}/8 | Analyst: ${r.analyst}/15
+  Momentum: ${r.momentum}/17 | Earnings: ${r.earPts}/15 | Vol/Short: ${r.volShort}/11
+
+FUNDAMENTALS:
+  P/E: ${r.pe ?? 'N/A'} (sector avg: ~20) | P/B: ${r.pb ?? 'N/A'}
+  Revenue growth YoY: ${r.revGrowth ?? 'N/A'}% | EPS growth: ${r.epsGrowth ?? 'N/A'}%
+  Gross margin: ${r.grossMargin ?? 'N/A'}% | EBITDA margin: ${r.ebitdaMargin ?? 'N/A'}%
+  ROE: ${r.roe ?? 'N/A'}% | Current ratio: ${r.currentRatio ?? 'N/A'}
+  Debt/Equity: ${r.de ?? 'N/A'} | Net Debt/EBITDA: ${r.netDebtEbitda ?? 'N/A'}
+  Free Cash Flow: $${r.fcf ? Math.round(r.fcf/1e6) + 'M' : 'N/A'}
+  Share dilution: ${r.sharesDilution ?? 'N/A'}%
+
+TECHNICAL:
+  52W range: $${r.lo52 ?? '?'} – $${r.hi52 ?? '?'} (currently ${r.pct52High ?? '?'}% from high)
+  MA50: $${r.ma50 ?? 'N/A'} | MA200: $${r.ma200 ?? 'N/A'} | Golden cross: ${r.goldenCross ? 'YES' : 'NO'}
+  Volume ratio: ${r.volRatio ?? 'N/A'}x avg | Beta: ${r.beta ?? 'N/A'}
+  Short float: ${r.shortPct ?? 'N/A'}%
+  Price change today: ${r.priceChange1D ?? 'N/A'}%
+
+ANALYST CONSENSUS:
+  Buy: ${r.recBuy} | Hold: ${r.recHold} | Sell: ${r.recSell}
+  Target: $${r.targetPrice ?? 'N/A'} (${r.upside ?? 'N/A'}% upside)
+
+EARNINGS:
+  Next: ${r.earningsDate ?? 'N/A'} (${r.earningsDays ?? 'N/A'} days)
+  Beat streak: ${r.streak ?? 0}/4 quarters
+  EPS history: ${r.epsHistory?.slice(0,4).map(e => `${e.q}: ${e.actual} vs ${e.est} (${e.surprise > 0 ? '+' : ''}${e.surprise}%)`).join(' | ') || 'N/A'}
+
+${insiderCtx}
+
+${newsCtx}
+
+TASK: Analyze this stock as if a client is about to invest $50,000. Be brutally honest.
+
+Respond in this EXACT JSON format (no markdown, no code blocks):
+{
+  "verdict": "STRONG_BUY" | "BUY" | "HOLD" | "AVOID",
+  "confidence": 1-10,
+  "adjustedScore": 0-100,
+  "redFlags": ["flag1", "flag2"],
+  "catalysts": ["catalyst1", "catalyst2"],
+  "risks": ["risk1", "risk2"],
+  "summary": "2-3 sentence analysis. Be specific, quantitative, no disclaimers.",
+  "keyInsight": "One sentence — the single most important thing an investor should know."
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn(`   ⚠ Deep analysis API error for ${r.sym}: ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+    const text = data.content?.[0]?.text?.trim();
+    if (!text) return null;
+
+    // Parse JSON response
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.warn(`   ⚠ Deep analysis: no JSON in response for ${r.sym}`);
+      return null;
+    }
+
+    const analysis = JSON.parse(jsonMatch[0]);
+
+    // Validate required fields
+    if (!analysis.verdict || !analysis.summary) {
+      console.warn(`   ⚠ Deep analysis: incomplete response for ${r.sym}`);
+      return null;
+    }
+
+    return analysis;
+  } catch (e) {
+    console.warn(`   ⚠ Deep analysis failed for ${r.sym}: ${e.message}`);
+    return null;
+  }
+}
+
+async function runDeepAnalysis(results) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.log('\n🧠 Phase 5: Deep Analysis — skipped (no ANTHROPIC_API_KEY)');
+    return;
+  }
+
+  // Analyze top stocks: STRONG BUY + high INTERESTING (score >= 62)
+  const candidates = results.filter(r =>
+    !r._stale && (r.signal === 'STRONG BUY' || (r.signal === 'INTERESTING' && r.total >= 62))
+  ).slice(0, 20); // max 20 per day to control costs (~$0.25/day)
+
+  if (candidates.length === 0) {
+    console.log('\n🧠 Phase 5: Deep Analysis — no candidates above threshold');
+    return;
+  }
+
+  console.log(`\n🧠 Phase 5: Deep Analysis — analyzing ${candidates.length} top stocks with Claude...`);
+
+  let analyzed = 0, downgraded = 0, confirmed = 0;
+
+  for (const r of candidates) {
+    const analysis = await deepAnalyzeStock(r);
+    if (analysis) {
+      r.deepAnalysis = analysis;
+      analyzed++;
+
+      const verdictEmoji = {
+        'STRONG_BUY': '🟢', 'BUY': '🔵', 'HOLD': '🟡', 'AVOID': '🔴'
+      }[analysis.verdict] || '⚪';
+
+      if (analysis.verdict === 'AVOID' || analysis.verdict === 'HOLD') {
+        downgraded++;
+        console.log(`   ${verdictEmoji} ${r.sym.padEnd(6)} ${r.total}pts → ${analysis.verdict} (conf: ${analysis.confidence}/10) — ${analysis.keyInsight?.substring(0, 80)}`);
+      } else {
+        confirmed++;
+      }
+    }
+    await sleep(400); // rate limit: ~2.5 calls/sec
+    process.stdout.write('.');
+  }
+
+  console.log(`\n   ✅ Deep Analysis complete: ${analyzed} analyzed | ${confirmed} confirmed | ${downgraded} downgraded/hold`);
 }
 
 main().catch(e => { console.error('Fatal:', e); process.exit(1); });

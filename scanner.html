@@ -1632,6 +1632,24 @@ function renderDet(d){
     ${d.dilPenalty<0?`<div style="font-size:8px;color:var(--red);margin-top:5px;">⚠ Dilution: ${d.dilPenalty}pts</div>`:''}${d.debtPenalty<0?`<div style="font-size:8px;color:var(--orange);">⚠ Debt+growth: ${d.debtPenalty}pts</div>`:''}
   </div>
   ${(typeof renderAlertsForDetail === 'function') ? renderAlertsForDetail(d.sym) : ''}
+  ${d.deepAnalysis ? `
+  <div class="det-card" style="grid-column:1/-1;border-color:${d.deepAnalysis.verdict==='STRONG_BUY'||d.deepAnalysis.verdict==='BUY'?'#00ff9430':d.deepAnalysis.verdict==='AVOID'?'#ff2d5530':'#ffcc0030'};background:${d.deepAnalysis.verdict==='STRONG_BUY'||d.deepAnalysis.verdict==='BUY'?'linear-gradient(135deg,#00ff9406,#00b4ff04)':d.deepAnalysis.verdict==='AVOID'?'linear-gradient(135deg,#ff2d5506,#ff704004)':'linear-gradient(135deg,#ffcc0006,#ff704004)'};">
+    <div class="det-title" style="display:flex;align-items:center;gap:10px;">
+      🧠 DEEP ANALYSIS (AI)
+      <span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px;letter-spacing:1px;font-family:var(--mono);
+        color:${d.deepAnalysis.verdict==='STRONG_BUY'?'var(--green)':d.deepAnalysis.verdict==='BUY'?'var(--blue)':d.deepAnalysis.verdict==='HOLD'?'var(--gold)':'var(--red)'};
+        background:${d.deepAnalysis.verdict==='STRONG_BUY'?'#00ff9415':d.deepAnalysis.verdict==='BUY'?'#00b4ff15':d.deepAnalysis.verdict==='HOLD'?'#ffcc0015':'#ff2d5515'};
+        border:1px solid ${d.deepAnalysis.verdict==='STRONG_BUY'?'#00ff9430':d.deepAnalysis.verdict==='BUY'?'#00b4ff30':d.deepAnalysis.verdict==='HOLD'?'#ffcc0030':'#ff2d5530'};">
+        ${d.deepAnalysis.verdict.replace('_',' ')}
+      </span>
+      <span style="font-size:9px;color:var(--txt);font-family:var(--mono);">Confidence: ${d.deepAnalysis.confidence}/10 · Adjusted: ${d.deepAnalysis.adjustedScore}/100</span>
+    </div>
+    <div style="font-size:13px;color:var(--txb);line-height:1.7;margin-top:8px;font-weight:300;">${d.deepAnalysis.summary}</div>
+    ${d.deepAnalysis.keyInsight?`<div style="margin-top:10px;padding:10px 14px;background:#00b4ff08;border:1px solid #00b4ff20;border-radius:8px;font-size:12px;color:#8ec8ff;line-height:1.5;">💡 <strong>Key insight:</strong> ${d.deepAnalysis.keyInsight}</div>`:''}
+    ${d.deepAnalysis.redFlags?.length?`<div style="margin-top:10px;"><div style="font-size:8px;letter-spacing:1.5px;color:var(--red);margin-bottom:6px;font-family:var(--mono);font-weight:700;">🔴 RED FLAGS</div>${d.deepAnalysis.redFlags.map(f=>`<div style="font-size:11px;color:var(--txb);padding:3px 0;line-height:1.4;">• ${f}</div>`).join('')}</div>`:''}
+    ${d.deepAnalysis.catalysts?.length?`<div style="margin-top:10px;"><div style="font-size:8px;letter-spacing:1.5px;color:var(--green);margin-bottom:6px;font-family:var(--mono);font-weight:700;">🟢 CATALYSTS</div>${d.deepAnalysis.catalysts.map(c=>`<div style="font-size:11px;color:var(--txb);padding:3px 0;line-height:1.4;">• ${c}</div>`).join('')}</div>`:''}
+    ${d.deepAnalysis.risks?.length?`<div style="margin-top:10px;"><div style="font-size:8px;letter-spacing:1.5px;color:var(--gold);margin-bottom:6px;font-family:var(--mono);font-weight:700;">⚠️ RISKS</div>${d.deepAnalysis.risks.map(r=>`<div style="font-size:11px;color:var(--txb);padding:3px 0;line-height:1.4;">• ${r}</div>`).join('')}</div>`:''}
+  </div>` : ''}
   ${d.moverSummary ? `
   <div class="det-card" style="grid-column:1/-1;background:linear-gradient(135deg,#00ff9408,#00e5cc05);border-color:#00ff9420;">
     <div class="det-title" style="color:var(--green);">🔺 WHY IT MOVED TODAY
