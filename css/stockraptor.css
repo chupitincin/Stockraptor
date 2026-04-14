@@ -105,6 +105,7 @@ body {
   font-size: 14px;
   line-height: 1.5;
   min-height: 100vh;
+  font-variant-numeric: lining-nums tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -130,6 +131,7 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--txw);
   letter-spacing: -0.5px;
   line-height: 1.1;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 h1 { font-size: clamp(28px, 4vw, 42px); }
 h2 { font-size: clamp(20px, 2.5vw, 26px); }
@@ -494,6 +496,7 @@ a:hover { opacity: 0.8; }
   font-weight: 700;
   color: var(--txw);
   line-height: 1.1;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .sr-stat-l {
   font-family: var(--font-mono);
