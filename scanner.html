@@ -339,7 +339,7 @@ body { background: #0a0a0a; }
 
 body {
   background: var(--bg) !important;
-  font-family: var(--display) !important;
+  
 }
 
 /* ── GRID BACKGROUND ── */
@@ -353,7 +353,7 @@ body {
   border-bottom: 1px solid var(--bord2) !important;
   padding: 7px 32px !important;
 }
-#cacheStamp { font-family: var(--mono) !important; font-size: 11px !important; color: var(--txt) !important; letter-spacing: 0.3px !important; }
+#cacheStamp {   color: var(--txt) !important;  }
 #cacheLoading { top: 60px !important; background: var(--s1) !important; }
 
 /* ── SCANNER PAGE ── */
@@ -371,11 +371,11 @@ body {
   margin-bottom: 20px !important;
 }
 .hbrand {
-  font-family: var(--display) !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
+  
+  
+  
   color: var(--txh) !important;
-  letter-spacing: -0.2px !important;
+  
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
@@ -388,10 +388,10 @@ body {
 .livdot.done { background: var(--green) !important; box-shadow: 0 0 8px rgba(0,229,122,.5) !important; }
 .livdot.scan { background: var(--gold) !important; box-shadow: 0 0 8px rgba(245,158,11,.5) !important; }
 .hmeta {
-  font-family: var(--mono) !important;
-  font-size: 10px !important;
+  
+  
   color: var(--txt) !important;
-  letter-spacing: 0.5px !important;
+  
   margin-top: 3px !important;
 }
 
@@ -417,17 +417,17 @@ body {
 }
 .scard:hover { background: var(--s2) !important; transform: none !important; }
 .scard .sc-n {
-  font-family: var(--display) !important;
-  font-size: 26px !important;
-  font-weight: 800 !important;
-  letter-spacing: -1px !important;
-  line-height: 1 !important;
+  
+  
+  
+  
+  
   margin-bottom: 4px !important;
 }
 .scard .sc-l {
-  font-family: var(--mono) !important;
-  font-size: 9px !important;
-  letter-spacing: 1.5px !important;
+  
+  
+  
   color: var(--txt) !important;
   text-transform: uppercase !important;
 }
@@ -443,10 +443,10 @@ body {
 }
 .bf {
   padding: 6px 14px !important;
-  font-family: var(--mono) !important;
-  font-size: 10px !important;
-  letter-spacing: 1px !important;
-  font-weight: 500 !important;
+  
+  
+  
+  
   color: var(--txt) !important;
   background: transparent !important;
   border: 1px solid var(--bord2) !important;
@@ -468,20 +468,20 @@ body {
 table {
   border-collapse: separate !important;
   border-spacing: 0 4px !important;
-  font-family: var(--display) !important;
+  
 }
 thead {
   background: rgba(6,6,15,0.95) !important;
   backdrop-filter: blur(12px) !important;
 }
 th {
-  font-family: var(--mono) !important;
-  font-size: 9px !important;
-  letter-spacing: 1.5px !important;
+  
+  
+  
   color: var(--txt) !important;
   padding: 10px 10px !important;
   text-transform: uppercase !important;
-  font-weight: 400 !important;
+  
   border-bottom: 1px solid var(--bord2) !important;
 }
 th:hover { color: var(--txh) !important; }
@@ -544,73 +544,68 @@ tbody tr.dr > td { padding: 0 !important; border: none !important; background: t
   border-radius: 8px !important;
 }
 .det-title {
-  font-family: var(--mono) !important;
-  font-size: 9px !important;
-  letter-spacing: 2px !important;
+  
+  
+  
   color: var(--txt) !important;
   border-bottom: 1px solid var(--bord2) !important;
   padding-bottom: 8px !important;
   margin-bottom: 10px !important;
 }
-.dk { font-family: var(--mono) !important; font-size: 11px !important; color: var(--txt) !important; }
-.dv { font-family: var(--mono) !important; font-size: 11px !important; font-weight: 600 !important; }
+.dk {   color: var(--txt) !important; }
+.dv { /* cleaned */ }
 
 /* ── TICKER COLUMN ── */
 .tsym {
-  font-family: var(--mono) !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
+  
+  
+  
   color: var(--white) !important;
-  letter-spacing: 0.5px !important;
+  
 }
 .tname {
-  font-family: var(--display) !important;
-  font-size: 11px !important;
+  
+  
   color: var(--txt) !important;
   margin-top: 2px !important;
 }
 .tsec {
-  font-family: var(--mono) !important;
-  font-size: 9px !important;
+  
+  
   color: #2a4a6a !important;
-  letter-spacing: 0.5px !important;
+  
   margin-top: 1px !important;
 }
 
 /* ── SIGNAL BADGE ── */
 .badge {
-  font-family: var(--mono) !important;
-  font-size: 9px !important;
-  letter-spacing: 1px !important;
+  
+  
+  
   padding: 4px 10px !important;
   border-radius: 20px !important;
   border: 1px solid !important;
-  font-weight: 500 !important;
+  
   white-space: nowrap !important;
 }
 
 /* ── SCORE COLUMN ── */
-.sv {
-  font-family: var(--mono) !important;
-  font-size: 18px !important;
-  font-weight: 500 !important;
-  letter-spacing: -0.5px !important;
-}
+.sv { /* cleaned */ }
 .bseg { border-radius: 2px !important; }
 
 /* ── FLAGS ── */
 .flag {
-  font-family: var(--mono) !important;
-  font-size: 9px !important;
+  
+  
   padding: 3px 7px !important;
   border-radius: 5px !important;
-  letter-spacing: 0.3px !important;
-  font-weight: 500 !important;
+  
+  
 }
 
 /* ── ARROW ── */
 .arr {
-  font-size: 9px !important;
+  
   color: var(--bord2) !important;
   transition: transform .2s, color .2s !important;
 }
@@ -618,8 +613,8 @@ tbody tr.dr > td { padding: 0 !important; border: none !important; background: t
 
 /* ── CHART TABS ── */
 .chart-tab {
-  font-family: var(--mono) !important;
-  font-size: 9px !important;
+  
+  
   border-radius: 5px !important;
   border-color: var(--bord2) !important;
   color: var(--txt) !important;
@@ -635,26 +630,26 @@ tbody tr.dr > td { padding: 0 !important; border: none !important; background: t
 
 /* ── TOOLTIP UPGRADE ── */
 #sr-tooltip {
-  font-family: var(--display) !important;
+  
   background: var(--s2) !important;
   border: 1px solid var(--bord2) !important;
   color: var(--txb) !important;
   border-radius: 8px !important;
-  font-size: 12px !important;
-  line-height: 1.6 !important;
+  
+  
 }
 
 /* ── EMPTY STATE ── */
 .empty-t {
-  font-family: var(--mono) !important;
+  
   color: var(--bord2) !important;
 }
 
 /* ── PAYWALL BANNER ── */
 #freeLockBanner > div > div:first-child {
-  font-family: var(--display) !important;
-  font-size: 15px !important;
-  font-weight: 600 !important;
+  
+  
+  
   color: var(--white) !important;
 }
 
@@ -665,7 +660,7 @@ tbody tr.dr > td { padding: 0 !important; border: none !important; background: t
   border-radius: 16px !important;
 }
 .upgrade-title {
-  font-family: var(--display) !important;
+  
   color: var(--white) !important;
 }
 
@@ -675,14 +670,14 @@ tbody tr.dr > td { padding: 0 !important; border: none !important; background: t
   border-color: var(--bord2) !important;
   border-radius: 16px !important;
 }
-.gate-logo { font-family: var(--display) !important; }
+.gate-logo { /* cleaned */ }
 .gate-logo span { color: var(--green) !important; }
 
 /* ── RE-SCAN BTN ── */
 #btnRescan {
-  font-family: var(--mono) !important;
-  font-size: 9px !important;
-  letter-spacing: 1px !important;
+  
+  
+  
   padding: 5px 12px !important;
   border-radius: 6px !important;
   border-color: var(--bord2) !important;
@@ -695,7 +690,7 @@ tbody tr.dr > td { padding: 0 !important; border: none !important; background: t
   .spage { padding-left: 12px !important; padding-right: 12px !important; }
   .sum-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .cbar { gap: 3px !important; }
-  .bf { padding: 5px 10px !important; font-size: 9px !important; }
+  .bf { padding: 5px 10px !important;  }
   
 }
 
@@ -705,7 +700,7 @@ tbody tr.dr > td { padding: 0 !important; border: none !important; background: t
 /* broken :root override removed — uses stockraptor.css */
 body {
   background: var(--bg) !important;
-  font-family: 'Inter', sans-serif !important;
+  
 }
 /* NO grid background — clean solid dark */
 .bg-grid { display: none !important; }
@@ -714,11 +709,11 @@ body::before { display: none !important; }
 /* NAV */
 
 /* TABLE SHARED */
-table { font-family: 'Inter', sans-serif !important; }
+table { /* cleaned */ }
 th {
-  font-family: 'Geist Mono', monospace !important;
-  font-size: 9px !important; letter-spacing: 1.5px !important;
-  color: var(--txt) !important; font-weight: 400 !important;
+  
+   
+  color: var(--txt) !important; 
   border-bottom: 1px solid var(--bord-2) !important;
   padding: 10px 10px !important;
 }
@@ -735,12 +730,12 @@ tbody tr.mr td:first-child { border-left: 1px solid var(--bord-2) !important; bo
 tbody tr.mr td:last-child  { border-right: 1px solid var(--bord-2) !important; border-radius: 0 10px 10px 0 !important; padding-right: 14px !important; }
 tbody tr.mr:hover td { background: var(--bg-2) !important; }
 tbody tr.mr { border-bottom: none !important; }
-.tsym { font-family: 'Geist Mono', monospace !important; font-size: 14px !important; font-weight: 500 !important; color: var(--txw) !important; }
-.tname { font-family: 'Inter', sans-serif !important; font-size: 11px !important; color: var(--txt) !important; }
-.tsec  { font-family: 'Geist Mono', monospace !important; font-size: 9px !important; color: #1e3a50 !important; letter-spacing: .5px !important; }
-.badge { font-family: 'Geist Mono', monospace !important; font-size: 9px !important; letter-spacing: 1px !important; padding: 4px 10px !important; border-radius: 20px !important; font-weight: 500 !important; }
-.sv    { font-family: 'Geist Mono', monospace !important; font-size: 18px !important; font-weight: 500 !important; letter-spacing: -.5px !important; }
-.flag  { font-family: 'Geist Mono', monospace !important; font-size: 9px !important; padding: 3px 7px !important; border-radius: 5px !important; font-weight: 500 !important; }
+.tsym {    color: var(--txw) !important; }
+.tname {   color: var(--txt) !important; }
+.tsec  {   color: #1e3a50 !important;  }
+.badge {    padding: 4px 10px !important; border-radius: 20px !important;  }
+.sv    { /* cleaned */ }
+.flag  {   padding: 3px 7px !important; border-radius: 5px !important;  }
 .arr   { color: var(--bord-2) !important; }
 .arr.op { color: var(--green) !important; }
 
