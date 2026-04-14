@@ -4,7 +4,7 @@
  * ═══════════════════════════════════════════════════════════════ */
 
 /* ── Google Fonts ──────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&family=Geist+Mono:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&family=Geist+Mono:wght@300;400;500;600;700&display=swap');
 
 /* ── Design Tokens ─────────────────────────────────────────── */
 :root {
@@ -43,7 +43,7 @@
   --pink-d:   #ff4fa018;
 
   /* Typography */
-  --font-display: 'Syne', sans-serif;
+  --font-display: 'Bricolage Grotesque', sans-serif;
   --font-body:    'Inter', -apple-system, sans-serif;
   --font-mono:    'Geist Mono', 'Space Mono', monospace;
 
