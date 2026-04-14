@@ -617,6 +617,10 @@ async function analyzeTicker(sym, baseData, insiderCache = {}) {
     return {
       sym, sector, signal, total,
       companyName: p?.companyName || baseData?.companyName || sym,
+      description: p?.description || null,
+      industry: p?.industry || null,
+      fullTimeEmployees: p?.fullTimeEmployees || null,
+      ipoDate: p?.ipoDate || null,
       website: p?.website || null,
       fund, sent, analyst, momentum, earPts, volShort, insiderScore,
       price: Math.round(price * 100) / 100,
@@ -1243,7 +1247,11 @@ async function main() {
   // red flags, and nuances that quantitative scoring misses.
   await runDeepAnalysis(results);
 
-  // Save updated results (now with deepAnalysis field)
+  // ── PHASE 5b: INVESTMENT THESES (Claude Opus) ──────────
+  // Business-focused analyst thesis for STRONG BUY stocks only.
+  await runInvestmentTheses(results);
+
+  // Save updated results (now with deepAnalysis + investmentThesis fields)
   await sb.from('scan_cache').upsert({
     id: 'daily',
     scan_date: todayScanDate,
@@ -1480,6 +1488,124 @@ Be specific and quantitative. No generic phrases. No disclaimers.`;
     console.warn(`  ⚠ AI summary failed for ${p.sym}:`, e.message);
     return null;
   }
+}
+
+// ── INVESTMENT THESIS: Claude Opus writes analyst-quality thesis ──
+// Phase 5b: For STRONG BUY stocks only. Written like a human analyst
+// would brief an investor — focused on the business, not technicals.
+async function generateInvestmentThesis(r) {
+  if (!process.env.ANTHROPIC_API_KEY) return null;
+
+  const newsContext = r.newsItems?.length > 0
+    ? r.newsItems.slice(0, 4).map(n => `- ${n.headline} (${n.source})`).join('\n')
+    : 'No recent news available.';
+
+  const insiderContext = r.insiderData
+    ? `Insider activity: ${r.insiderData.buys} buys ($${Math.round((r.insiderData.totalBuyValue||0)/1000)}K), ${r.insiderData.sells} sells. ${r.freshInsiderDays != null && r.freshInsiderDays <= 14 ? `Most recent buy was ${r.freshInsiderDays} days ago.` : ''}`
+    : '';
+
+  const prompt = `You are a senior equity research analyst writing an investment thesis for a client who is NOT a finance professional. Write clearly, avoid jargon, and focus on the BUSINESS — not chart patterns or technical ratios.
+
+COMPANY: ${r.companyName} (${r.sym})
+SECTOR: ${r.sector} | INDUSTRY: ${r.industry || 'N/A'}
+${r.description ? `DESCRIPTION: ${r.description.substring(0, 500)}` : ''}
+EMPLOYEES: ${r.fullTimeEmployees || 'N/A'} | IPO: ${r.ipoDate || 'N/A'}
+
+KEY FINANCIALS:
+- Market Cap: $${Math.round((r.cap||0)/1e6)}M
+- Revenue Growth: ${r.revGrowth ?? 'N/A'}% YoY
+- EPS Growth: ${r.epsGrowth ?? 'N/A'}% YoY
+- Gross Margin: ${r.grossMargin ?? 'N/A'}%
+- Free Cash Flow: $${r.fcf ? Math.round(r.fcf/1e6) + 'M' : 'N/A'}
+- P/E: ${r.pe ?? 'N/A'} | Debt/Equity: ${r.de ?? 'N/A'}
+
+ANALYST CONSENSUS: ${r.recBuy} Buy / ${r.recHold} Hold / ${r.recSell} Sell
+Price target: $${r.targetPrice ?? 'N/A'} (${r.upside ?? 'N/A'}% upside)
+
+${insiderContext}
+
+RECENT NEWS:
+${newsContext}
+
+EARNINGS TRACK: ${r.streak}/4 quarters beat estimates
+
+Write the thesis in this JSON format (no markdown, no code blocks):
+{
+  "oneLiner": "One sentence: what the company does and why it matters, in plain English.",
+  "thesis": "3-4 paragraphs. First: what the company does, who are its customers, what problem it solves. Second: why the business is growing — be specific about revenue drivers, market trends, competitive advantages. Third: what could go wrong — honest assessment of risks. Fourth: conclusion — why this is a good entry point right now. Write like you're explaining to a smart friend, not a Wall Street trader. No jargon. No 'bullish setup' language.",
+  "whyNow": "2-3 sentences. What makes THIS moment a good time to look at this stock? Reference specific catalysts: upcoming earnings, insider buying, sector tailwinds, analyst upgrades, etc.",
+  "growthDrivers": ["Driver 1: specific and concrete", "Driver 2", "Driver 3"],
+  "keyRisks": ["Risk 1: specific and honest", "Risk 2", "Risk 3"],
+  "verdict": "One bold sentence: your investment conclusion."
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-6',
+        max_tokens: 1200,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn(`   ⚠ Thesis API error for ${r.sym}: ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+    const text = data.content?.[0]?.text?.trim();
+    if (!text) return null;
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    const thesis = JSON.parse(jsonMatch[0]);
+    if (!thesis.thesis || !thesis.verdict) return null;
+
+    return thesis;
+  } catch (e) {
+    console.warn(`   ⚠ Thesis failed for ${r.sym}: ${e.message}`);
+    return null;
+  }
+}
+
+async function runInvestmentTheses(results) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.log('\n📝 Phase 5b: Investment Theses — skipped (no ANTHROPIC_API_KEY)');
+    return;
+  }
+
+  const strongBuys = results.filter(r =>
+    !r._stale && r.signal === 'STRONG BUY'
+  ).slice(0, 8); // max 8/day
+
+  if (strongBuys.length === 0) {
+    console.log('\n📝 Phase 5b: Investment Theses — no STRONG BUY stocks');
+    return;
+  }
+
+  console.log(`\n📝 Phase 5b: Generating investment theses for ${strongBuys.length} STRONG BUY stocks (Claude Opus)...`);
+
+  let generated = 0;
+  for (const r of strongBuys) {
+    const thesis = await generateInvestmentThesis(r);
+    if (thesis) {
+      r.investmentThesis = thesis;
+      generated++;
+      console.log(`   ✅ ${r.sym}: "${thesis.oneLiner?.substring(0, 60)}..."`);
+    }
+    await sleep(1000); // Opus rate limit
+    process.stdout.write('.');
+  }
+
+  console.log(`\n   ✅ ${generated}/${strongBuys.length} theses generated`);
 }
 
 // ── DEEP ANALYSIS: Claude re-evaluates top stocks ────────

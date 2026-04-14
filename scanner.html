@@ -1514,7 +1514,7 @@ function renderTable(){
       ? `<div style="display:flex;gap:3px;flex-wrap:nowrap;align-items:center;">${d.flags.slice(0,3).map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('')}${d.flags.length>3?`<span style="font-size:9px;color:#686868;font-family:var(--font);">+${d.flags.length-3}</span>`:''}</div>`
       : '<span class="cd" style="font-size:8px">—</span>';
     const staleTag = d._stale ? `<span class="tt" data-tip="Data from ${d._lastSeen||'previous day'} — company was not in today's scan (${d._staleReason==='api_error'?'API error':'not in screener'})" style="font-size:8px;color:#ff9800;background:#ff980015;border:1px solid #ff980033;border-radius:3px;padding:1px 4px;margin-left:4px;font-family:var(--mono);">STALE</span>` : '';
-    return`<tr class="mr" onclick="toggleDet('${d.sym}')"${d._stale?' style="opacity:0.7"':''}>
+    return`<tr class="mr${d.signal==='STRONG BUY'?' row-strong-buy':''}" onclick="toggleDet('${d.sym}')"${d._stale?' style="opacity:0.7"':''}>
       <td><span class="arr" id="ar-${d.sym}">▶</span></td>
       <td><div class="tsym">${d.sym}${staleTag}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div>${d.website?`<a href="${d.website}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:9px;font-family:var(--mono);color:#2a4a6a;text-decoration:none;letter-spacing:.3px;display:inline-flex;align-items:center;gap:3px;margin-top:2px;transition:color .15s;" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='#2a4a6a'">↗ website</a>`:''}</td>
       <td style="text-align:center">${deltaHtml}</td>
@@ -1556,6 +1556,22 @@ function renderDet(d){
     <div style="font-family:var(--mono);font-size:10px;color:var(--txt);letter-spacing:1px;">${d.companyName||d.sym}${!_isFMP?'<span style="font-size:8px;color:var(--txt);margin-left:8px;background:#ffffff08;padding:2px 6px;border-radius:3px;">MANUAL SCAN · some fields unavailable</span>':''}</div>
     <div id="website-link-${d.sym}" style="min-height:20px;"></div>
   </div>
+  ${d.investmentThesis ? `
+  <div class="thesis-card">
+    <div class="thesis-badge">INVESTMENT THESIS · STRONG BUY</div>
+    <div class="thesis-oneliner">${d.investmentThesis.oneLiner || d.companyName}</div>
+    <div class="thesis-body">${d.investmentThesis.thesis}</div>
+    ${d.investmentThesis.whyNow ? `
+    <div class="thesis-section-title">Why now?</div>
+    <div class="thesis-whynow">${d.investmentThesis.whyNow}</div>` : ''}
+    ${d.investmentThesis.growthDrivers?.length ? `
+    <div class="thesis-section-title">Growth drivers</div>
+    <ul class="thesis-list drivers">${d.investmentThesis.growthDrivers.map(g => `<li>${g}</li>`).join('')}</ul>` : ''}
+    ${d.investmentThesis.keyRisks?.length ? `
+    <div class="thesis-section-title">Key risks</div>
+    <ul class="thesis-list risks">${d.investmentThesis.keyRisks.map(r => `<li>${r}</li>`).join('')}</ul>` : ''}
+    <div class="thesis-verdict">${d.investmentThesis.verdict}</div>
+  </div>` : ''}
   <div class="det-card"><div class="det-title" style="display:flex;align-items:center;justify-content:space-between;">${(window._detTitles&&window._detTitles().fund)||"📊 FUNDAMENTALS"} <span style="font-size:7px;color:#1e1e30;margin-left:4px">sector P/E benchmark: ${SECTOR_PE[d.sector]||22}</span>${d.website?`<a href="${d.website}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:9px;font-family:var(--mono);color:var(--green);text-decoration:none;letter-spacing:.3px;opacity:.8;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.8'">↗ IR</a>`:''}</div>
     <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipPE)||'Price-to-Earnings: how much you pay per $1 of profit. Lower is better vs sector avg.'}">P/E Ratio</span><span class="dv ${d.pe&&d.pe<(SECTOR_PE[d.sector]||22)?'cg':'cd'}">${d.pe??'—'}</span></div>
     <div class="det-r"><span class="dk tt" data-tip="${(window._st&&window._st.tipPB)||'Price-to-Book.'}">P/B Ratio</span><span class="dv ${d.pb&&d.pb<2?'cg':'cd'}">${d.pb??'—'}</span></div>
