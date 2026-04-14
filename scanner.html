@@ -1564,7 +1564,7 @@ function renderTable(){
 }
 
 function renderStrongBuyCard(d) {
-  const desc = d.investmentThesis?.oneLiner || d.description?.substring(0, 200) || '';
+  const desc = d.description || d.investmentThesis?.oneLiner || '';
 
   return `<div class="sb-card" onclick="toggleDet('${d.sym}');scrollToSym('${d.sym}');" style="cursor:pointer;">
     <div class="sb-card-top">

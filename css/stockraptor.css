@@ -935,7 +935,7 @@ a:hover { opacity: 0.8; }
   line-height: 1.6;
   margin-bottom: 14px;
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 10;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
