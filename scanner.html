@@ -1138,6 +1138,7 @@ const PLAN_LIMITS = { free: 40, pro: 200, elite: 200 };
     </div>
     <div class="rl-warn" id="rlWarn">⚡ Rate limit — pausing 13s and continuing... (200 stocks takes ~25 min total)</div>
     <div class="sum-grid" id="sumGrid"></div>
+    <div id="strongBuyCards" style="display:none;margin-bottom:24px;"></div>
     <div class="tbl-outer">
       <table id="tbl">
         
@@ -1460,10 +1461,27 @@ function renderTable(){
   });
   // Auto-sort by delta when MOVERS filter active
   if(curF==='MOVERS' && curS==='score') rows.sort((a,b)=>(b.rankDelta??-999)-(a.rankDelta??-999));
-  document.getElementById('tbl').style.display=rows.length?'table':'none';
-  document.getElementById('empty').style.display=rows.length?'none':'block';
+  // Separate STRONG BUY for cards (only when showing ALL or STRONG BUY filter)
+  const plan = scanProfile?.plan || 'free';
+  const showCards = (curF === 'ALL' || curF === 'STRONG BUY') && plan !== 'free';
+  const strongBuys = showCards ? rows.filter(d => d.signal === 'STRONG BUY' && !d._stale) : [];
+  const tableRows = showCards ? rows.filter(d => d.signal !== 'STRONG BUY' || d._stale) : rows;
+
+  const sbContainer = document.getElementById('strongBuyCards');
+  if (sbContainer) {
+    if (strongBuys.length > 0) {
+      sbContainer.innerHTML = `<div class="sb-cards-header">Strong Buy · ${strongBuys.length} companies</div><div class="sb-cards-grid">${strongBuys.map(d => renderStrongBuyCard(d)).join('')}</div>`;
+      sbContainer.style.display = 'block';
+    } else {
+      sbContainer.innerHTML = '';
+      sbContainer.style.display = 'none';
+    }
+  }
+
+  document.getElementById('tbl').style.display=tableRows.length?'table':'none';
+  document.getElementById('empty').style.display=(rows.length||strongBuys.length)?'none':'block';
   const maxes=[25,20,15,17,15,13],cols=['var(--blue)','var(--purple)','var(--green)','var(--gold)','var(--orange)','var(--teal)'];
-  document.getElementById('tbody').innerHTML=rows.map((d,idx)=>{
+  document.getElementById('tbody').innerHTML=tableRows.map((d,idx)=>{
     // Free users: show first 20 normally, rest locked
     const isLocked = plan === 'free' && d.signal === 'STRONG BUY';
     if (isLocked) {
@@ -1514,7 +1532,7 @@ function renderTable(){
       ? `<div style="display:flex;gap:3px;flex-wrap:nowrap;align-items:center;">${d.flags.slice(0,3).map(f=>`<span class="flag tt" style="color:${f.color};border-color:${f.color}44" data-tip="${FLAG_TIPS[f.label]||f.label}">${f.label}</span>`).join('')}${d.flags.length>3?`<span style="font-size:9px;color:#686868;font-family:var(--font);">+${d.flags.length-3}</span>`:''}</div>`
       : '<span class="cd" style="font-size:8px">—</span>';
     const staleTag = d._stale ? `<span class="tt" data-tip="Data from ${d._lastSeen||'previous day'} — company was not in today's scan (${d._staleReason==='api_error'?'API error':'not in screener'})" style="font-size:8px;color:#ff9800;background:#ff980015;border:1px solid #ff980033;border-radius:3px;padding:1px 4px;margin-left:4px;font-family:var(--mono);">STALE</span>` : '';
-    return`<tr class="mr${d.signal==='STRONG BUY'?' row-strong-buy':''}" onclick="toggleDet('${d.sym}')"${d._stale?' style="opacity:0.7"':''}>
+    return`<tr class="mr" onclick="toggleDet('${d.sym}')"${d._stale?' style="opacity:0.7"':''}>
       <td><span class="arr" id="ar-${d.sym}">▶</span></td>
       <td><div class="tsym">${d.sym}${staleTag}</div>${d.companyName?`<div class="tname">${d.companyName.substring(0,22)}</div>`:''}<div class="tsec">${d.sector||''}</div>${d.website?`<a href="${d.website}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:9px;font-family:var(--mono);color:#2a4a6a;text-decoration:none;letter-spacing:.3px;display:inline-flex;align-items:center;gap:3px;margin-top:2px;transition:color .15s;" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='#2a4a6a'">↗ website</a>`:''}</td>
       <td style="text-align:center">${deltaHtml}</td>
@@ -1544,6 +1562,35 @@ function renderTable(){
     const banner = document.getElementById('freeLockBanner');
     if (banner) banner.style.display = 'none';
   }
+}
+
+function renderStrongBuyCard(d) {
+  const c = SIG['STRONG BUY'];
+  const ch = d.priceChange1D;
+  const chSign = ch > 0 ? '+' : '';
+  const chColor = ch > 0 ? 'var(--green)' : ch < 0 ? 'var(--red)' : 'var(--txt)';
+  const topFlags = (d.flags || []).slice(0, 3);
+  const oneLiner = d.investmentThesis?.oneLiner || d.description?.substring(0, 120) || '';
+  const thesisPreview = d.investmentThesis?.verdict || d.deepAnalysis?.summary?.substring(0, 150) || '';
+
+  return `<div class="sb-card" onclick="toggleDet('${d.sym}');scrollToSym('${d.sym}');" style="cursor:pointer;">
+    <div class="sb-card-top">
+      <div class="sb-card-badge">STRONG BUY</div>
+      <div class="sb-card-score" style="color:${c}">${d.total}</div>
+    </div>
+    <div class="sb-card-ticker">${d.sym}</div>
+    <div class="sb-card-name">${d.companyName || ''}</div>
+    <div class="sb-card-sector">${d.sector || ''}</div>
+    <div class="sb-card-price">
+      <span class="sb-card-price-n">$${d.price?.toFixed(2) || '—'}</span>
+      <span style="color:${chColor};font-weight:600;font-size:13px;">${ch !== null ? chSign + ch + '%' : ''}</span>
+      ${d.upside ? `<span style="color:var(--txt);font-size:12px;margin-left:8px;">Target: ${d.upside > 0 ? '+' : ''}${d.upside}%</span>` : ''}
+    </div>
+    ${oneLiner ? `<div class="sb-card-desc">${oneLiner}</div>` : ''}
+    ${topFlags.length ? `<div class="sb-card-flags">${topFlags.map(f => `<span style="color:${f.color};font-size:10px;font-weight:600;">${f.label}</span>`).join(' · ')}</div>` : ''}
+    ${thesisPreview ? `<div class="sb-card-thesis">${thesisPreview}</div>` : ''}
+    <div class="sb-card-cta">View full analysis →</div>
+  </div>`;
 }
 
 function renderDet(d){

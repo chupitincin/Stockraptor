@@ -854,16 +854,159 @@ a:hover { opacity: 0.8; }
   border-bottom: none;
 }
 
-/* ── STRONG BUY row highlight ─────────────────────────────── */
-tr.row-strong-buy td {
-  border-left: 3px solid var(--green);
-  background: linear-gradient(90deg, rgba(0,255,148,0.04), transparent 40%);
+/* ── STRONG BUY Cards Grid ─────────────────────────────────── */
+.sb-cards-header {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-tr.row-strong-buy td:first-child {
-  border-left: 3px solid var(--green);
+.sb-cards-header::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: sr-pulse 1.5s ease infinite;
 }
-[data-theme="light"] tr.row-strong-buy td {
-  background: linear-gradient(90deg, rgba(22,130,90,0.06), transparent 40%);
+.sb-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.sb-card {
+  background: var(--bg-1);
+  border: 1px solid var(--bord-2);
+  border-top: 3px solid var(--green);
+  border-radius: var(--r-lg);
+  padding: 22px 24px;
+  transition: transform .2s, border-color .2s, box-shadow .2s;
+  position: relative;
+}
+.sb-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--green);
+  box-shadow: 0 8px 32px rgba(0,255,148,0.08);
+}
+.sb-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.sb-card-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--green);
+  background: rgba(0,255,148,0.08);
+  border: 1px solid rgba(0,255,148,0.2);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+.sb-card-score {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  font-variant-numeric: lining-nums;
+}
+.sb-card-ticker {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--txw);
+  letter-spacing: -0.5px;
+  margin-bottom: 2px;
+}
+.sb-card-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--txb);
+  margin-bottom: 2px;
+}
+.sb-card-sector {
+  font-size: 11px;
+  color: var(--txt);
+  margin-bottom: 14px;
+}
+.sb-card-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.sb-card-price-n {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--txw);
+  font-variant-numeric: lining-nums;
+}
+.sb-card-desc {
+  font-size: 13px;
+  color: var(--txb);
+  line-height: 1.6;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sb-card-flags {
+  font-size: 10px;
+  color: var(--txt);
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sb-card-thesis {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--txb);
+  line-height: 1.6;
+  padding: 12px 14px;
+  background: var(--bg-2);
+  border-radius: var(--r-md);
+  margin-bottom: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sb-card-cta {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green);
+  letter-spacing: 0.3px;
+}
+.sb-card:hover .sb-card-cta { text-decoration: underline; }
+
+@media (max-width: 700px) {
+  .sb-cards-grid { grid-template-columns: 1fr; }
+}
+
+/* Light mode */
+[data-theme="light"] .sb-card {
+  background: var(--bg-1) !important;
+  border-color: var(--bord-2) !important;
+  border-top-color: var(--green) !important;
+}
+[data-theme="light"] .sb-card:hover {
+  box-shadow: 0 8px 32px rgba(22,130,90,0.1);
+}
+[data-theme="light"] .sb-card-badge {
+  background: rgba(22,130,90,0.08) !important;
+  border-color: rgba(22,130,90,0.2) !important;
+}
+[data-theme="light"] .sb-card-thesis {
+  background: var(--bg-2) !important;
 }
 
 /* ── Investment Thesis Card ──────────────────────────────── */
