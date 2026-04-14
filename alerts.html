@@ -49,7 +49,7 @@
     <a class="sr-nav-item" href="/tracker.html">📈 Tracker</a>
   </div>
   <div class="sr-nav-right">
-    <button class="sr-theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle dark/light mode">🌙</button>
+    <label class="sr-theme-switch" title="Toggle dark/light"><input type="checkbox" id="themeToggle" onchange="toggleTheme()"><span class="slider"></span></label>
     <span class="sr-plan-badge free" id="navPlan">FREE</span>
     <a class="sr-user-btn" href="/" id="navUserBtn">
       <div class="sr-user-avatar" id="navUserAvatar">?</div>
@@ -251,19 +251,16 @@ setInterval(loadAlerts, 60000); // refresh every minute
 </script>
 <script>
 function toggleTheme() {
-  var el = document.documentElement;
-  var current = el.dataset.theme || 'dark';
-  var next = current === 'dark' ? 'light' : 'dark';
-  if (next === 'light') el.dataset.theme = 'light';
-  else delete el.dataset.theme;
-  localStorage.setItem('sr_theme', next);
-  updateThemeIcon();
+  var cb = document.getElementById('themeToggle');
+  var light = cb && cb.checked;
+  if (light) document.documentElement.dataset.theme = 'light';
+  else delete document.documentElement.dataset.theme;
+  localStorage.setItem('sr_theme', light ? 'light' : 'dark');
 }
-function updateThemeIcon() {
-  var btn = document.getElementById('themeToggle');
-  if (btn) btn.textContent = (document.documentElement.dataset.theme === 'light') ? '☀️' : '🌙';
-}
-updateThemeIcon();
+(function() {
+  var cb = document.getElementById('themeToggle');
+  if (cb && document.documentElement.dataset.theme === 'light') cb.checked = true;
+})();
 </script>
 </body>
 </html>

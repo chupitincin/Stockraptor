@@ -75,7 +75,10 @@ a:hover{text-decoration:underline;}
     <div class="nav-logo-icon">🦅</div>
     Stock<span>Raptor</span>
   </a>
-  <a class="nav-back" href="/">← Back to StockRaptor</a>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <label class="sr-theme-switch" title="Toggle dark/light"><input type="checkbox" id="themeToggle" onchange="toggleTheme()"><span class="slider"></span></label>
+    <a class="nav-back" href="/">← Back to StockRaptor</a>
+  </div>
 </nav>
 
 <div class="page">
@@ -343,19 +346,16 @@ function showSection(id, fromHash) {
 </footer>
 <script>
 function toggleTheme() {
-  var el = document.documentElement;
-  var current = el.dataset.theme || 'dark';
-  var next = current === 'dark' ? 'light' : 'dark';
-  if (next === 'light') el.dataset.theme = 'light';
-  else delete el.dataset.theme;
-  localStorage.setItem('sr_theme', next);
-  updateThemeIcon();
+  var cb = document.getElementById('themeToggle');
+  var light = cb && cb.checked;
+  if (light) document.documentElement.dataset.theme = 'light';
+  else delete document.documentElement.dataset.theme;
+  localStorage.setItem('sr_theme', light ? 'light' : 'dark');
 }
-function updateThemeIcon() {
-  var btn = document.getElementById('themeToggle');
-  if (btn) btn.textContent = (document.documentElement.dataset.theme === 'light') ? '☀️' : '🌙';
-}
-updateThemeIcon();
+(function() {
+  var cb = document.getElementById('themeToggle');
+  if (cb && document.documentElement.dataset.theme === 'light') cb.checked = true;
+})();
 </script>
 </body>
 </html>

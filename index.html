@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="/css/stockraptor.css">
 <style>
 /* Landing page — shared tokens come from stockraptor.css */
+body::before { display: none; }
 /* broken :root override removed — uses stockraptor.css */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
@@ -1173,6 +1174,7 @@ footer {
     <a class="nav-link" href="#pricing">Pricing</a>
   </div>
   <div class="nav-right" id="navRight">
+    <label class="sr-theme-switch" title="Toggle dark/light"><input type="checkbox" id="themeToggle" onchange="toggleTheme()"><span class="slider"></span></label>
     <button class="nav-login" onclick="openAuth('login')">Log in</button>
     <button class="nav-cta" onclick="openAuth('register')">Start free →</button>
   </div>
@@ -2233,6 +2235,7 @@ async function checkAuth() {
 // ── NAV STATES ───────────────────────────────────────
 function showNavGuest() {
   document.getElementById('navRight').innerHTML = `
+    <label class="sr-theme-switch" title="Toggle dark/light"><input type="checkbox" id="themeToggle" onchange="toggleTheme()"><span class="slider"></span></label>
     <button class="nav-login" onclick="openAuth('login')">Log in</button>
     <button class="nav-cta" onclick="openAuth('register')">Start free →</button>`;
   updatePricingButtons(null);
@@ -2622,19 +2625,16 @@ async function confirmCancelPlan() {
 
 <script>
 function toggleTheme() {
-  var el = document.documentElement;
-  var current = el.dataset.theme || 'dark';
-  var next = current === 'dark' ? 'light' : 'dark';
-  if (next === 'light') el.dataset.theme = 'light';
-  else delete el.dataset.theme;
-  localStorage.setItem('sr_theme', next);
-  updateThemeIcon();
+  var cb = document.getElementById('themeToggle');
+  var light = cb && cb.checked;
+  if (light) document.documentElement.dataset.theme = 'light';
+  else delete document.documentElement.dataset.theme;
+  localStorage.setItem('sr_theme', light ? 'light' : 'dark');
 }
-function updateThemeIcon() {
-  var btn = document.getElementById('themeToggle');
-  if (btn) btn.textContent = (document.documentElement.dataset.theme === 'light') ? '☀️' : '🌙';
-}
-updateThemeIcon();
+(function() {
+  var cb = document.getElementById('themeToggle');
+  if (cb && document.documentElement.dataset.theme === 'light') cb.checked = true;
+})();
 </script>
 </body>
 </html>
