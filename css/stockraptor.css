@@ -881,38 +881,39 @@ a:hover { opacity: 0.8; }
 .sb-card {
   background: var(--bg-1);
   border: 1px solid var(--bord-2);
-  border-radius: var(--r-lg);
-  padding: 22px 24px;
-  transition: transform .2s, border-color .2s, box-shadow .2s;
+  border-radius: 12px;
+  padding: 24px;
+  transition: transform .2s, box-shadow .2s;
   position: relative;
 }
 .sb-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--green);
-  box-shadow: 0 8px 32px rgba(0,255,148,0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
 }
 .sb-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 .sb-card-badge {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   color: var(--green);
-  background: rgba(0,255,148,0.08);
-  border: 1px solid rgba(0,255,148,0.2);
-  padding: 4px 10px;
+  background: rgba(0,255,148,0.1);
+  border: 1.5px solid rgba(0,255,148,0.3);
+  padding: 5px 12px;
   border-radius: 4px;
 }
 .sb-card-score {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
+  color: var(--green);
   font-variant-numeric: lining-nums;
+  line-height: 1;
 }
 .sb-card-name {
   font-family: var(--font-display);
@@ -920,73 +921,44 @@ a:hover { opacity: 0.8; }
   font-weight: 700;
   color: var(--txw);
   letter-spacing: -0.3px;
-  margin-bottom: 2px;
-  line-height: 1.2;
+  margin-bottom: 4px;
+  line-height: 1.25;
 }
 .sb-card-ticker {
   font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--txt);
-  letter-spacing: 0.5px;
-  margin-bottom: 2px;
-}
-.sb-card-sector {
-  font-size: 11px;
-  color: var(--txt);
-  margin-bottom: 14px;
+  letter-spacing: 0.3px;
+  margin-bottom: 12px;
 }
 .sb-card-price {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 .sb-card-price-n {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--txw);
   font-variant-numeric: lining-nums;
 }
-.sb-card-desc {
-  font-size: 13px;
-  color: var(--txb);
-  line-height: 1.6;
-  margin-bottom: 12px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
 .sb-card-flags {
-  font-size: 10px;
-  color: var(--txt);
-  margin-bottom: 12px;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-}
-.sb-card-thesis {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--txb);
-  line-height: 1.6;
-  padding: 12px 14px;
-  background: var(--bg-2);
-  border-radius: var(--r-md);
-  margin-bottom: 14px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 16px;
+  font-size: 11px;
 }
 .sb-card-cta {
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--green);
-  letter-spacing: 0.3px;
 }
 .sb-card:hover .sb-card-cta { text-decoration: underline; }
 
@@ -996,18 +968,15 @@ a:hover { opacity: 0.8; }
 
 /* Light mode */
 [data-theme="light"] .sb-card {
-  background: var(--bg-1) !important;
-  border-color: var(--bord-2) !important;
+  background: #ffffff !important;
+  border-color: #e2e4ea !important;
 }
 [data-theme="light"] .sb-card:hover {
-  box-shadow: 0 8px 32px rgba(22,130,90,0.1);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 [data-theme="light"] .sb-card-badge {
   background: rgba(22,130,90,0.08) !important;
-  border-color: rgba(22,130,90,0.2) !important;
-}
-[data-theme="light"] .sb-card-thesis {
-  background: var(--bg-2) !important;
+  border-color: rgba(22,130,90,0.25) !important;
 }
 
 /* ── Investment Thesis Card ──────────────────────────────── */

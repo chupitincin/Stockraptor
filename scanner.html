@@ -1564,29 +1564,24 @@ function renderTable(){
 }
 
 function renderStrongBuyCard(d) {
-  const c = SIG['STRONG BUY'];
   const ch = d.priceChange1D;
   const chSign = ch > 0 ? '+' : '';
   const chColor = ch > 0 ? 'var(--green)' : ch < 0 ? 'var(--red)' : 'var(--txt)';
   const topFlags = (d.flags || []).slice(0, 3);
-  const oneLiner = d.investmentThesis?.oneLiner || d.description?.substring(0, 120) || '';
-  const thesisPreview = d.investmentThesis?.verdict || d.deepAnalysis?.summary?.substring(0, 150) || '';
 
   return `<div class="sb-card" onclick="toggleDet('${d.sym}');scrollToSym('${d.sym}');" style="cursor:pointer;">
     <div class="sb-card-top">
       <div class="sb-card-badge">STRONG BUY</div>
-      <div class="sb-card-score" style="color:${c}">${d.total}</div>
+      <div class="sb-card-score">${d.total}</div>
     </div>
     <div class="sb-card-name">${d.companyName || d.sym}</div>
     <div class="sb-card-ticker">${d.sym} · ${d.sector || ''}</div>
     <div class="sb-card-price">
       <span class="sb-card-price-n">$${d.price?.toFixed(2) || '—'}</span>
       <span style="color:${chColor};font-weight:600;font-size:13px;">${ch !== null ? chSign + ch + '%' : ''}</span>
-      ${d.upside ? `<span style="color:var(--txt);font-size:12px;margin-left:8px;">Target: ${d.upside > 0 ? '+' : ''}${d.upside}%</span>` : ''}
+      ${d.upside ? `<span style="color:var(--txt);font-size:12px;">Target: ${d.upside > 0 ? '+' : ''}${d.upside}%</span>` : ''}
     </div>
-    ${oneLiner ? `<div class="sb-card-desc">${oneLiner}</div>` : ''}
-    ${topFlags.length ? `<div class="sb-card-flags">${topFlags.map(f => `<span style="color:${f.color};font-size:10px;font-weight:600;">${f.label}</span>`).join(' · ')}</div>` : ''}
-    ${thesisPreview ? `<div class="sb-card-thesis">${thesisPreview}</div>` : ''}
+    ${topFlags.length ? `<div class="sb-card-flags">${topFlags.map(f => `<span style="color:${f.color};font-weight:600;">${f.label}</span>`).join('<span style="color:var(--txt);margin:0 2px;">·</span>')}</div>` : ''}
     <div class="sb-card-cta">View full analysis →</div>
   </div>`;
 }
