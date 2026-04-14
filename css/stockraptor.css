@@ -882,101 +882,93 @@ a:hover { opacity: 0.8; }
   background: var(--bg-1);
   border: 1px solid var(--bord-2);
   border-radius: 12px;
-  padding: 24px;
+  padding: 20px;
   transition: transform .2s, box-shadow .2s;
-  position: relative;
 }
 .sb-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
 }
 .sb-card-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 .sb-card-badge {
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: var(--green);
-  background: rgba(0,255,148,0.1);
-  border: 1.5px solid rgba(0,255,148,0.3);
-  padding: 5px 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: #00c106;
+  background: #f0fff0;
+  padding: 4px 10px;
   border-radius: 4px;
 }
 .sb-card-score {
   font-family: var(--font-display);
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--green);
+  font-size: 18px;
+  font-weight: 600;
+  color: #00d807;
   font-variant-numeric: lining-nums;
-  line-height: 1;
 }
 .sb-card-name {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--txw);
-  letter-spacing: -0.3px;
   margin-bottom: 4px;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 .sb-card-ticker {
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-size: 12px;
-  font-weight: 500;
-  color: var(--txt);
-  letter-spacing: 0.3px;
+  font-weight: 300;
+  color: #6e788b;
   margin-bottom: 12px;
 }
-.sb-card-price {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-.sb-card-price-n {
+.sb-card-desc {
   font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--txw);
-  font-variant-numeric: lining-nums;
-}
-.sb-card-flags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 16px;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 300;
+  color: #6e788b;
+  line-height: 1.6;
+  margin-bottom: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .sb-card-cta {
-  font-family: var(--font-body);
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-size: 12px;
   font-weight: 600;
-  color: var(--green);
+  color: var(--txw);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.sb-card:hover .sb-card-cta { text-decoration: underline; }
+.sb-card-cta::after {
+  content: '→';
+}
+.sb-card:hover .sb-card-cta { color: var(--green); }
 
 @media (max-width: 700px) {
   .sb-cards-grid { grid-template-columns: 1fr; }
 }
 
-/* Light mode */
+/* Dark mode adjustments */
+.sb-card-badge { background: rgba(0,193,6,0.1); }
 [data-theme="light"] .sb-card {
   background: #ffffff !important;
-  border-color: #e2e4ea !important;
+  border-color: #e8eaef !important;
 }
 [data-theme="light"] .sb-card:hover {
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
 }
 [data-theme="light"] .sb-card-badge {
-  background: rgba(22,130,90,0.08) !important;
-  border-color: rgba(22,130,90,0.25) !important;
+  background: #f0fff0 !important;
+  color: #00c106 !important;
 }
 
 /* ── Investment Thesis Card ──────────────────────────────── */
