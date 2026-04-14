@@ -126,14 +126,14 @@ body::before {
 /* ── Headings ──────────────────────────────────────────────── */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 800;
   color: var(--txw);
-  letter-spacing: -0.8px;
-  line-height: 1.05;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
 }
-h1 { font-size: clamp(32px, 4vw, 46px); font-weight: 700; }
-h2 { font-size: clamp(22px, 2.5vw, 28px); }
-h3 { font-size: 20px; }
+h1 { font-size: clamp(28px, 4vw, 42px); }
+h2 { font-size: clamp(20px, 2.5vw, 26px); }
+h3 { font-size: 18px; }
 h4 { font-size: 15px; }
 
 /* ── Links ─────────────────────────────────────────────────── */
@@ -490,11 +490,10 @@ a:hover { opacity: 0.8; }
 .sr-stat.center { text-align: center; }
 .sr-stat-n {
   font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 700;
   color: var(--txw);
-  line-height: 1;
-  letter-spacing: -0.5px;
+  line-height: 1.1;
 }
 .sr-stat-l {
   font-family: var(--font-mono);
