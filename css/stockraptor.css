@@ -401,9 +401,9 @@ h1, h2, h3, h4, h5, h6 {
   font-variant-numeric: lining-nums tabular-nums;
 }
 h1 { font-size: clamp(28px, 4vw, 42px); }
-h2 { font-size: clamp(20px, 2.5vw, 26px); }
-h3 { font-size: 18px; }
-h4 { font-size: 15px; }
+h2 { font-size: clamp(22px, 3vw, 30px); font-weight: 700; }
+h3 { font-size: 20px; font-weight: 700; }
+h4 { font-size: 16px; font-weight: 700; }
 
 /* ── Links ─────────────────────────────────────────────────── */
 a {
@@ -619,13 +619,12 @@ a:hover { opacity: 0.8; }
   gap: 10px;
 }
 .sr-page-subtitle {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 1.8px;
-  text-transform: uppercase;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--txt);
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .sr-page-header-right {
   display: flex;
@@ -639,12 +638,11 @@ a:hover { opacity: 0.8; }
   margin-bottom: 32px;
 }
 .sr-section-title {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--txt);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--txb);
   margin-bottom: 14px;
   display: flex;
   align-items: center;
@@ -666,12 +664,11 @@ a:hover { opacity: 0.8; }
 .sr-card:hover { border-color: var(--bord-3); }
 
 .sr-card-title {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.8px;
-  text-transform: uppercase;
-  color: var(--txt);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: var(--txb);
   margin-bottom: 14px;
 }
 
@@ -759,20 +756,19 @@ a:hover { opacity: 0.8; }
 .sr-stat.center { text-align: center; }
 .sr-stat-n {
   font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
   color: var(--txw);
   line-height: 1.1;
   font-variant-numeric: lining-nums tabular-nums;
 }
 .sr-stat-l {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1.8px;
-  text-transform: uppercase;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
   color: var(--txt);
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .sr-stat-sub {
   font-size: 11px;
@@ -799,12 +795,11 @@ a:hover { opacity: 0.8; }
   background: var(--bg-1);
   border: 1px solid var(--bord-2);
   color: var(--txt);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  padding: 8px 14px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  padding: 8px 16px;
   border-radius: var(--r-md);
   cursor: pointer;
   transition: all var(--t-fast);
@@ -839,11 +834,10 @@ a:hover { opacity: 0.8; }
   background: var(--bg-2);
   padding: 12px 14px;
   text-align: left;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
   color: var(--txt);
   border-bottom: 1px solid var(--bord-2);
   white-space: nowrap;
