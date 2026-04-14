@@ -881,7 +881,6 @@ a:hover { opacity: 0.8; }
 .sb-card {
   background: var(--bg-1);
   border: 1px solid var(--bord-2);
-  border-top: 3px solid var(--green);
   border-radius: var(--r-lg);
   padding: 22px 24px;
   transition: transform .2s, border-color .2s, box-shadow .2s;
@@ -915,18 +914,21 @@ a:hover { opacity: 0.8; }
   font-weight: 800;
   font-variant-numeric: lining-nums;
 }
-.sb-card-ticker {
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--txw);
-  letter-spacing: -0.5px;
-  margin-bottom: 2px;
-}
 .sb-card-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--txb);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--txw);
+  letter-spacing: -0.3px;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+.sb-card-ticker {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--txt);
+  letter-spacing: 0.5px;
   margin-bottom: 2px;
 }
 .sb-card-sector {
@@ -996,7 +998,6 @@ a:hover { opacity: 0.8; }
 [data-theme="light"] .sb-card {
   background: var(--bg-1) !important;
   border-color: var(--bord-2) !important;
-  border-top-color: var(--green) !important;
 }
 [data-theme="light"] .sb-card:hover {
   box-shadow: 0 8px 32px rgba(22,130,90,0.1);

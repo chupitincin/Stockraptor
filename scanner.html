@@ -1577,9 +1577,8 @@ function renderStrongBuyCard(d) {
       <div class="sb-card-badge">STRONG BUY</div>
       <div class="sb-card-score" style="color:${c}">${d.total}</div>
     </div>
-    <div class="sb-card-ticker">${d.sym}</div>
-    <div class="sb-card-name">${d.companyName || ''}</div>
-    <div class="sb-card-sector">${d.sector || ''}</div>
+    <div class="sb-card-name">${d.companyName || d.sym}</div>
+    <div class="sb-card-ticker">${d.sym} · ${d.sector || ''}</div>
     <div class="sb-card-price">
       <span class="sb-card-price-n">$${d.price?.toFixed(2) || '—'}</span>
       <span style="color:${chColor};font-weight:600;font-size:13px;">${ch !== null ? chSign + ch + '%' : ''}</span>
