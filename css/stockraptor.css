@@ -115,20 +115,192 @@
   --pink:     #db2777;
   --pink-d:   #db277718;
 }
-[data-theme="light"] body::before { opacity: 0.06; }
-[data-theme="light"] .sr-nav {
-  background: rgba(255,255,255,0.92);
-  border-bottom-color: var(--bord);
+/* ── Light mode global overrides ─────────────────────────── */
+[data-theme="light"] body::before { display: none; }
+[data-theme="light"] #bg-canvas { display: none !important; }
+
+/* Nav */
+[data-theme="light"] .sr-nav,
+[data-theme="light"] nav {
+  background: rgba(255,255,255,0.95) !important;
+  border-bottom-color: var(--bord) !important;
 }
-[data-theme="light"] .sr-nav-logo { color: var(--txw); }
-[data-theme="light"] .sr-nav-logo span { color: var(--green); }
-[data-theme="light"] .sr-nav-item { color: var(--txt); }
-[data-theme="light"] .sr-nav-item:hover { color: var(--txw); background: var(--bg-2); }
-[data-theme="light"] .sr-nav-item.active { color: var(--txw); background: var(--bg-2); border-color: var(--bord-2); }
-[data-theme="light"] .sr-user-btn { background: var(--bg-2); border-color: var(--bord-2); }
-[data-theme="light"] .sr-user-avatar { background: linear-gradient(135deg, var(--green), var(--blue)); color: #fff; }
-[data-theme="light"] ::-webkit-scrollbar-track { background: var(--bg); }
-[data-theme="light"] ::-webkit-scrollbar-thumb { background: var(--bord-2); }
+[data-theme="light"] .sr-nav-logo,
+[data-theme="light"] .nav-logo { color: var(--txw) !important; }
+[data-theme="light"] .sr-nav-logo span,
+[data-theme="light"] .nav-logo span { color: var(--green) !important; }
+[data-theme="light"] .sr-nav-item,
+[data-theme="light"] .nav-link { color: var(--txt) !important; }
+[data-theme="light"] .sr-nav-item:hover,
+[data-theme="light"] .sr-nav-item.active,
+[data-theme="light"] .nav-link:hover { color: var(--txw) !important; background: var(--bg-2) !important; }
+[data-theme="light"] .sr-user-btn { background: var(--bg-2) !important; border-color: var(--bord-2) !important; }
+[data-theme="light"] .sr-user-avatar { background: linear-gradient(135deg, var(--green), var(--blue)) !important; color: #fff !important; }
+
+/* Scrollbar */
+[data-theme="light"] ::-webkit-scrollbar-track { background: var(--bg) !important; }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: var(--bord-2) !important; }
+
+/* Cards, panels, surfaces — catch ALL dark backgrounds */
+[data-theme="light"] .det-card,
+[data-theme="light"] .det-inner,
+[data-theme="light"] .sr-card,
+[data-theme="light"] .sr-stat,
+[data-theme="light"] .tr-stat,
+[data-theme="light"] .kpi,
+[data-theme="light"] .chart-card,
+[data-theme="light"] .table-wrap,
+[data-theme="light"] .sr-table-wrap,
+[data-theme="light"] .alert,
+[data-theme="light"] .pick-card,
+[data-theme="light"] .wl-card,
+[data-theme="light"] .wl-row,
+[data-theme="light"] .gate-card,
+[data-theme="light"] .modal-box,
+[data-theme="light"] .upgrade-card,
+[data-theme="light"] .picks-tab,
+[data-theme="light"] .picks-tabs,
+[data-theme="light"] .faq-item,
+[data-theme="light"] .plan-card,
+[data-theme="light"] .step-card,
+[data-theme="light"] .feat-card,
+[data-theme="light"] .compare-table,
+[data-theme="light"] .hero-stats,
+[data-theme="light"] .hero-stat,
+[data-theme="light"] .wr-item,
+[data-theme="light"] .period-tabs .tab,
+[data-theme="light"] .sr-tab,
+[data-theme="light"] .filter {
+  background: var(--bg-1) !important;
+  border-color: var(--bord-2) !important;
+  color: var(--txb) !important;
+}
+
+/* Table rows */
+[data-theme="light"] table,
+[data-theme="light"] .sr-table,
+[data-theme="light"] tr,
+[data-theme="light"] td,
+[data-theme="light"] th {
+  border-color: var(--bord) !important;
+}
+[data-theme="light"] th {
+  background: var(--bg-2) !important;
+  color: var(--txt) !important;
+}
+[data-theme="light"] tr:hover td {
+  background: var(--bg-2) !important;
+}
+
+/* Text that was hardcoded dark */
+[data-theme="light"] .det-title,
+[data-theme="light"] .sr-card-title,
+[data-theme="light"] .sr-section-title,
+[data-theme="light"] .chart-title,
+[data-theme="light"] .table-title,
+[data-theme="light"] .kpi-label,
+[data-theme="light"] .sr-stat-l {
+  color: var(--txt) !important;
+}
+
+/* Bright text */
+[data-theme="light"] .kpi-value,
+[data-theme="light"] .sr-stat-n,
+[data-theme="light"] .tr-stat-n,
+[data-theme="light"] .stat-n,
+[data-theme="light"] .wr-value,
+[data-theme="light"] .hero-title,
+[data-theme="light"] .section-title,
+[data-theme="light"] .feat-title,
+[data-theme="light"] .step-title,
+[data-theme="light"] .plan-name,
+[data-theme="light"] .faq-q,
+[data-theme="light"] .pick-ticker,
+[data-theme="light"] .tsym,
+[data-theme="light"] .tr-sym {
+  color: var(--txw) !important;
+}
+
+/* Badges — fix dark badges on light bg */
+[data-theme="light"] .badge,
+[data-theme="light"] .sr-badge,
+[data-theme="light"] .sr-plan-badge,
+[data-theme="light"] .flag,
+[data-theme="light"] .tr-type-badge {
+  background: var(--bg-2) !important;
+  border-color: var(--bord-2) !important;
+}
+
+/* Buttons — ensure CTA contrast */
+[data-theme="light"] .btn-primary,
+[data-theme="light"] .sr-btn-primary,
+[data-theme="light"] .nav-cta,
+[data-theme="light"] .gate-btn-green {
+  color: #fff !important;
+  background: var(--green) !important;
+}
+[data-theme="light"] .btn-outline,
+[data-theme="light"] .nav-login,
+[data-theme="light"] .gate-btn-outline {
+  color: var(--txw) !important;
+  border-color: var(--bord-2) !important;
+  background: var(--bg-1) !important;
+}
+
+/* Inputs */
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background: var(--bg-1) !important;
+  border-color: var(--bord-2) !important;
+  color: var(--txw) !important;
+}
+
+/* Footer */
+[data-theme="light"] footer {
+  background: var(--bg-2) !important;
+  border-color: var(--bord) !important;
+}
+
+/* Gradient text in light mode — needs darker colors */
+[data-theme="light"] .hero-title em {
+  -webkit-text-fill-color: var(--green) !important;
+  background: none !important;
+}
+
+/* Links inside content */
+[data-theme="light"] a { color: var(--green); }
+[data-theme="light"] a:hover { opacity: 0.7; }
+
+/* Fix scanner data cells that use hardcoded colors */
+[data-theme="light"] .dv,
+[data-theme="light"] .dk { color: var(--txb) !important; }
+[data-theme="light"] .dv.cg { color: var(--green) !important; }
+[data-theme="light"] .dv.cr { color: var(--red) !important; }
+[data-theme="light"] .dv.cd { color: var(--txt) !important; }
+
+/* Scanner-specific: cache banner, alerts banner */
+[data-theme="light"] #cacheBanner,
+[data-theme="light"] #alertsBanner,
+[data-theme="light"] #cacheLoading {
+  background: var(--bg-1) !important;
+  border-color: var(--bord) !important;
+}
+
+/* Auth gate overlay */
+[data-theme="light"] #authGate,
+[data-theme="light"] #upgradeGate {
+  background: rgba(0,0,0,0.3) !important;
+}
+
+/* Track record rows */
+[data-theme="light"] .tr-row { border-color: var(--bord) !important; }
+[data-theme="light"] .tr-week-title { border-color: var(--bord) !important; color: var(--txt) !important; }
+[data-theme="light"] .tr-perf.pos { color: var(--green) !important; }
+[data-theme="light"] .tr-perf.neg { color: var(--red) !important; }
+
+/* Disclaimer */
+[data-theme="light"] .disclaimer { background: var(--bg-2) !important; color: var(--txt) !important; }
 
 /* ── Theme Toggle Switch ───────────────────────────────────── */
 .sr-theme-switch {
