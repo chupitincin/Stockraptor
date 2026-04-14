@@ -1462,7 +1462,6 @@ function renderTable(){
   // Auto-sort by delta when MOVERS filter active
   if(curF==='MOVERS' && curS==='score') rows.sort((a,b)=>(b.rankDelta??-999)-(a.rankDelta??-999));
   // Separate STRONG BUY for cards (only when showing ALL or STRONG BUY filter)
-  const plan = scanProfile?.plan || 'free';
   const showCards = (curF === 'ALL' || curF === 'STRONG BUY') && plan !== 'free';
   const strongBuys = showCards ? rows.filter(d => d.signal === 'STRONG BUY' && !d._stale) : [];
   const tableRows = showCards ? rows.filter(d => d.signal !== 'STRONG BUY' || d._stale) : rows;
