@@ -1224,7 +1224,11 @@ const TICKERS=[
   "PDCO","ALKS","AMPH","ASND","ATIF","BLRX","BPMC","CARA","CBPO","CBRL"
 ];
 const SECTOR_PE={'Technology':28,'Biotechnology':35,'Healthcare':22,'Software':32,'Consumer Cyclical':18,'Financial Services':14,'Industrials':18,'Energy':12,'Real Estate':20,'Communication Services':20,'Consumer Defensive':20,'Utilities':16,'Basic Materials':14,'default':22};
-const SIG={'STRONG BUY':'#00ff94','INTERESTING':'#ffcc00','WATCH':'#ff7040','WEAK':'#ff2d55'};
+function _getSigColors(){const s=getComputedStyle(document.documentElement);return{'STRONG BUY':s.getPropertyValue('--green').trim()||'#00ff94','INTERESTING':s.getPropertyValue('--gold').trim()||'#ffcc00','WATCH':s.getPropertyValue('--orange').trim()||'#ff7040','WEAK':s.getPropertyValue('--red').trim()||'#ff2d55'};}
+let _sigCache=null;function _sigColor(k){if(!_sigCache)_sigCache=_getSigColors();return _sigCache[k]||'#888';}
+const SIG=new Proxy({},{ get:(_,k)=>_sigColor(k) });
+document.addEventListener('DOMContentLoaded',()=>{_sigCache=null;});
+window._refreshSigColors=()=>{_sigCache=null;};
 
 const FLAG_TIPS = {
   '⚡ VOL SPIKE':   'Volume is 3x or more above the 10-day average. Something is happening — news, earnings, or unusual interest.',
@@ -3053,6 +3057,9 @@ function toggleTheme() {
   if (light) document.documentElement.dataset.theme = 'light';
   else delete document.documentElement.dataset.theme;
   localStorage.setItem('sr_theme', light ? 'light' : 'dark');
+  // Refresh signal colors and re-render table for new theme
+  if (typeof _refreshSigColors === 'function') _refreshSigColors();
+  if (typeof renderTable === 'function') renderTable();
 }
 (function() {
   var cb = document.getElementById('themeToggle');
