@@ -86,6 +86,74 @@
   --t-med:  .25s;
 }
 
+/* ── Light Theme ───────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg:       #f5f6f8;
+  --bg-1:     #ffffff;
+  --bg-2:     #eef0f4;
+  --bg-3:     #e4e6ec;
+  --bord:     #d8dce4;
+  --bord-2:   #c8ccd6;
+  --bord-3:   #b0b4c0;
+  --txt:      #6b7280;
+  --txb:      #374151;
+  --txw:      #111827;
+  --green:    #059669;
+  --green-d:  #05966918;
+  --red:      #dc2626;
+  --red-d:    #dc262618;
+  --blue:     #2563eb;
+  --blue-d:   #2563eb18;
+  --gold:     #d97706;
+  --gold-d:   #d9770618;
+  --purple:   #7c3aed;
+  --purple-d: #7c3aed18;
+  --orange:   #ea580c;
+  --orange-d: #ea580c18;
+  --teal:     #0d9488;
+  --teal-d:   #0d948818;
+  --pink:     #db2777;
+  --pink-d:   #db277718;
+}
+[data-theme="light"] body::before { opacity: 0.06; }
+[data-theme="light"] .sr-nav {
+  background: rgba(255,255,255,0.92);
+  border-bottom-color: var(--bord);
+}
+[data-theme="light"] .sr-nav-logo { color: var(--txw); }
+[data-theme="light"] .sr-nav-logo span { color: var(--green); }
+[data-theme="light"] .sr-nav-item { color: var(--txt); }
+[data-theme="light"] .sr-nav-item:hover { color: var(--txw); background: var(--bg-2); }
+[data-theme="light"] .sr-nav-item.active { color: var(--txw); background: var(--bg-2); border-color: var(--bord-2); }
+[data-theme="light"] .sr-user-btn { background: var(--bg-2); border-color: var(--bord-2); }
+[data-theme="light"] .sr-user-avatar { background: linear-gradient(135deg, var(--green), var(--blue)); color: #fff; }
+[data-theme="light"] ::-webkit-scrollbar-track { background: var(--bg); }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: var(--bord-2); }
+
+/* ── Theme Toggle Button ───────────────────────────────────── */
+.sr-theme-toggle {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-2);
+  border: 1px solid var(--bord-2);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: all var(--t-fast);
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  padding: 0;
+  color: var(--txb);
+}
+.sr-theme-toggle:hover {
+  border-color: var(--bord-3);
+  background: var(--bg-3);
+  transform: scale(1.05);
+}
+
 /* ── Reset ─────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;

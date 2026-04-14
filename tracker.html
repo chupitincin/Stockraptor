@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+<script>
+// Apply saved theme before any render to prevent flash
+(function(){
+  var t = localStorage.getItem('sr_theme');
+  if (!t) t = window.matchMedia('(prefers-color-scheme:light)').matches ? 'light' : 'dark';
+  if (t === 'light') document.documentElement.dataset.theme = 'light';
+})();
+</script>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -135,6 +143,7 @@ td.neu{color:var(--text-dim)}
     <a class="sr-nav-item active" href="/tracker.html">📈 Tracker</a>
   </div>
   <div class="sr-nav-right">
+    <button class="sr-theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle dark/light mode">🌙</button>
     <span class="sr-plan-badge free" id="navPlan">FREE</span>
     <a class="sr-user-btn" href="/" id="navUserBtn">
       <div class="sr-user-avatar" id="navUserAvatar">?</div>
@@ -540,6 +549,22 @@ function subscribeRealtime() {
   await loadData();
   subscribeRealtime();
 })();
+</script>
+<script>
+function toggleTheme() {
+  var el = document.documentElement;
+  var current = el.dataset.theme || 'dark';
+  var next = current === 'dark' ? 'light' : 'dark';
+  if (next === 'light') el.dataset.theme = 'light';
+  else delete el.dataset.theme;
+  localStorage.setItem('sr_theme', next);
+  updateThemeIcon();
+}
+function updateThemeIcon() {
+  var btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = (document.documentElement.dataset.theme === 'light') ? '☀️' : '🌙';
+}
+updateThemeIcon();
 </script>
 </body>
 </html>

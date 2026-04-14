@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+<script>
+// Apply saved theme before any render to prevent flash
+(function(){
+  var t = localStorage.getItem('sr_theme');
+  if (!t) t = window.matchMedia('(prefers-color-scheme:light)').matches ? 'light' : 'dark';
+  if (t === 'light') document.documentElement.dataset.theme = 'light';
+})();
+</script>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -333,5 +341,21 @@ function showSection(id, fromHash) {
     <a href="/legal.html#cookies" style="color:#4a4a70;text-decoration:none;transition:color .15s;" onmouseover="this.style.color='#7070a0'" onmouseout="this.style.color='#4a4a70'">Cookies</a>
   </div>
 </footer>
+<script>
+function toggleTheme() {
+  var el = document.documentElement;
+  var current = el.dataset.theme || 'dark';
+  var next = current === 'dark' ? 'light' : 'dark';
+  if (next === 'light') el.dataset.theme = 'light';
+  else delete el.dataset.theme;
+  localStorage.setItem('sr_theme', next);
+  updateThemeIcon();
+}
+function updateThemeIcon() {
+  var btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = (document.documentElement.dataset.theme === 'light') ? '☀️' : '🌙';
+}
+updateThemeIcon();
+</script>
 </body>
 </html>
