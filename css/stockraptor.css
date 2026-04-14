@@ -88,32 +88,32 @@
 
 /* ── Light Theme ───────────────────────────────────────────── */
 [data-theme="light"] {
-  --bg:       #f5f6f8;
+  --bg:       #f7f8fa;
   --bg-1:     #ffffff;
-  --bg-2:     #eef0f4;
-  --bg-3:     #e4e6ec;
-  --bord:     #d8dce4;
-  --bord-2:   #c8ccd6;
-  --bord-3:   #b0b4c0;
-  --txt:      #6b7280;
-  --txb:      #374151;
-  --txw:      #111827;
-  --green:    #059669;
-  --green-d:  #05966918;
-  --red:      #dc2626;
-  --red-d:    #dc262618;
-  --blue:     #2563eb;
-  --blue-d:   #2563eb18;
-  --gold:     #d97706;
-  --gold-d:   #d9770618;
-  --purple:   #7c3aed;
-  --purple-d: #7c3aed18;
-  --orange:   #ea580c;
-  --orange-d: #ea580c18;
-  --teal:     #0d9488;
-  --teal-d:   #0d948818;
-  --pink:     #db2777;
-  --pink-d:   #db277718;
+  --bg-2:     #f0f1f5;
+  --bg-3:     #e5e7ed;
+  --bord:     #dcdfe6;
+  --bord-2:   #c5c9d4;
+  --bord-3:   #a8adb8;
+  --txt:      #64748b;
+  --txb:      #334155;
+  --txw:      #0f172a;
+  --green:    #16825a;
+  --green-d:  #16825a14;
+  --red:      #b91c1c;
+  --red-d:    #b91c1c14;
+  --blue:     #1d4ed8;
+  --blue-d:   #1d4ed814;
+  --gold:     #a16207;
+  --gold-d:   #a1620714;
+  --purple:   #6d28d9;
+  --purple-d: #6d28d914;
+  --orange:   #c2410c;
+  --orange-d: #c2410c14;
+  --teal:     #0f766e;
+  --teal-d:   #0f766e14;
+  --pink:     #be185d;
+  --pink-d:   #be185d14;
 }
 /* ── Light mode global overrides ─────────────────────────── */
 [data-theme="light"] body::before { display: none; }
